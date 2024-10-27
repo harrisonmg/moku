@@ -1,0 +1,12 @@
+[package]
+name = "moku"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Placeholder under active development."
+homepage = "https://github.com/harrisonmg/moku"
+repository = "https://github.com/harrisonmg/moku"
+readme = "README.md"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }

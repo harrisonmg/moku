@@ -11,7 +11,7 @@ readme = "README.md"
 [workspace]
 
 [dependencies]
-moku-macros = { path = "moku-macros" }
+moku-macros = { version = "0.1.0", path = "moku-macros" }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }

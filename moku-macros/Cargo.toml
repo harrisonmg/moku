@@ -1,0 +1,9 @@
+[package]
+name = "moku-macros"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Procedural macros for use with the moku crate."
+homepage = "https://github.com/harrisonmg/moku"
+repository = "https://github.com/harrisonmg/moku"
+readme = "README.md"

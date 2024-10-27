@@ -8,5 +8,10 @@ homepage = "https://github.com/harrisonmg/moku"
 repository = "https://github.com/harrisonmg/moku"
 readme = "README.md"
 
+[workspace]
+
+[dependencies]
+moku-macros = { path = "moku-macros" }
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }

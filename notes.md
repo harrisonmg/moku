@@ -1,9 +1,16 @@
-- enum of states
-    * optionally override name
-- attributes to optionally hold references to specific super states
-    * compile error if state is not a real superstate
-    * use Syn visitor?
-    * maybe only make available during trait method calls?
-- update and top_down_update
+# todo
+- transition
+- entry and exit actions
+- mechanism to get state ref
 - function to print state chart
+- branch states
+
+- self transition optional reentry
 - no_std support seems feasible
+
+# features
+- no dynamic memory allocation
+
+# shortcomings
+- states must be Sized
+- does not check for transition cycles

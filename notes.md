@@ -1,12 +1,18 @@
 # todo
-- transition
-- entry and exit actions
 - mechanism to get state ref
 - function to print state chart
-- branch states
 
 - self transition optional reentry
 - no_std support seems feasible
+
+# attributes
+- StateEnum name
+- internal module
+
+# errors / warnings
+- init not implemented for branch state
+    * optional
+- dead states
 
 # features
 - no dynamic memory allocation

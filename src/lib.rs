@@ -15,9 +15,12 @@ pub enum StateEntry<T: StateEnum, U: State<T>> {
 }
 
 pub trait State<T: StateEnum>: Sized {
+    // TODO autogen
     fn enter() -> StateEntry<T, Self>;
 
-    fn init(&mut self) -> T;
+    fn init(&mut self) -> Option<T> {
+        None
+    }
 
     fn update(&mut self) -> Option<T> {
         None
@@ -32,8 +35,22 @@ pub trait State<T: StateEnum>: Sized {
     }
 }
 
+pub trait TopState<T: StateEnum>: Sized {
+    fn init(&mut self) -> (Self, Option<T>);
+
+    fn update(&mut self) -> Option<T> {
+        None
+    }
+
+    fn top_down_update(&mut self) -> Option<T> {
+        None
+    }
+}
+
+impl<T: StateEnum> State<T> for TopState<T> {}
+
 pub mod internal {
-    use std::{collections::btree_set::Union, marker::PhantomData};
+    use std::marker::PhantomData;
 
     use enumset::{enum_set, EnumSet};
 
@@ -117,7 +134,6 @@ pub mod internal {
             match self.substate.transition(target) {
                 TransitionResult::Done => TransitionResult::Done,
                 TransitionResult::MoveUp => {
-                    if !matches!(self.substate, )
                     if let Some(new_target) = self.substate.exit() {
                         TransitionResult::NewTransition(new_target)
                     } else if V::DECENDENTS.contains(target) {

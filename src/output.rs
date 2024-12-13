@@ -2,12 +2,11 @@ use crate::internal::*;
 use crate::*;
 
 struct Top;
-impl State<BlinkyState> for Top {
-    fn enter() -> StateEntry<BlinkyState, Self> {
+impl TopState<BlinkyState> for Top {
+    fn init() -> StateEntry<BlinkyState, Self> {
         StateEntry::State(Self {})
     }
 
-    // TODO autogen
     fn init(&mut self) -> BlinkyState {
         BlinkyState::Enabled
     }
@@ -19,7 +18,6 @@ impl State<BlinkyState> for Disabled {
         StateEntry::State(Self {})
     }
 
-    // TODO autogen
     fn init(&mut self) -> BlinkyState {
         BlinkyState::Disabled
     }
@@ -31,7 +29,6 @@ impl State<BlinkyState> for Enabled {
         StateEntry::State(Self {})
     }
 
-    // TODO autogen
     fn init(&mut self) -> BlinkyState {
         BlinkyState::Enabled
     }
@@ -43,7 +40,6 @@ impl State<BlinkyState> for LedOn {
         StateEntry::State(Self {})
     }
 
-    // TODO autogen
     fn init(&mut self) -> BlinkyState {
         BlinkyState::LedOn
     }
@@ -55,7 +51,6 @@ impl State<BlinkyState> for LedOff {
         StateEntry::State(Self {})
     }
 
-    // TODO autogen
     fn init(&mut self) -> BlinkyState {
         BlinkyState::LedOff
     }
@@ -78,9 +73,7 @@ impl StateEnum for BlinkyState {
     }
 }
 
-type StateMachine = moku_machine::StateMachine;
-
-mod moku_machine {
+mod state_machine {
     use super::{BlinkyState as SE, Enabled};
     use crate::internal::*;
     use enumset::{enum_set, EnumSet};
@@ -203,9 +196,34 @@ mod moku_machine {
                     }
                     NodeEntry::Transition(new_target) => Some(new_target),
                 },
+                SE::Enabled | SE::LedOn | SE::LedOn => match EnabledNode::enter() {
+                    NodeEntry::Node(node) => {
+                        *self = Self::Enabled(node);
+                        None
+                    }
+                    NodeEntry::Transition(new_target) => Some(new_target),
+                },
+                _ => unreachable!(),
             }
         }
     }
 
-    pub type StateMachine = TopNode;
+    pub struct StateMachine {
+        top_node: TopNode,
+    }
+
+    impl StateMachine {
+        pub fn init() -> Self {
+            let top_node = match TopNode::enter() {
+                NodeEntry::Node(node) => node,
+                NodeEntry::Transition(target)
+            };
+
+            Self { top_node }
+        }
+
+        pub fn update(&mut self) -> {
+
+        }
+    }
 }

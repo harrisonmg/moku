@@ -78,8 +78,10 @@ impl StateEnum for BlinkyState {
     }
 }
 
+type StateMachine = moku_machine::StateMachine;
+
 mod moku_machine {
-    use super::BlinkyState as SE;
+    use super::{BlinkyState as SE, Enabled};
     use crate::internal::*;
     use enumset::{enum_set, EnumSet};
 
@@ -121,12 +123,11 @@ mod moku_machine {
 
     impl SubstateEnum<SE, super::Enabled> for EnabledSubstate {
         const STATE: EnumSet<SE> = enum_set!(SE::Enabled);
+        const DECENDENTS: EnumSet<SE> = enum_set!(SE::LedOn | SE::LedOff);
 
         fn none_variant() -> Self {
             Self::None
         }
-
-        fn
     }
 
     type DisabledNode = Node<SE, super::Disabled, DisabledSubstate>;
@@ -153,11 +154,58 @@ mod moku_machine {
 
     impl SubstateEnum<SE, super::Top> for TopSubstate {
         const STATE: EnumSet<SE> = enum_set!(SE::Top);
+        const DECENDENTS: EnumSet<SE> =
+            enum_set!(SE::Enabled | SE::LedOn | SE::LedOff | SE::Disabled);
 
         fn none_variant() -> Self {
             Self::None
         }
+
+        fn update(&mut self) -> Option<SE> {
+            match self {
+                Self::None => None,
+                Self::Enabled(node) => node.update(),
+                Self::Disabled(node) => node.update(),
+            }
+        }
+
+        fn top_down_update(&mut self) -> Option<SE> {
+            match self {
+                Self::None => None,
+                Self::Enabled(node) => node.top_down_update(),
+                Self::Disabled(node) => node.top_down_update(),
+            }
+        }
+
+        fn exit(&mut self) -> Option<SE> {
+            let old_state = std::mem::replace(self, Self::None);
+            match old_state {
+                Self::None => None,
+                Self::Enabled(node) => node.exit(),
+                Self::Disabled(node) => node.exit(),
+            }
+        }
+
+        fn transition(&mut self, target: SE) -> TransitionResult<SE> {
+            match self {
+                Self::None => TransitionResult::Done,
+                Self::Enabled(node) => node.transition(target),
+                Self::Disabled(node) => node.transition(target),
+            }
+        }
+
+        fn enter_substate_towards(&mut self, target: SE) -> Option<SE> {
+            match target {
+                SE::Disabled => match DisabledNode::enter() {
+                    NodeEntry::Node(node) => {
+                        *self = Self::Disabled(node);
+                        None
+                    }
+                    NodeEntry::Transition(new_target) => Some(new_target),
+                },
+            }
+        }
     }
 
-    type StateMachine =
+    pub type StateMachine = TopNode;
 }

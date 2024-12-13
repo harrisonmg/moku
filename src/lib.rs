@@ -84,7 +84,7 @@ pub mod internal {
     }
 
     impl<T: StateEnum, U: State<T>, V: SubstateEnum<T, U>> Node<T, U, V> {
-        fn enter() -> NodeEntry<T, U, V> {
+        pub fn enter() -> NodeEntry<T, U, V> {
             match U::enter() {
                 StateEntry::State(state) => NodeEntry::Node(Self {
                     state,
@@ -95,28 +95,29 @@ pub mod internal {
             }
         }
 
-        fn update(&mut self) -> Option<T> {
+        pub fn update(&mut self) -> Option<T> {
             match self.substate.update() {
                 Some(target) => Some(target),
                 None => self.state.update(),
             }
         }
 
-        fn top_down_update(&mut self) -> Option<T> {
+        pub fn top_down_update(&mut self) -> Option<T> {
             match self.state.update() {
                 Some(target) => Some(target),
                 None => self.substate.update(),
             }
         }
 
-        fn exit(self) -> Option<T> {
+        pub fn exit(self) -> Option<T> {
             self.state.exit()
         }
 
-        fn transition(&mut self, target: T) -> TransitionResult<T> {
+        pub fn transition(&mut self, target: T) -> TransitionResult<T> {
             match self.substate.transition(target) {
                 TransitionResult::Done => TransitionResult::Done,
                 TransitionResult::MoveUp => {
+                    if !matches!(self.substate, )
                     if let Some(new_target) = self.substate.exit() {
                         TransitionResult::NewTransition(new_target)
                     } else if V::DECENDENTS.contains(target) {

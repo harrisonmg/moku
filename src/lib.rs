@@ -2,7 +2,7 @@
 
 mod output;
 
-pub trait StateEnum: Copy {}
+pub trait StateEnum: std::fmt::Debug + Copy {}
 
 pub enum StateEntry<T: StateEnum, U: State<T>> {
     State(U),
@@ -79,6 +79,10 @@ pub mod internal {
 
     pub trait SubstateEnum<T: StateEnum> {
         fn none_variant() -> Self;
+
+        fn this_state() -> T;
+
+        fn get_state(&self) -> T;
 
         fn is_state(state: T) -> bool;
 
@@ -190,6 +194,10 @@ pub mod internal {
                 TransitionResult::NewTransition(new_target) => self.transition(new_target),
             }
         }
+
+        pub fn get_state(&self) -> T {
+            self.substate.get_state()
+        }
     }
 
     pub trait StateMachine<T: StateEnum, U: TopState<T>> {
@@ -197,5 +205,6 @@ pub mod internal {
         fn update(&mut self);
         fn top_down_update(&mut self);
         fn transition(&mut self, target: T);
+        fn get_state(&self) -> T;
     }
 }

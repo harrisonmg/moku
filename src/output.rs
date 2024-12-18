@@ -2,7 +2,11 @@ use crate::internal::*;
 use crate::*;
 
 struct Top;
-impl TopState<BlinkyState> for Top {}
+impl TopState<BlinkyState> for Top {
+    fn init(&mut self) -> Option<BlinkyState> {
+        Some(BlinkyState::Enabled)
+    }
+}
 
 struct Disabled;
 impl State<BlinkyState> for Disabled {
@@ -16,6 +20,10 @@ impl State<BlinkyState> for Enabled {
     fn enter() -> StateEntry<BlinkyState, Self> {
         StateEntry::State(Self {})
     }
+
+    fn init(&mut self) -> Option<BlinkyState> {
+        Some(BlinkyState::LedOn)
+    }
 }
 
 struct LedOn;
@@ -23,12 +31,20 @@ impl State<BlinkyState> for LedOn {
     fn enter() -> StateEntry<BlinkyState, Self> {
         StateEntry::State(Self {})
     }
+
+    fn update(&mut self) -> Option<BlinkyState> {
+        Some(BlinkyState::LedOff)
+    }
 }
 
 struct LedOff;
 impl State<BlinkyState> for LedOff {
     fn enter() -> StateEntry<BlinkyState, Self> {
         StateEntry::State(Self {})
+    }
+
+    fn update(&mut self) -> Option<BlinkyState> {
+        Some(BlinkyState::LedOn)
     }
 }
 
@@ -45,6 +61,8 @@ enum BlinkyState {
 
 impl StateEnum for BlinkyState {}
 
+use state_machine::Machine;
+
 mod state_machine {
     use crate::internal::*;
 
@@ -57,6 +75,14 @@ mod state_machine {
     impl SubstateEnum<super::BlinkyState> for LedOffSubstate {
         fn none_variant() -> Self {
             Self::None
+        }
+
+        fn this_state() -> super::BlinkyState {
+            super::BlinkyState::LedOff
+        }
+
+        fn get_state(&self) -> super::BlinkyState {
+            super::BlinkyState::LedOff
         }
 
         fn is_state(state: super::BlinkyState) -> bool {
@@ -77,6 +103,14 @@ mod state_machine {
     impl SubstateEnum<super::BlinkyState> for LedOnSubstate {
         fn none_variant() -> Self {
             Self::None
+        }
+
+        fn this_state() -> super::BlinkyState {
+            super::BlinkyState::LedOn
+        }
+
+        fn get_state(&self) -> super::BlinkyState {
+            super::BlinkyState::LedOn
         }
 
         fn is_state(state: super::BlinkyState) -> bool {
@@ -101,6 +135,18 @@ mod state_machine {
             Self::None
         }
 
+        fn this_state() -> super::BlinkyState {
+            super::BlinkyState::Enabled
+        }
+
+        fn get_state(&self) -> super::BlinkyState {
+            match self {
+                Self::None => super::BlinkyState::Enabled,
+                Self::LedOn(state) => state.get_state(),
+                Self::LedOff(state) => state.get_state(),
+            }
+        }
+
         fn is_state(state: super::BlinkyState) -> bool {
             matches!(state, super::BlinkyState::Enabled)
         }
@@ -110,6 +156,65 @@ mod state_machine {
                 state,
                 super::BlinkyState::LedOn | super::BlinkyState::LedOff
             )
+        }
+
+        fn update(&mut self) -> Option<super::BlinkyState> {
+            match self {
+                Self::None => None,
+                Self::LedOn(node) => node.update(),
+                Self::LedOff(node) => node.update(),
+            }
+        }
+
+        fn top_down_update(&mut self) -> Option<super::BlinkyState> {
+            match self {
+                Self::None => None,
+                Self::LedOn(node) => node.top_down_update(),
+                Self::LedOff(node) => node.top_down_update(),
+            }
+        }
+
+        fn exit(&mut self) -> Option<super::BlinkyState> {
+            let old_state = std::mem::replace(self, Self::None);
+            match old_state {
+                Self::None => None,
+                Self::LedOn(node) => node.exit(),
+                Self::LedOff(node) => node.exit(),
+            }
+        }
+
+        fn transition(
+            &mut self,
+            target: super::BlinkyState,
+        ) -> TransitionResult<super::BlinkyState> {
+            match self {
+                Self::None => TransitionResult::MoveUp,
+                Self::LedOn(node) => node.transition(target),
+                Self::LedOff(node) => node.transition(target),
+            }
+        }
+
+        fn enter_substate_towards(
+            &mut self,
+            target: super::BlinkyState,
+        ) -> Option<super::BlinkyState> {
+            match target {
+                super::BlinkyState::LedOn => match LedOnNode::enter() {
+                    NodeEntry::Node(node) => {
+                        *self = Self::LedOn(node);
+                        None
+                    }
+                    NodeEntry::Transition(new_target) => Some(new_target),
+                },
+                super::BlinkyState::LedOff => match LedOffNode::enter() {
+                    NodeEntry::Node(node) => {
+                        *self = Self::LedOff(node);
+                        None
+                    }
+                    NodeEntry::Transition(new_target) => Some(new_target),
+                },
+                _ => unreachable!(),
+            }
         }
     }
 
@@ -122,6 +227,14 @@ mod state_machine {
     impl SubstateEnum<super::BlinkyState> for DisabledSubstate {
         fn none_variant() -> Self {
             Self::None
+        }
+
+        fn this_state() -> super::BlinkyState {
+            super::BlinkyState::Disabled
+        }
+
+        fn get_state(&self) -> super::BlinkyState {
+            super::BlinkyState::Disabled
         }
 
         fn is_state(state: super::BlinkyState) -> bool {
@@ -144,6 +257,18 @@ mod state_machine {
     impl SubstateEnum<super::BlinkyState> for TopSubstate {
         fn none_variant() -> Self {
             Self::None
+        }
+
+        fn this_state() -> super::BlinkyState {
+            super::BlinkyState::Top
+        }
+
+        fn get_state(&self) -> super::BlinkyState {
+            match self {
+                Self::None => super::BlinkyState::Top,
+                Self::Enabled(state) => state.get_state(),
+                Self::Disabled(state) => state.get_state(),
+            }
         }
 
         fn is_state(state: super::BlinkyState) -> bool {
@@ -210,7 +335,7 @@ mod state_machine {
                 },
                 super::BlinkyState::Enabled
                 | super::BlinkyState::LedOn
-                | super::BlinkyState::LedOn => match EnabledNode::enter() {
+                | super::BlinkyState::LedOff => match EnabledNode::enter() {
                     NodeEntry::Node(node) => {
                         *self = Self::Enabled(node);
                         None
@@ -260,5 +385,21 @@ mod state_machine {
                 TransitionResult::NewTransition(new_target) => self.transition(new_target),
             }
         }
+
+        fn get_state(&self) -> super::BlinkyState {
+            self.node.get_state()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_log::test;
+
+    #[test]
+    fn state_machine_init() {
+        let machine = Machine::from_top_state(Top {});
+        assert!(matches!(machine.get_state(), BlinkyState::Top))
     }
 }

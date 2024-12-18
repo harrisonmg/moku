@@ -50,7 +50,7 @@ impl State<BlinkyState> for LedOff {
 
 // AUTOGEN
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BlinkyState {
     Top,
     Disabled,
@@ -81,16 +81,12 @@ mod state_machine {
             super::BlinkyState::LedOff
         }
 
-        fn get_state(&self) -> super::BlinkyState {
+        fn current_state(&self) -> super::BlinkyState {
             super::BlinkyState::LedOff
         }
 
         fn is_state(state: super::BlinkyState) -> bool {
             matches!(state, super::BlinkyState::LedOff)
-        }
-
-        fn is_ancestor(state: super::BlinkyState) -> bool {
-            false
         }
     }
 
@@ -109,16 +105,12 @@ mod state_machine {
             super::BlinkyState::LedOn
         }
 
-        fn get_state(&self) -> super::BlinkyState {
+        fn current_state(&self) -> super::BlinkyState {
             super::BlinkyState::LedOn
         }
 
         fn is_state(state: super::BlinkyState) -> bool {
             matches!(state, super::BlinkyState::LedOn)
-        }
-
-        fn is_ancestor(state: super::BlinkyState) -> bool {
-            false
         }
     }
 
@@ -139,11 +131,11 @@ mod state_machine {
             super::BlinkyState::Enabled
         }
 
-        fn get_state(&self) -> super::BlinkyState {
+        fn current_state(&self) -> super::BlinkyState {
             match self {
                 Self::None => super::BlinkyState::Enabled,
-                Self::LedOn(state) => state.get_state(),
-                Self::LedOff(state) => state.get_state(),
+                Self::LedOn(state) => state.current_state(),
+                Self::LedOff(state) => state.current_state(),
             }
         }
 
@@ -233,7 +225,7 @@ mod state_machine {
             super::BlinkyState::Disabled
         }
 
-        fn get_state(&self) -> super::BlinkyState {
+        fn current_state(&self) -> super::BlinkyState {
             super::BlinkyState::Disabled
         }
 
@@ -263,11 +255,11 @@ mod state_machine {
             super::BlinkyState::Top
         }
 
-        fn get_state(&self) -> super::BlinkyState {
+        fn current_state(&self) -> super::BlinkyState {
             match self {
                 Self::None => super::BlinkyState::Top,
-                Self::Enabled(state) => state.get_state(),
-                Self::Disabled(state) => state.get_state(),
+                Self::Enabled(state) => state.current_state(),
+                Self::Disabled(state) => state.current_state(),
             }
         }
 
@@ -276,13 +268,7 @@ mod state_machine {
         }
 
         fn is_ancestor(state: super::BlinkyState) -> bool {
-            matches!(
-                state,
-                super::BlinkyState::Enabled
-                    | super::BlinkyState::LedOn
-                    | super::BlinkyState::LedOff
-                    | super::BlinkyState::Disabled
-            )
+            true
         }
 
         fn update(&mut self) -> Option<super::BlinkyState> {
@@ -387,7 +373,7 @@ mod state_machine {
         }
 
         fn get_state(&self) -> super::BlinkyState {
-            self.node.get_state()
+            self.node.current_state()
         }
     }
 }
@@ -400,6 +386,6 @@ mod tests {
     #[test]
     fn state_machine_init() {
         let machine = Machine::from_top_state(Top {});
-        assert!(matches!(machine.get_state(), BlinkyState::Top))
+        assert_eq!(machine.get_state(), BlinkyState::Enabled)
     }
 }

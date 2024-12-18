@@ -82,11 +82,13 @@ pub mod internal {
 
         fn this_state() -> T;
 
-        fn get_state(&self) -> T;
+        fn current_state(&self) -> T;
 
         fn is_state(state: T) -> bool;
 
-        fn is_ancestor(state: T) -> bool;
+        fn is_ancestor(state: T) -> bool {
+            false
+        }
 
         fn update(&mut self) -> Option<T> {
             None
@@ -195,8 +197,8 @@ pub mod internal {
             }
         }
 
-        pub fn get_state(&self) -> T {
-            self.substate.get_state()
+        pub fn current_state(&self) -> T {
+            self.substate.current_state()
         }
     }
 

@@ -1,7 +1,10 @@
 # todo
-- way to match machine state
-- way to get state ref
-- way to print state chart
+- get full state
+- get state ref
+- macro
+
+# stretch goals
+- print state chart
 - no_std support seems feasible
 
 # attributes

@@ -98,9 +98,11 @@ pub mod internal {
 
         fn this_state() -> T;
 
-        fn current_state(&self) -> T;
-
         fn is_state(state: T) -> bool;
+
+        fn current_state(&self) -> T {
+            Self::this_state()
+        }
 
         fn is_ancestor(state: T) -> bool {
             false
@@ -124,6 +126,10 @@ pub mod internal {
 
         fn enter_substate_towards(&mut self, target: T) -> Option<T> {
             unreachable!()
+        }
+
+        fn state_matches(&self, state: T) -> bool {
+            Self::is_state(state)
         }
     }
 
@@ -233,6 +239,10 @@ pub mod internal {
         pub fn current_state(&self) -> T {
             self.substate.current_state()
         }
+
+        pub fn state_matches(&self, state: T) -> bool {
+            self.substate.state_matches(state)
+        }
     }
 
     pub struct TopNode<T: StateEnum, U: TopState<T>, V: SubstateEnum<T>> {
@@ -300,6 +310,10 @@ pub mod internal {
 
         pub fn set_name(&mut self, name: String) {
             self.name = name;
+        }
+
+        pub fn state_matches(&self, state: T) -> bool {
+            self.node.state_matches(state)
         }
     }
 }

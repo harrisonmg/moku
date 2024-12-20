@@ -89,10 +89,6 @@ mod state_machine {
             super::BlinkyState::LedOff
         }
 
-        fn current_state(&self) -> super::BlinkyState {
-            super::BlinkyState::LedOff
-        }
-
         fn is_state(state: super::BlinkyState) -> bool {
             matches!(state, super::BlinkyState::LedOff)
         }
@@ -110,10 +106,6 @@ mod state_machine {
         }
 
         fn this_state() -> super::BlinkyState {
-            super::BlinkyState::LedOn
-        }
-
-        fn current_state(&self) -> super::BlinkyState {
             super::BlinkyState::LedOn
         }
 
@@ -139,16 +131,16 @@ mod state_machine {
             super::BlinkyState::Enabled
         }
 
+        fn is_state(state: super::BlinkyState) -> bool {
+            matches!(state, super::BlinkyState::Enabled)
+        }
+
         fn current_state(&self) -> super::BlinkyState {
             match self {
                 Self::None => super::BlinkyState::Enabled,
                 Self::LedOn(state) => state.current_state(),
                 Self::LedOff(state) => state.current_state(),
             }
-        }
-
-        fn is_state(state: super::BlinkyState) -> bool {
-            matches!(state, super::BlinkyState::Enabled)
         }
 
         fn is_ancestor(state: super::BlinkyState) -> bool {
@@ -216,6 +208,15 @@ mod state_machine {
                 _ => unreachable!(),
             }
         }
+
+        fn state_matches(&self, state: super::BlinkyState) -> bool {
+            return Self::is_state(state)
+                || match self {
+                    Self::None => false,
+                    Self::LedOn(node) => node.state_matches(state),
+                    Self::LedOff(node) => node.state_matches(state),
+                };
+        }
     }
 
     type DisabledNode = moku::internal::Node<super::BlinkyState, super::Disabled, DisabledSubstate>;
@@ -233,16 +234,8 @@ mod state_machine {
             super::BlinkyState::Disabled
         }
 
-        fn current_state(&self) -> super::BlinkyState {
-            super::BlinkyState::Disabled
-        }
-
         fn is_state(state: super::BlinkyState) -> bool {
             matches!(state, super::BlinkyState::Disabled)
-        }
-
-        fn is_ancestor(state: super::BlinkyState) -> bool {
-            false
         }
     }
 
@@ -263,16 +256,16 @@ mod state_machine {
             super::BlinkyState::Top
         }
 
+        fn is_state(state: super::BlinkyState) -> bool {
+            matches!(state, super::BlinkyState::Top)
+        }
+
         fn current_state(&self) -> super::BlinkyState {
             match self {
                 Self::None => super::BlinkyState::Top,
                 Self::Enabled(state) => state.current_state(),
                 Self::Disabled(state) => state.current_state(),
             }
-        }
-
-        fn is_state(state: super::BlinkyState) -> bool {
-            matches!(state, super::BlinkyState::Enabled)
         }
 
         fn is_ancestor(state: super::BlinkyState) -> bool {
@@ -339,6 +332,15 @@ mod state_machine {
                 _ => unreachable!(),
             }
         }
+
+        fn state_matches(&self, state: super::BlinkyState) -> bool {
+            return Self::is_state(state)
+                || match self {
+                    Self::None => false,
+                    Self::Enabled(node) => node.state_matches(state),
+                    Self::Disabled(node) => node.state_matches(state),
+                };
+        }
     }
 
     pub struct Machine {
@@ -382,7 +384,9 @@ mod state_machine {
             self.top_node.set_name(name)
         }
 
-        fn state_matches()
+        fn state_matches(&self, state: super::BlinkyState) -> bool {
+            self.top_node.state_matches(state)
+        }
     }
 }
 
@@ -395,6 +399,12 @@ mod tests {
     fn basic() {
         let mut machine = Machine::from_top_state(Top {});
         assert_eq!(machine.state(), BlinkyState::LedOn);
+
+        assert!(machine.state_matches(BlinkyState::Top));
+        assert!(machine.state_matches(BlinkyState::Enabled));
+        assert!(machine.state_matches(BlinkyState::LedOn));
+        assert!(!machine.state_matches(BlinkyState::Disabled));
+        assert!(!machine.state_matches(BlinkyState::LedOff));
 
         machine.top_down_update();
         //assert_eq!(machine.state(), BlinkyState::LedOn);

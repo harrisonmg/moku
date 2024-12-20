@@ -381,6 +381,8 @@ mod state_machine {
         fn set_name(&mut self, name: String) {
             self.top_node.set_name(name)
         }
+
+        fn state_matches()
     }
 }
 

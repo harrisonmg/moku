@@ -66,8 +66,24 @@ impl<T: StateEnum, U: TopState<T>> State<T> for U {
     }
 }
 
+pub trait StateMachine<T: StateEnum, U: TopState<T>> {
+    fn from_top_state(top_state: U) -> Self;
+    fn from_top_state_with_name(top_state: U, name: &str) -> Self;
+    fn update(&mut self);
+    fn top_down_update(&mut self);
+    fn transition(&mut self, target: T);
+    fn state(&self) -> T;
+    fn name(&self) -> &str;
+    fn set_name(&mut self, name: String);
+    fn state_matches(&self, state: T) -> bool;
+    //fn state_ref<V>(&self, state: T) -> Option<&V>;
+    //fn state_ref_mut<V>(&mut self, state: T) -> Option<&mut V>;
+}
+
 pub mod internal {
     use std::marker::PhantomData;
+
+    use log::info;
 
     use super::*;
 
@@ -132,24 +148,32 @@ pub mod internal {
         }
 
         pub fn enter() -> NodeEntry<T, U, V> {
+            info!("\u{02502}Entering {:?}", V::this_state());
             match U::enter() {
                 StateEntry::State(state) => NodeEntry::Node(Self {
                     state,
                     substate: V::none_variant(),
                     phantom: PhantomData,
                 }),
-                StateEntry::Transition(target) => NodeEntry::Transition(target),
+                StateEntry::Transition(target) => {
+                    info!("\u{02502}Short circuit transition to {target:?}");
+                    NodeEntry::Transition(target)
+                }
             }
         }
 
         pub fn update(&mut self) -> Option<T> {
             match self.substate.update() {
                 Some(target) => Some(target),
-                None => self.state.update(),
+                None => {
+                    info!("\u{02502}Updating {:?}", V::this_state());
+                    self.state.update()
+                }
             }
         }
 
         pub fn top_down_update(&mut self) -> Option<T> {
+            info!("\u{02502}Top-down updating {:?}", V::this_state());
             match self.state.top_down_update() {
                 Some(target) => Some(target),
                 None => self.substate.top_down_update(),
@@ -157,7 +181,10 @@ pub mod internal {
         }
 
         pub fn exit(self) -> Option<T> {
-            self.state.exit()
+            info!("\u{02502}Exiting {:?}", V::this_state());
+            self.state.exit().inspect(|target| {
+                info!("\u{02502}Short circuit transition to {target:?}");
+            })
         }
 
         pub fn transition(&mut self, target: T) -> TransitionResult<T> {
@@ -184,7 +211,10 @@ pub mod internal {
                         // this state is the target
                         match self.state.init() {
                             None => TransitionResult::Done,
-                            Some(new_target) => TransitionResult::NewTransition(new_target),
+                            Some(new_target) => {
+                                info!("\u{02502}Initial transition to {new_target:?}");
+                                TransitionResult::NewTransition(new_target)
+                            }
                         }
                     } else {
                         // this state is not the target state or an ancestor of it
@@ -193,7 +223,10 @@ pub mod internal {
                 }
 
                 // substate transition resulted in a short circuit transition
-                TransitionResult::NewTransition(new_target) => self.transition(new_target),
+                // bubble back up to top
+                TransitionResult::NewTransition(new_target) => {
+                    TransitionResult::NewTransition(new_target)
+                }
             }
         }
 
@@ -202,11 +235,71 @@ pub mod internal {
         }
     }
 
-    pub trait StateMachine<T: StateEnum, U: TopState<T>> {
-        fn from_top_state(top_state: U) -> Self;
-        fn update(&mut self);
-        fn top_down_update(&mut self);
-        fn transition(&mut self, target: T);
-        fn get_state(&self) -> T;
+    pub struct TopNode<T: StateEnum, U: TopState<T>, V: SubstateEnum<T>> {
+        node: Node<T, U, V>,
+        name: String,
+    }
+
+    impl<T: StateEnum, U: TopState<T>, V: SubstateEnum<T>> TopNode<T, U, V> {
+        pub fn from_top_state_with_name(mut top_state: U, name: &str) -> Self {
+            let initial_transition = TopState::init(&mut top_state);
+
+            let mut new = Self {
+                node: Node::from_state(top_state),
+                name: name.to_owned(),
+            };
+
+            if let Some(target) = initial_transition {
+                info!("{}: Initial transition to {target:?}", new.name);
+                new.transition_quiet(target);
+                info!("\u{02502}Transition complete");
+            }
+
+            new
+        }
+
+        pub fn update(&mut self) {
+            info!("{}: Updating", self.name);
+            if let Some(target) = self.node.update() {
+                self.transition(target);
+            }
+        }
+
+        pub fn top_down_update(&mut self) {
+            info!("{}: Top-down updating", self.name);
+            if let Some(target) = self.node.top_down_update() {
+                self.transition(target);
+            }
+        }
+
+        pub fn transition_quiet(&mut self, target: T) {
+            match self.node.transition(target) {
+                TransitionResult::Done => return,
+                TransitionResult::MoveUp => unreachable!(),
+                TransitionResult::NewTransition(new_target) => self.transition_quiet(new_target),
+            }
+        }
+
+        pub fn transition(&mut self, target: T) {
+            info!(
+                "{}: Transitioning from {:?} to {target:?}",
+                self.name(),
+                self.state()
+            );
+            self.transition_quiet(target);
+            info!("\u{02502}Transition complete");
+        }
+
+        pub fn state(&self) -> T {
+            self.node.current_state()
+        }
+
+        pub fn name(&self) -> &str {
+            &self.name
+        }
+
+        pub fn set_name(&mut self, name: String) {
+            self.name = name;
+        }
     }
 }

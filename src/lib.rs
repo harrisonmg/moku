@@ -4,71 +4,7 @@ mod output;
 
 pub trait StateEnum: std::fmt::Debug + Copy {}
 
-pub enum StateEntry<T: StateEnum, U: State<T>> {
-    State(U),
-    Transition(T),
-}
-
-pub trait State<T: StateEnum>: Sized {
-    // TODO autogen
-    fn enter() -> StateEntry<T, Self>;
-
-    fn init(&mut self) -> Option<T> {
-        None
-    }
-
-    fn update(&mut self) -> Option<T> {
-        None
-    }
-
-    fn top_down_update(&mut self) -> Option<T> {
-        None
-    }
-
-    fn exit(self) -> Option<T> {
-        None
-    }
-}
-
-pub trait TopState<T: StateEnum>: Sized {
-    fn init(&mut self) -> Option<T> {
-        None
-    }
-
-    fn update(&mut self) -> Option<T> {
-        None
-    }
-
-    fn top_down_update(&mut self) -> Option<T> {
-        None
-    }
-}
-
-impl<T: StateEnum, U: TopState<T>> State<T> for U {
-    fn enter() -> StateEntry<T, Self> {
-        unreachable!()
-    }
-
-    fn init(&mut self) -> Option<T> {
-        TopState::init(self)
-    }
-
-    fn update(&mut self) -> Option<T> {
-        TopState::update(self)
-    }
-
-    fn top_down_update(&mut self) -> Option<T> {
-        TopState::top_down_update(self)
-    }
-
-    fn exit(self) -> Option<T> {
-        unreachable!()
-    }
-}
-
-pub trait StateMachine<T: StateEnum, U: TopState<T>> {
-    fn from_top_state(top_state: U) -> Self;
-    fn from_top_state_with_name(top_state: U, name: &str) -> Self;
+pub trait StateMachine<T: StateEnum> {
     fn update(&mut self);
     fn top_down_update(&mut self);
     fn transition(&mut self, target: T);
@@ -76,8 +12,102 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     fn name(&self) -> &str;
     fn set_name(&mut self, name: String);
     fn state_matches(&self, state: T) -> bool;
-    //fn state_ref<V>(&self, state: T) -> Option<&V>;
-    //fn state_ref_mut<V>(&mut self, state: T) -> Option<&mut V>;
+}
+
+pub trait StateMachineBuilder<T, U, V>
+where
+    T: StateEnum,
+    U: StateMachine<T>,
+    V: TopState<T, U>,
+{
+    fn new(top_state: V) -> Self;
+    fn name(self, name: &str) -> Self;
+    fn build(self) -> U;
+}
+
+pub trait StateRef<T, U, V>
+where
+    T: StateEnum,
+    U: StateMachine<T>,
+    V: State<T, U>,
+{
+    fn get_ref(&self) -> Option<&U>;
+    fn get_ref_mut(&mut self) -> Option<&mut U>;
+}
+
+pub enum StateEntry<T, U: StateEnum> {
+    State(T),
+    Transition(U),
+}
+
+pub trait State<T, U>: Sized
+where
+    T: StateEnum,
+    U: StateMachine<T>,
+{
+    // TODO autogen
+    fn enter(machine: &mut U) -> StateEntry<Self, T>;
+
+    fn init(&mut self, machine: &mut U) -> Option<T> {
+        None
+    }
+
+    fn update(&mut self, machine: &mut U) -> Option<T> {
+        None
+    }
+
+    fn top_down_update(&mut self, machine: &mut U) -> Option<T> {
+        None
+    }
+
+    fn exit(self, machine: &mut U) -> Option<T> {
+        None
+    }
+}
+
+pub trait TopState<T, U>: Sized
+where
+    T: StateEnum,
+    U: StateMachine<T>,
+{
+    fn init(&mut self, machine: &mut U) -> Option<T> {
+        None
+    }
+
+    fn update(&mut self, machine: &mut U) -> Option<T> {
+        None
+    }
+
+    fn top_down_update(&mut self, machine: &mut U) -> Option<T> {
+        None
+    }
+}
+
+impl<T, U, V> State<T, U> for V
+where
+    T: StateEnum,
+    U: StateMachine<T>,
+    V: TopState<T, U>,
+{
+    fn enter() -> StateEntry<T, Self> {
+        unreachable!()
+    }
+
+    fn init(&mut self, machine: &mut U) -> Option<T> {
+        TopState::init(self)
+    }
+
+    fn update(&mut self, machine: &mut U) -> Option<T> {
+        TopState::update(self, machine)
+    }
+
+    fn top_down_update(&mut self, machine: &mut U) -> Option<T> {
+        TopState::top_down_update(self, machine)
+    }
+
+    fn exit(self, machine: &mut U) -> Option<T> {
+        unreachable!()
+    }
 }
 
 pub mod internal {
@@ -93,7 +123,7 @@ pub mod internal {
         NewTransition(T),
     }
 
-    pub trait SubstateEnum<T: StateEnum> {
+    pub trait SubstateEnum<T: StateEnum, U: StateMachine<T>> {
         fn none_variant() -> Self;
 
         fn this_state() -> T;
@@ -108,23 +138,23 @@ pub mod internal {
             false
         }
 
-        fn update(&mut self) -> Option<T> {
+        fn update(&mut self, machine: &mut U) -> Option<T> {
             None
         }
 
-        fn top_down_update(&mut self) -> Option<T> {
+        fn top_down_update(&mut self, machine: &mut U) -> Option<T> {
             None
         }
 
-        fn exit(&mut self) -> Option<T> {
+        fn exit(&mut self, machine: &mut U) -> Option<T> {
             None
         }
 
-        fn transition(&mut self, target: T) -> TransitionResult<T> {
+        fn transition(&mut self, target: T, machine: &mut U) -> TransitionResult<T> {
             TransitionResult::MoveUp
         }
 
-        fn enter_substate_towards(&mut self, target: T) -> Option<T> {
+        fn enter_substate_towards(&mut self, target: T, machine: &mut U) -> Option<T> {
             unreachable!()
         }
 
@@ -133,33 +163,54 @@ pub mod internal {
         }
     }
 
-    pub enum NodeEntry<T: StateEnum, U: State<T>, V: SubstateEnum<T>> {
-        Node(Node<T, U, V>),
+    pub enum NodeEntry<T, U, V, W>
+    where
+        T: StateEnum,
+        U: StateMachine<T>,
+        V: State<T, U>,
+        W: SubstateEnum<T, U>,
+    {
+        Node(Node<T, U, V, W>),
         Transition(T),
     }
 
-    pub struct Node<T: StateEnum, U: State<T>, V: SubstateEnum<T>> {
-        state: U,
-        substate: V,
-        phantom: PhantomData<T>,
+    pub struct Node<T, U, V, W>
+    where
+        T: StateEnum,
+        U: StateMachine<T>,
+        V: State<T, U>,
+        W: SubstateEnum<T, U>,
+    {
+        pub state: V,
+        pub substate: W,
+        phantom_t: PhantomData<T>,
+        phantom_u: PhantomData<U>,
     }
 
-    impl<T: StateEnum, U: State<T>, V: SubstateEnum<T>> Node<T, U, V> {
-        pub fn from_state(state: U) -> Self {
+    impl<T, U, V, W> Node<T, U, V, W>
+    where
+        T: StateEnum,
+        U: StateMachine<T>,
+        V: State<T, U>,
+        W: SubstateEnum<T, U>,
+    {
+        pub fn from_state(state: V) -> Self {
             Self {
                 state,
-                substate: V::none_variant(),
-                phantom: PhantomData,
+                substate: W::none_variant(),
+                phantom_t: PhantomData,
+                phantom_u: PhantomData,
             }
         }
 
-        pub fn enter() -> NodeEntry<T, U, V> {
-            info!("\u{02502}Entering {:?}", V::this_state());
-            match U::enter() {
+        pub fn enter(machine: &mut U) -> NodeEntry<T, U, V, W> {
+            info!("\u{02502}Entering {:?}", W::this_state());
+            match V::enter(machine) {
                 StateEntry::State(state) => NodeEntry::Node(Self {
                     state,
-                    substate: V::none_variant(),
-                    phantom: PhantomData,
+                    substate: W::none_variant(),
+                    phantom_t: PhantomData,
+                    phantom_u: PhantomData,
                 }),
                 StateEntry::Transition(target) => {
                     info!("\u{02502}Short circuit transition to {target:?}");
@@ -168,54 +219,56 @@ pub mod internal {
             }
         }
 
-        pub fn update(&mut self) -> Option<T> {
-            match self.substate.update() {
+        pub fn update(&mut self, machine: &mut U) -> Option<T> {
+            match self.substate.update(machine) {
                 Some(target) => Some(target),
                 None => {
-                    info!("\u{02502}Updating {:?}", V::this_state());
-                    self.state.update()
+                    info!("\u{02502}Updating {:?}", W::this_state());
+                    self.state.update(machine)
                 }
             }
         }
 
-        pub fn top_down_update(&mut self) -> Option<T> {
-            info!("\u{02502}Top-down updating {:?}", V::this_state());
-            match self.state.top_down_update() {
+        pub fn top_down_update(&mut self, machine: &mut U) -> Option<T> {
+            info!("\u{02502}Top-down updating {:?}", W::this_state());
+            match self.state.top_down_update(machine) {
                 Some(target) => Some(target),
-                None => self.substate.top_down_update(),
+                None => self.substate.top_down_update(machine),
             }
         }
 
-        pub fn exit(self) -> Option<T> {
-            info!("\u{02502}Exiting {:?}", V::this_state());
-            self.state.exit().inspect(|target| {
+        pub fn exit(self, machine: &mut U) -> Option<T> {
+            info!("\u{02502}Exiting {:?}", W::this_state());
+            self.state.exit(machine).inspect(|target| {
                 info!("\u{02502}Short circuit transition to {target:?}");
             })
         }
 
-        pub fn transition(&mut self, target: T) -> TransitionResult<T> {
+        pub fn transition(&mut self, target: T, machine: &mut U) -> TransitionResult<T> {
             // try to transition the current substate towards the target state
-            match self.substate.transition(target) {
+            match self.substate.transition(target, machine) {
                 // substate is the target state
                 TransitionResult::Done => TransitionResult::Done,
 
                 // substate is not the target state or an ancestor of it
                 TransitionResult::MoveUp => {
-                    if let Some(new_target) = self.substate.exit() {
+                    if let Some(new_target) = self.substate.exit(machine) {
                         // substate exit resulted in a short circuit transition
-                        self.transition(new_target)
-                    } else if V::is_ancestor(target) {
-                        if let Some(new_target) = self.substate.enter_substate_towards(target) {
+                        self.transition(new_target, machine)
+                    } else if W::is_ancestor(target) {
+                        if let Some(new_target) =
+                            self.substate.enter_substate_towards(target, machine)
+                        {
                             // substate transition resulted in a short circuit transition
                             TransitionResult::NewTransition(new_target)
                         } else {
                             // substate successfully moved towards target state,
                             // continue transitioning downwards
-                            self.substate.transition(target)
+                            self.substate.transition(target, machine)
                         }
-                    } else if V::is_state(target) {
+                    } else if W::is_state(target) {
                         // this state is the target
-                        match self.state.init() {
+                        match self.state.init(machine) {
                             None => TransitionResult::Done,
                             Some(new_target) => {
                                 info!("\u{02502}Initial transition to {new_target:?}");
@@ -245,58 +298,70 @@ pub mod internal {
         }
     }
 
-    pub struct TopNode<T: StateEnum, U: TopState<T>, V: SubstateEnum<T>> {
-        node: Node<T, U, V>,
+    pub struct TopNode<T, U, V, W>
+    where
+        T: StateEnum,
+        U: StateMachine<T>,
+        V: TopState<T, U>,
+        W: SubstateEnum<T, U>,
+    {
+        pub node: Node<T, U, V, W>,
         name: String,
     }
 
-    impl<T: StateEnum, U: TopState<T>, V: SubstateEnum<T>> TopNode<T, U, V> {
-        pub fn from_top_state_with_name(mut top_state: U, name: &str) -> Self {
-            let initial_transition = TopState::init(&mut top_state);
-
-            let mut new = Self {
+    impl<T, U, V, W> TopNode<T, U, V, W>
+    where
+        T: StateEnum,
+        U: StateMachine<T>,
+        V: TopState<T, U>,
+        W: SubstateEnum<T, U>,
+    {
+        pub fn new(mut top_state: V, name: String) -> Self {
+            Self {
                 node: Node::from_state(top_state),
-                name: name.to_owned(),
-            };
+                name,
+            }
+        }
 
-            if let Some(target) = initial_transition {
-                info!("{}: Initial transition to {target:?}", new.name);
-                new.transition_quiet(target);
+        pub fn init(&mut self, machine: &mut U) {
+            if let Some(target) = TopState::init(&mut self.node.state, machine) {
+                info!("{}: Initial transition to {target:?}", self.name);
+                self.transition_quiet(target, machine);
                 info!("\u{02502}Transition complete");
             }
-
-            new
         }
 
-        pub fn update(&mut self) {
+        pub fn update(&mut self, machine: &mut U) {
             info!("{}: Updating", self.name);
-            if let Some(target) = self.node.update() {
-                self.transition(target);
+            if let Some(target) = self.node.update(machine) {
+                self.transition(target, machine);
             }
         }
 
-        pub fn top_down_update(&mut self) {
+        pub fn top_down_update(&mut self, machine: &mut U) {
             info!("{}: Top-down updating", self.name);
-            if let Some(target) = self.node.top_down_update() {
-                self.transition(target);
+            if let Some(target) = self.node.top_down_update(machine) {
+                self.transition(target, machine);
             }
         }
 
-        pub fn transition_quiet(&mut self, target: T) {
-            match self.node.transition(target) {
+        pub fn transition_quiet(&mut self, target: T, machine: &mut U) {
+            match self.node.transition(target, machine) {
                 TransitionResult::Done => return,
                 TransitionResult::MoveUp => unreachable!(),
-                TransitionResult::NewTransition(new_target) => self.transition_quiet(new_target),
+                TransitionResult::NewTransition(new_target) => {
+                    self.transition_quiet(new_target, machine)
+                }
             }
         }
 
-        pub fn transition(&mut self, target: T) {
+        pub fn transition(&mut self, target: T, machine: &mut U) {
             info!(
                 "{}: Transitioning from {:?} to {target:?}",
                 self.name(),
                 self.state()
             );
-            self.transition_quiet(target);
+            self.transition_quiet(target, machine);
             info!("\u{02502}Transition complete");
         }
 

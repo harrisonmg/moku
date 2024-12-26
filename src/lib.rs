@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+use std::marker::PhantomData;
+
 mod output;
 
 pub trait StateEnum: std::fmt::Debug + Copy {}
@@ -30,28 +32,26 @@ pub enum StateEntry<T, U: StateEnum> {
     Transition(U),
 }
 
-pub trait State<T>: Sized
-where
-    T: StateEnum,
-{
-    type Superstates;
+pub trait State<T: StateEnum>: Sized {
+    // TODO autogen
+    type Superstates<'a>;
 
     // TODO autogen
-    fn enter(superstates: &Self::Superstates) -> StateEntry<Self, T>;
+    fn enter<'a>(superstates: &mut Self::Superstates<'a>) -> StateEntry<Self, T>;
 
-    fn init(&mut self, superstates: &Self::Superstates) -> Option<T> {
+    fn init<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<T> {
         None
     }
 
-    fn update(&mut self, superstates: &Self::Superstates) -> Option<T> {
+    fn update<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<T> {
         None
     }
 
-    fn top_down_update(&mut self, superstates: &Self::Superstates) -> Option<T> {
+    fn top_down_update<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<T> {
         None
     }
 
-    fn exit(self, superstates: &Self::Superstates) -> Option<T> {
+    fn exit<'a>(self, superstates: &mut Self::Superstates<'a>) -> Option<T> {
         None
     }
 }
@@ -70,26 +70,28 @@ pub trait TopState<T: StateEnum>: Sized {
     }
 }
 
-impl<T: StateEnum, U: TopState<T>> State<T> for U {
-    type Superstates = ();
+pub struct NoSuperstates<'a>(PhantomData<&'a ()>);
 
-    fn enter(superstates: &Self::Superstates) -> StateEntry<Self, T> {
+impl<T: StateEnum, U: TopState<T>> State<T> for U {
+    type Superstates<'a> = NoSuperstates<'a>;
+
+    fn enter<'a>(superstates: &mut Self::Superstates<'a>) -> StateEntry<Self, T> {
         unreachable!()
     }
 
-    fn init(&mut self, superstates: &Self::Superstates) -> Option<T> {
+    fn init<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<T> {
         TopState::init(self)
     }
 
-    fn update(&mut self, superstates: &Self::Superstates) -> Option<T> {
+    fn update<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<T> {
         TopState::update(self)
     }
 
-    fn top_down_update(&mut self, superstates: &Self::Superstates) -> Option<T> {
+    fn top_down_update<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<T> {
         TopState::top_down_update(self)
     }
 
-    fn exit(self, superstates: &Self::Superstates) -> Option<T> {
+    fn exit<'a>(self, superstates: &mut Self::Superstates<'a>) -> Option<T> {
         unreachable!()
     }
 }
@@ -122,23 +124,37 @@ pub mod internal {
             false
         }
 
-        fn update(&mut self, superstates: &U::Superstates) -> Option<T> {
+        fn update<'a>(&mut self, state: &mut U, superstates: &mut U::Superstates<'a>) -> Option<T> {
             None
         }
 
-        fn top_down_update(&mut self, superstates: &U::Superstates) -> Option<T> {
+        fn top_down_update<'a>(
+            &mut self,
+            state: &mut U,
+            superstates: &mut U::Superstates<'a>,
+        ) -> Option<T> {
             None
         }
 
-        fn exit(&mut self, superstates: &U::Superstates) -> Option<T> {
+        fn exit<'a>(&mut self, state: &mut U, superstates: &mut U::Superstates<'a>) -> Option<T> {
             None
         }
 
-        fn transition(&mut self, target: T, superstates: &U::Superstates) -> TransitionResult<T> {
+        fn transition<'a>(
+            &mut self,
+            target: T,
+            state: &mut U,
+            superstates: &mut U::Superstates<'a>,
+        ) -> TransitionResult<T> {
             TransitionResult::MoveUp
         }
 
-        fn enter_substate_towards(&mut self, target: T, superstates: &U::Superstates) -> Option<T> {
+        fn enter_substate_towards<'a>(
+            &mut self,
+            target: T,
+            state: &mut U,
+            superstates: &mut U::Superstates<'a>,
+        ) -> Option<T> {
             unreachable!()
         }
 
@@ -182,7 +198,7 @@ pub mod internal {
             }
         }
 
-        pub fn enter(superstates: &U::Superstates) -> NodeEntry<T, U, V> {
+        pub fn enter<'a>(superstates: &mut U::Superstates<'a>) -> NodeEntry<T, U, V> {
             info!("\u{02502}Entering {:?}", V::this_state());
             match U::enter(superstates) {
                 StateEntry::State(state) => NodeEntry::Node(Self {
@@ -197,8 +213,8 @@ pub mod internal {
             }
         }
 
-        pub fn update(&mut self, superstates: &U::Superstates) -> Option<T> {
-            match self.substate.update(superstates) {
+        pub fn update<'a>(&mut self, superstates: &mut U::Superstates<'a>) -> Option<T> {
+            match self.substate.update(&mut self.state, superstates) {
                 Some(target) => Some(target),
                 None => {
                     info!("\u{02502}Updating {:?}", V::this_state());
@@ -207,46 +223,52 @@ pub mod internal {
             }
         }
 
-        pub fn top_down_update(&mut self, superstates: &U::Superstates) -> Option<T> {
+        pub fn top_down_update<'a>(&mut self, superstates: &mut U::Superstates<'a>) -> Option<T> {
             info!("\u{02502}Top-down updating {:?}", V::this_state());
             match self.state.top_down_update(superstates) {
                 Some(target) => Some(target),
-                None => self.substate.top_down_update(superstates),
+                None => self.substate.top_down_update(&mut self.state, superstates),
             }
         }
 
-        pub fn exit(self, superstates: &U::Superstates) -> Option<T> {
+        pub fn exit<'a>(self, superstates: &mut U::Superstates<'a>) -> Option<T> {
             info!("\u{02502}Exiting {:?}", V::this_state());
             self.state.exit(superstates).inspect(|target| {
                 info!("\u{02502}Short circuit transition to {target:?}");
             })
         }
 
-        pub fn transition(
+        pub fn transition<'a>(
             &mut self,
             target: T,
-            superstates: &U::Superstates,
+            superstates: &mut U::Superstates<'a>,
         ) -> TransitionResult<T> {
             // try to transition the current substate towards the target state
-            match self.substate.transition(target, superstates) {
+            match self
+                .substate
+                .transition(target, &mut self.state, superstates)
+            {
                 // substate is the target state
                 TransitionResult::Done => TransitionResult::Done,
 
                 // substate is not the target state or an ancestor of it
                 TransitionResult::MoveUp => {
-                    if let Some(new_target) = self.substate.exit(superstates) {
+                    if let Some(new_target) = self.substate.exit(&mut self.state, superstates) {
                         // substate exit resulted in a short circuit transition
                         self.transition(new_target, superstates)
                     } else if V::is_ancestor(target) {
-                        if let Some(new_target) =
-                            self.substate.enter_substate_towards(target, superstates)
-                        {
+                        if let Some(new_target) = self.substate.enter_substate_towards(
+                            target,
+                            &mut self.state,
+                            superstates,
+                        ) {
                             // substate transition resulted in a short circuit transition
                             TransitionResult::NewTransition(new_target)
                         } else {
                             // substate successfully moved towards target state,
                             // continue transitioning downwards
-                            self.substate.transition(target, superstates)
+                            self.substate
+                                .transition(target, &mut self.state, superstates)
                         }
                     } else if V::is_state(target) {
                         // this state is the target
@@ -311,22 +333,25 @@ pub mod internal {
             }
         }
 
-        pub fn update(&mut self) {
+        pub fn update<'a>(&mut self) {
             info!("{}: Updating", self.name);
-            if let Some(target) = self.node.update(&()) {
+            if let Some(target) = self.node.update(&mut NoSuperstates(PhantomData)) {
                 self.transition(target);
             }
         }
 
         pub fn top_down_update(&mut self) {
             info!("{}: Top-down updating", self.name);
-            if let Some(target) = self.node.top_down_update(&()) {
+            if let Some(target) = self.node.top_down_update(&mut NoSuperstates(PhantomData)) {
                 self.transition(target);
             }
         }
 
         pub fn transition_quiet(&mut self, target: T) {
-            match self.node.transition(target, &()) {
+            match self
+                .node
+                .transition(target, &mut NoSuperstates(PhantomData))
+            {
                 TransitionResult::Done => return,
                 TransitionResult::MoveUp => unreachable!(),
                 TransitionResult::NewTransition(new_target) => self.transition_quiet(new_target),

@@ -1,63 +1,61 @@
 use crate::internal::*;
 use crate::*;
 
-use state_machine::{BlinkyMachineBuilder, BlinkyState, BlinkyStateMachine, BlinkyStateRefs};
+use state_machine::{BlinkyMachine, BlinkyMachineBuilder, BlinkyState};
 
 struct Top;
-impl<'a> TopState<BlinkyState> for Top {
-    fn init(&mut self) -> Option<BlinkyState> {
+impl TopState<BlinkyState, BlinkyMachine> for Top {
+    fn init(&mut self, machine: &mut BlinkyMachine) -> Option<BlinkyState> {
         Some(BlinkyState::Enabled)
     }
 }
 
 struct Disabled;
-impl<'a> State<'a, BlinkyState, BlinkyStateMachine<'a>> for Disabled {
-    fn enter(state_refs: &BlinkyStateRefs<'a>) -> StateEntry<Self, BlinkyState> {
+impl State<BlinkyState, BlinkyMachine> for Disabled {
+    fn enter(machine: &mut BlinkyMachine) -> StateEntry<Self, BlinkyState> {
         StateEntry::Transition(BlinkyState::LedOn)
     }
 }
 
 struct Enabled;
-impl<'a> State<'a, BlinkyState, BlinkyStateMachine<'a>> for Enabled {
-    fn enter(state_refs: &BlinkyStateRefs) -> StateEntry<Self, BlinkyState> {
+impl State<BlinkyState, BlinkyMachine> for Enabled {
+    fn enter(machine: &mut BlinkyMachine) -> StateEntry<Self, BlinkyState> {
         StateEntry::State(Self {})
     }
 
-    fn init(&mut self, state_refs: &BlinkyStateRefs) -> Option<BlinkyState> {
+    fn init(&mut self, machine: &mut BlinkyMachine) -> Option<BlinkyState> {
         Some(BlinkyState::LedOn)
     }
 }
 
 struct LedOn;
-impl<'a> State<'a, BlinkyState, BlinkyStateMachine<'a>> for LedOn {
-    fn enter(state_refs: &BlinkyStateRefs) -> StateEntry<Self, BlinkyState> {
+impl State<BlinkyState, BlinkyMachine> for LedOn {
+    fn enter(machine: &mut BlinkyMachine) -> StateEntry<Self, BlinkyState> {
         StateEntry::State(Self {})
     }
 
-    fn top_down_update(&mut self, state_refs: &BlinkyStateRefs) -> Option<BlinkyState> {
+    fn top_down_update(&mut self, machine: &mut BlinkyMachine) -> Option<BlinkyState> {
         Some(BlinkyState::LedOff)
     }
 
-    fn exit(self, state_refs: &BlinkyStateRefs) -> Option<BlinkyState> {
+    fn exit(self, machine: &mut BlinkyMachine) -> Option<BlinkyState> {
         Some(BlinkyState::Enabled)
     }
 }
 
 struct LedOff;
-impl<'a> State<'a, BlinkyState, BlinkyStateMachine<'a>> for LedOff {
-    fn enter(state_refs: &BlinkyStateRefs) -> StateEntry<Self, BlinkyState> {
+impl State<BlinkyState, BlinkyMachine> for LedOff {
+    fn enter(machine: &mut BlinkyMachine) -> StateEntry<Self, BlinkyState> {
         StateEntry::State(Self {})
     }
 
-    fn update(&mut self, state_refs: &BlinkyStateRefs) -> Option<BlinkyState> {
+    fn update(&mut self, machine: &mut BlinkyMachine) -> Option<BlinkyState> {
         Some(BlinkyState::LedOn)
     }
 }
 
 // AUTOGEN
 mod state_machine {
-    use std::{cell::RefCell, marker::PhantomData, rc::Rc};
-
     use crate as moku;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,39 +69,14 @@ mod state_machine {
 
     impl moku::StateEnum for BlinkyState {}
 
-    pub struct BlinkyStateRefs<'a> {
-        top: Option<&'a mut super::Top>,
-        disabled: Option<&'a mut super::Disabled>,
-        enabled: Option<&'a mut super::Enabled>,
-        led_on: Option<&'a mut super::LedOn>,
-        led_off: Option<&'a mut super::LedOff>,
-    }
-
-    impl<'a> moku::StateRef<'a, BlinkyState, BlinkyStateMachine<'a>, super::Top>
-        for BlinkyStateRefs<'a>
-    {
-        fn get_ref(&self) -> Option<&super::Top> {
-            self.top.as_deref()
-        }
-
-        fn get_ref_mut(&mut self) -> Option<&mut super::Top> {
-            self.top
-        }
-    }
-
-    type LedOffNode<'a> = moku::internal::Node<
-        'a,
-        BlinkyState,
-        BlinkyStateMachine<'a>,
-        super::LedOff,
-        LedOffSubstate,
-    >;
+    type LedOffNode =
+        moku::internal::Node<BlinkyState, BlinkyMachine, super::LedOff, LedOffSubstate>;
 
     enum LedOffSubstate {
         None,
     }
 
-    impl<'a> moku::internal::SubstateEnum<'a, BlinkyState, BlinkyStateMachine<'a>> for LedOffSubstate {
+    impl moku::internal::SubstateEnum<BlinkyState, BlinkyMachine> for LedOffSubstate {
         fn none_variant() -> Self {
             Self::None
         }
@@ -117,14 +90,13 @@ mod state_machine {
         }
     }
 
-    type LedOnNode<'a> =
-        moku::internal::Node<'a, BlinkyState, BlinkyStateMachine<'a>, super::LedOn, LedOnSubstate>;
+    type LedOnNode = moku::internal::Node<BlinkyState, BlinkyMachine, super::LedOn, LedOnSubstate>;
 
     enum LedOnSubstate {
         None,
     }
 
-    impl<'a> moku::internal::SubstateEnum<'a, BlinkyState, BlinkyStateMachine<'a>> for LedOnSubstate {
+    impl moku::internal::SubstateEnum<BlinkyState, BlinkyMachine> for LedOnSubstate {
         fn none_variant() -> Self {
             Self::None
         }
@@ -138,23 +110,16 @@ mod state_machine {
         }
     }
 
-    type EnabledNode<'a> = moku::internal::Node<
-        'a,
-        BlinkyState,
-        BlinkyStateMachine<'a>,
-        super::Enabled,
-        EnabledSubstate<'a>,
-    >;
+    type EnabledNode =
+        moku::internal::Node<BlinkyState, BlinkyMachine, super::Enabled, EnabledSubstate>;
 
-    enum EnabledSubstate<'a> {
+    enum EnabledSubstate {
         None,
-        LedOn(LedOnNode<'a>),
-        LedOff(LedOffNode<'a>),
+        LedOn(LedOnNode),
+        LedOff(LedOffNode),
     }
 
-    impl<'a> moku::internal::SubstateEnum<'a, BlinkyState, BlinkyStateMachine<'a>>
-        for EnabledSubstate<'a>
-    {
+    impl moku::internal::SubstateEnum<BlinkyState, BlinkyMachine> for EnabledSubstate {
         fn none_variant() -> Self {
             Self::None
         }
@@ -179,66 +144,57 @@ mod state_machine {
             matches!(state, BlinkyState::LedOn | BlinkyState::LedOff)
         }
 
-        fn update(&mut self, state_refs: &BlinkyStateRefs<'a>) -> Option<BlinkyState> {
+        fn update(&mut self) -> Option<BlinkyState> {
             match self {
                 Self::None => None,
-                Self::LedOn(node) => node.update(state_refs),
-                Self::LedOff(node) => node.update(state_refs),
+                Self::LedOn(node) => node.update(),
+                Self::LedOff(node) => node.update(),
             }
         }
 
-        fn top_down_update(&mut self, state_refs: &BlinkyStateRefs<'a>) -> Option<BlinkyState> {
+        fn top_down_update(&mut self) -> Option<BlinkyState> {
             match self {
                 Self::None => None,
-                Self::LedOn(node) => node.top_down_update(state_refs),
-                Self::LedOff(node) => node.top_down_update(state_refs),
+                Self::LedOn(node) => node.top_down_update(),
+                Self::LedOff(node) => node.top_down_update(),
             }
         }
 
-        fn exit(&mut self, state_refs: &BlinkyStateRefs) -> Option<BlinkyState> {
+        fn exit(&mut self) -> Option<BlinkyState> {
             let old_state = std::mem::replace(self, Self::None);
             match old_state {
                 Self::None => None,
-                Self::LedOn(node) => node.exit(state_refs),
-                Self::LedOff(node) => node.exit(state_refs),
+                Self::LedOn(node) => node.exit(),
+                Self::LedOff(node) => node.exit(),
             }
         }
 
         fn transition(
             &mut self,
             target: BlinkyState,
-            state_refs: &BlinkyStateRefs<'a>,
         ) -> moku::internal::TransitionResult<BlinkyState> {
             match self {
                 Self::None => moku::internal::TransitionResult::MoveUp,
-                Self::LedOn(node) => node.transition(target, state_refs),
-                Self::LedOff(node) => node.transition(target, state_refs),
+                Self::LedOn(node) => node.transition(target),
+                Self::LedOff(node) => node.transition(target),
             }
         }
 
-        fn enter_substate_towards(
-            &mut self,
-            target: BlinkyState,
-            state_refs: &BlinkyStateRefs<'a>,
-        ) -> Option<BlinkyState> {
+        fn enter_substate_towards(&mut self, target: BlinkyState) -> Option<BlinkyState> {
             match target {
-                BlinkyState::LedOn => match LedOnNode::enter(state_refs) {
+                BlinkyState::LedOn => match LedOnNode::enter() {
                     moku::internal::NodeEntry::Node(node) => {
                         *self = Self::LedOn(node);
                         None
                     }
-                    moku::internal::NodeEntry::Transition(new_target, PhantomData) => {
-                        Some(new_target)
-                    }
+                    moku::internal::NodeEntry::Transition(new_target) => Some(new_target),
                 },
-                BlinkyState::LedOff => match LedOffNode::enter(state_refs) {
+                BlinkyState::LedOff => match LedOffNode::enter() {
                     moku::internal::NodeEntry::Node(node) => {
                         *self = Self::LedOff(node);
                         None
                     }
-                    moku::internal::NodeEntry::Transition(new_target, PhantomData) => {
-                        Some(new_target)
-                    }
+                    moku::internal::NodeEntry::Transition(new_target) => Some(new_target),
                 },
                 _ => unreachable!(),
             }
@@ -254,21 +210,14 @@ mod state_machine {
         }
     }
 
-    type DisabledNode<'a> = moku::internal::Node<
-        'a,
-        BlinkyState,
-        BlinkyStateMachine<'a>,
-        super::Disabled,
-        DisabledSubstate,
-    >;
+    type DisabledNode =
+        moku::internal::Node<BlinkyState, BlinkyMachine, super::Disabled, DisabledSubstate>;
 
     enum DisabledSubstate {
         None,
     }
 
-    impl<'a> moku::internal::SubstateEnum<'a, BlinkyState, BlinkyStateMachine<'a>>
-        for DisabledSubstate
-    {
+    impl moku::internal::SubstateEnum<BlinkyState, BlinkyMachine> for DisabledSubstate {
         fn none_variant() -> Self {
             Self::None
         }
@@ -282,16 +231,15 @@ mod state_machine {
         }
     }
 
-    type TopNode<'a> =
-        moku::internal::Node<'a, BlinkyState, BlinkyStateMachine<'a>, super::Top, TopSubstate<'a>>;
+    type TopNode = moku::internal::Node<BlinkyState, BlinkyMachine, super::Top, TopSubstate>;
 
-    enum TopSubstate<'a> {
+    enum TopSubstate {
         None,
-        Enabled(EnabledNode<'a>),
-        Disabled(DisabledNode<'a>),
+        Enabled(EnabledNode),
+        Disabled(DisabledNode),
     }
 
-    impl<'a> moku::internal::SubstateEnum<'a, BlinkyState, BlinkyStateMachine<'a>> for TopSubstate<'a> {
+    impl moku::internal::SubstateEnum<BlinkyState, BlinkyMachine> for TopSubstate {
         fn none_variant() -> Self {
             Self::None
         }
@@ -316,67 +264,58 @@ mod state_machine {
             true
         }
 
-        fn update(&mut self, state_refs: &BlinkyStateRefs<'a>) -> Option<BlinkyState> {
+        fn update(&mut self) -> Option<BlinkyState> {
             match self {
                 Self::None => None,
-                Self::Enabled(node) => node.update(state_refs),
-                Self::Disabled(node) => node.update(state_refs),
+                Self::Enabled(node) => node.update(),
+                Self::Disabled(node) => node.update(),
             }
         }
 
-        fn top_down_update(&mut self, state_refs: &BlinkyStateRefs<'a>) -> Option<BlinkyState> {
+        fn top_down_update(&mut self) -> Option<BlinkyState> {
             match self {
                 Self::None => None,
-                Self::Enabled(node) => node.top_down_update(state_refs),
-                Self::Disabled(node) => node.top_down_update(state_refs),
+                Self::Enabled(node) => node.top_down_update(),
+                Self::Disabled(node) => node.top_down_update(),
             }
         }
 
-        fn exit(&mut self, state_refs: &BlinkyStateRefs<'a>) -> Option<BlinkyState> {
+        fn exit(&mut self) -> Option<BlinkyState> {
             let old_state = std::mem::replace(self, Self::None);
             match old_state {
                 Self::None => None,
-                Self::Enabled(node) => node.exit(state_refs),
-                Self::Disabled(node) => node.exit(state_refs),
+                Self::Enabled(node) => node.exit(),
+                Self::Disabled(node) => node.exit(),
             }
         }
 
         fn transition(
             &mut self,
             target: BlinkyState,
-            state_refs: &BlinkyStateRefs<'a>,
         ) -> moku::internal::TransitionResult<BlinkyState> {
             match self {
                 Self::None => moku::internal::TransitionResult::MoveUp,
-                Self::Enabled(node) => node.transition(target, state_refs),
-                Self::Disabled(node) => node.transition(target, state_refs),
+                Self::Enabled(node) => node.transition(target),
+                Self::Disabled(node) => node.transition(target),
             }
         }
 
-        fn enter_substate_towards(
-            &mut self,
-            target: BlinkyState,
-            state_refs: &BlinkyStateRefs<'a>,
-        ) -> Option<BlinkyState> {
+        fn enter_substate_towards(&mut self, target: BlinkyState) -> Option<BlinkyState> {
             match target {
-                BlinkyState::Disabled => match DisabledNode::enter(state_refs) {
+                BlinkyState::Disabled => match DisabledNode::enter() {
                     moku::internal::NodeEntry::Node(node) => {
                         *self = Self::Disabled(node);
                         None
                     }
-                    moku::internal::NodeEntry::Transition(new_target, PhantomData) => {
-                        Some(new_target)
-                    }
+                    moku::internal::NodeEntry::Transition(new_target) => Some(new_target),
                 },
                 BlinkyState::Enabled | BlinkyState::LedOn | BlinkyState::LedOff => {
-                    match EnabledNode::enter(state_refs) {
+                    match EnabledNode::enter() {
                         moku::internal::NodeEntry::Node(node) => {
                             *self = Self::Enabled(node);
                             None
                         }
-                        moku::internal::NodeEntry::Transition(new_target, PhantomData) => {
-                            Some(new_target)
-                        }
+                        moku::internal::NodeEntry::Transition(new_target) => Some(new_target),
                     }
                 }
                 _ => unreachable!(),
@@ -393,35 +332,21 @@ mod state_machine {
         }
     }
 
-    pub struct BlinkyStateMachine<'a> {
-        top_node: moku::internal::TopNode<
-            'a,
-            BlinkyState,
-            BlinkyStateMachine<'a>,
-            super::Top,
-            TopSubstate<'a>,
-        >,
+    pub struct BlinkyMachine {
+        top_node: moku::internal::TopNode<BlinkyState, BlinkyMachine, super::Top, TopSubstate>,
     }
 
-    impl<'a> BlinkyStateMachine<'a> {
+    impl BlinkyMachine {
         fn new(
-            top_node: moku::internal::TopNode<
-                'a,
-                BlinkyState,
-                BlinkyStateMachine<'a>,
-                super::Top,
-                TopSubstate<'a>,
-            >,
-        ) -> Self {
-            let mut new = Self { top_node };
-            new.top_node.init();
+            top_node: moku::internal::TopNode<BlinkyState, BlinkyMachine, super::Top, TopSubstate>,
+        ) {
+            let new = Self { top_node };
+            new.top_node.init(&mut new);
             new
         }
     }
 
-    impl<'a> moku::StateMachine<'a, BlinkyState> for BlinkyStateMachine<'a> {
-        type StateRefs = BlinkyStateRefs<'a>;
-
+    impl moku::StateMachine<BlinkyState> for BlinkyMachine {
         fn update(&mut self) {
             self.top_node.update()
         }
@@ -456,9 +381,7 @@ mod state_machine {
         name: Option<String>,
     }
 
-    impl<'a> moku::StateMachineBuilder<'a, BlinkyState, BlinkyStateMachine<'a>, super::Top>
-        for BlinkyMachineBuilder
-    {
+    impl moku::StateMachineBuilder<BlinkyState, BlinkyMachine, super::Top> for BlinkyMachineBuilder {
         fn new(top_state: super::Top) -> Self {
             Self {
                 top_state,
@@ -471,11 +394,47 @@ mod state_machine {
             self
         }
 
-        fn build(self) -> BlinkyStateMachine<'a> {
-            BlinkyStateMachine::new(moku::internal::TopNode::new(
+        fn build(self) -> BlinkyMachine {
+            BlinkyMachine::new(moku::internal::TopNode::new(
                 self.top_state,
                 self.name.unwrap_or_else(|| String::from("Blinky")),
             ))
+        }
+    }
+
+    impl<T: moku::State<BlinkyState>> moku::StateRef<BlinkyState, T> for BlinkyMachine {
+        fn get_ref(&self) -> Option<&T> {
+            self.top_node.get_ref()
+        }
+
+        fn get_ref_mut(&mut self) -> Option<&mut T> {
+            self.top_node.get_ref_mut()
+        }
+    }
+
+    impl<T: moku::State<BlinkyState>> moku::StateRef<BlinkyState, T>
+        for moku::internal::TopNode<BlinkyState, super::Top, TopSubstate>
+    {
+        fn get_ref(&self) -> Option<&T> {
+            todo!()
+            //self.node.get_ref()
+        }
+
+        fn get_ref_mut(&mut self) -> Option<&mut T> {
+            todo!()
+            //self.node.get_ref_mut()
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Top>
+        for moku::internal::Node<BlinkyState, super::Top, TopSubstate>
+    {
+        fn get_ref(&self) -> Option<&super::Top> {
+            Some(&self.state)
+        }
+
+        fn get_ref_mut(&mut self) -> Option<&mut super::Top> {
+            Some(&mut self.state)
         }
     }
 }

@@ -90,8 +90,6 @@ mod state_machine {
 
     use crate as moku;
 
-    use super::NoSuperstates;
-
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum BlinkyState {
         Top,
@@ -320,7 +318,7 @@ mod state_machine {
     }
 
     impl<'a> TopSuperstates<'a> {
-        pub fn new(state: &'a mut super::Top, superstates: &'a mut NoSuperstates) -> Self {
+        pub fn new(state: &'a mut super::Top, superstates: &'a mut moku::NoSuperstates) -> Self {
             Self { top: state }
         }
     }
@@ -459,7 +457,7 @@ mod state_machine {
         }
     }
 
-    impl moku::StateMachine<BlinkyState> for BlinkyMachine {
+    impl moku::StateMachine<BlinkyState, super::Top> for BlinkyMachine {
         fn update(&mut self) {
             self.top_node.update()
         }
@@ -487,6 +485,34 @@ mod state_machine {
         fn state_matches(&self, state: BlinkyState) -> bool {
             self.top_node.state_matches(state)
         }
+
+        fn top_ref(&self) -> &super::Top {
+            &self.top_node.node.state
+        }
+
+        fn top_mut(&mut self) -> &mut super::Top {
+            &mut self.top_node.node.state
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Disabled> for BlinkyMachine {
+        fn state_ref(&self) -> Option<&super::Disabled> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Disabled> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Enabled> for BlinkyMachine {
+        fn state_ref(&self) -> Option<&super::Enabled> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Enabled> {
+            None
+        }
     }
 
     pub struct BlinkyMachineBuilder {
@@ -494,7 +520,7 @@ mod state_machine {
         name: Option<String>,
     }
 
-    impl moku::StateMachineBuilder<BlinkyState, BlinkyMachine, super::Top> for BlinkyMachineBuilder {
+    impl moku::StateMachineBuilder<BlinkyState, super::Top, BlinkyMachine> for BlinkyMachineBuilder {
         fn new(top_state: super::Top) -> Self {
             Self {
                 top_state,
@@ -526,6 +552,11 @@ mod tests {
         let mut machine = BlinkyMachineBuilder::new(Top {}).build();
 
         machine.transition(BlinkyState::Enabled);
+
+        let state: Option<&Enabled> = machine.state_ref();
+        if let Some(state) = state {
+            println!("{:?}", state.blink_period);
+        }
 
         loop {
             std::thread::sleep(Duration::from_millis(500));

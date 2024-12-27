@@ -1,5 +1,5 @@
 # todo
-- get state ref
+- external state refs
 - get full state
 - macro
 

@@ -6,7 +6,7 @@ mod output;
 
 pub trait StateEnum: std::fmt::Debug + Copy {}
 
-pub trait StateMachine<T: StateEnum> {
+pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     fn update(&mut self);
     fn top_down_update(&mut self);
     fn transition(&mut self, target: T);
@@ -14,17 +14,24 @@ pub trait StateMachine<T: StateEnum> {
     fn name(&self) -> &str;
     fn set_name(&mut self, name: String);
     fn state_matches(&self, state: T) -> bool;
+    fn top_ref(&self) -> &U;
+    fn top_mut(&mut self) -> &mut U;
+}
+
+pub trait StateRef<T: StateEnum, U: State<T>> {
+    fn state_ref(&self) -> Option<&U>;
+    fn state_mut(&mut self) -> Option<&mut U>;
 }
 
 pub trait StateMachineBuilder<T, U, V>
 where
     T: StateEnum,
-    U: StateMachine<T>,
-    V: TopState<T>,
+    U: TopState<T>,
+    V: StateMachine<T, U>,
 {
-    fn new(top_state: V) -> Self;
+    fn new(top_state: U) -> Self;
     fn name(self, name: &str) -> Self;
-    fn build(self) -> U;
+    fn build(self) -> V;
 }
 
 pub enum StateEntry<T, U: StateEnum> {

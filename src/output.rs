@@ -92,6 +92,12 @@ mod state_machine {
 
     use moku::StateRef;
 
+    pub const BLINKY_STATE_CHART: &str = "Top
+\u{0251C}\u{02500} Disabled
+\u{02514}\u{02500} Enabled
+   \u{0251C}\u{02500} LedOn
+   \u{02514}\u{02500} LedOff";
+
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum BlinkyState {
         Top,
@@ -879,6 +885,7 @@ mod tests {
 
     #[test]
     fn basic() {
+        println!("{}", state_machine::BLINKY_STATE_CHART);
         let mut machine = BlinkyMachineBuilder::new(Top {}).build();
 
         let top: &Top = machine.top_ref();

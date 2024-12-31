@@ -336,7 +336,7 @@ pub mod internal {
             if let Some(target) = TopState::init(&mut self.node.state) {
                 info!("{}: Initial transition to {target:?}", self.name);
                 self.transition_quiet(target);
-                info!("\u{02502}Transition complete");
+                info!("\u{02514}Transition complete");
             }
         }
 
@@ -372,7 +372,7 @@ pub mod internal {
                 self.state()
             );
             self.transition_quiet(target);
-            info!("\u{02502}Transition complete");
+            info!("\u{02514}Transition complete");
         }
 
         pub fn state(&self) -> T {

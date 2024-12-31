@@ -1,9 +1,7 @@
 # todo
-- get full state
 - macro
 
 # stretch goals
-- print state chart
 - no_std support seems feasible
 
 # attributes

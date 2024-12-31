@@ -7,9 +7,9 @@ use state_machine::{BlinkyMachine, BlinkyMachineBuilder, BlinkyState};
 
 struct Top;
 impl TopState<BlinkyState> for Top {
-    fn init(&mut self) -> Option<BlinkyState> {
-        Some(BlinkyState::Disabled)
-    }
+    //fn init(&mut self) -> Option<BlinkyState> {
+    //    Some(BlinkyState::Disabled)
+    //}
 }
 
 struct Disabled;
@@ -34,9 +34,9 @@ impl State<BlinkyState> for Enabled {
         })
     }
 
-    fn init<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<BlinkyState> {
-        Some(BlinkyState::LedOn)
-    }
+    //fn init<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<BlinkyState> {
+    //    Some(BlinkyState::LedOn)
+    //}
 }
 
 struct LedOn {
@@ -90,6 +90,8 @@ mod state_machine {
 
     use crate as moku;
 
+    use moku::StateRef;
+
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum BlinkyState {
         Top,
@@ -102,6 +104,56 @@ mod state_machine {
     impl moku::StateEnum for BlinkyState {}
 
     type LedOffNode = moku::internal::Node<BlinkyState, super::LedOff, LedOffSubstate>;
+
+    impl moku::StateRef<BlinkyState, super::Top> for LedOffNode {
+        fn state_ref(&self) -> Option<&super::Top> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Top> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Disabled> for LedOffNode {
+        fn state_ref(&self) -> Option<&super::Disabled> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Disabled> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Enabled> for LedOffNode {
+        fn state_ref(&self) -> Option<&super::Enabled> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Enabled> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOn> for LedOffNode {
+        fn state_ref(&self) -> Option<&super::LedOn> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOn> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOff> for LedOffNode {
+        fn state_ref(&self) -> Option<&super::LedOff> {
+            Some(&self.state)
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOff> {
+            Some(&mut self.state)
+        }
+    }
 
     enum LedOffSubstate {
         None,
@@ -123,6 +175,56 @@ mod state_machine {
 
     type LedOnNode = moku::internal::Node<BlinkyState, super::LedOn, LedOnSubstate>;
 
+    impl moku::StateRef<BlinkyState, super::Top> for LedOnNode {
+        fn state_ref(&self) -> Option<&super::Top> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Top> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Disabled> for LedOnNode {
+        fn state_ref(&self) -> Option<&super::Disabled> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Disabled> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Enabled> for LedOnNode {
+        fn state_ref(&self) -> Option<&super::Enabled> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Enabled> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOn> for LedOnNode {
+        fn state_ref(&self) -> Option<&super::LedOn> {
+            Some(&self.state)
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOn> {
+            Some(&mut self.state)
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOff> for LedOnNode {
+        fn state_ref(&self) -> Option<&super::LedOff> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOff> {
+            None
+        }
+    }
+
     enum LedOnSubstate {
         None,
     }
@@ -142,6 +244,72 @@ mod state_machine {
     }
 
     type EnabledNode = moku::internal::Node<BlinkyState, super::Enabled, EnabledSubstate>;
+
+    impl moku::StateRef<BlinkyState, super::Top> for EnabledNode {
+        fn state_ref(&self) -> Option<&super::Top> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Top> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Disabled> for EnabledNode {
+        fn state_ref(&self) -> Option<&super::Disabled> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Disabled> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Enabled> for EnabledNode {
+        fn state_ref(&self) -> Option<&super::Enabled> {
+            Some(&self.state)
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Enabled> {
+            Some(&mut self.state)
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOn> for EnabledNode {
+        fn state_ref(&self) -> Option<&super::LedOn> {
+            match &self.substate {
+                EnabledSubstate::None => None,
+                EnabledSubstate::LedOff(node) => node.state_ref(),
+                EnabledSubstate::LedOn(node) => node.state_ref(),
+            }
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOn> {
+            match &mut self.substate {
+                EnabledSubstate::None => None,
+                EnabledSubstate::LedOff(node) => node.state_mut(),
+                EnabledSubstate::LedOn(node) => node.state_mut(),
+            }
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOff> for EnabledNode {
+        fn state_ref(&self) -> Option<&super::LedOff> {
+            match &self.substate {
+                EnabledSubstate::None => None,
+                EnabledSubstate::LedOff(node) => node.state_ref(),
+                EnabledSubstate::LedOn(node) => node.state_ref(),
+            }
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOff> {
+            match &mut self.substate {
+                EnabledSubstate::None => None,
+                EnabledSubstate::LedOff(node) => node.state_mut(),
+                EnabledSubstate::LedOn(node) => node.state_mut(),
+            }
+        }
+    }
 
     enum EnabledSubstate {
         None,
@@ -287,6 +455,56 @@ mod state_machine {
 
     type DisabledNode = moku::internal::Node<BlinkyState, super::Disabled, DisabledSubstate>;
 
+    impl moku::StateRef<BlinkyState, super::Top> for DisabledNode {
+        fn state_ref(&self) -> Option<&super::Top> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Top> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Disabled> for DisabledNode {
+        fn state_ref(&self) -> Option<&super::Disabled> {
+            Some(&self.state)
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Disabled> {
+            Some(&mut self.state)
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Enabled> for DisabledNode {
+        fn state_ref(&self) -> Option<&super::Enabled> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Enabled> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOn> for DisabledNode {
+        fn state_ref(&self) -> Option<&super::LedOn> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOn> {
+            None
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOff> for DisabledNode {
+        fn state_ref(&self) -> Option<&super::LedOff> {
+            None
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOff> {
+            None
+        }
+    }
+
     enum DisabledSubstate {
         None,
     }
@@ -306,6 +524,88 @@ mod state_machine {
     }
 
     type TopNode = moku::internal::Node<BlinkyState, super::Top, TopSubstate>;
+
+    impl moku::StateRef<BlinkyState, super::Top> for TopNode {
+        fn state_ref(&self) -> Option<&super::Top> {
+            Some(&self.state)
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Top> {
+            Some(&mut self.state)
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Disabled> for TopNode {
+        fn state_ref(&self) -> Option<&super::Disabled> {
+            match &self.substate {
+                TopSubstate::None => None,
+                TopSubstate::Enabled(node) => node.state_ref(),
+                TopSubstate::Disabled(node) => node.state_ref(),
+            }
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Disabled> {
+            match &mut self.substate {
+                TopSubstate::None => None,
+                TopSubstate::Enabled(node) => node.state_mut(),
+                TopSubstate::Disabled(node) => node.state_mut(),
+            }
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::Enabled> for TopNode {
+        fn state_ref(&self) -> Option<&super::Enabled> {
+            match &self.substate {
+                TopSubstate::None => None,
+                TopSubstate::Enabled(node) => node.state_ref(),
+                TopSubstate::Disabled(node) => node.state_ref(),
+            }
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Enabled> {
+            match &mut self.substate {
+                TopSubstate::None => None,
+                TopSubstate::Enabled(node) => node.state_mut(),
+                TopSubstate::Disabled(node) => node.state_mut(),
+            }
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOn> for TopNode {
+        fn state_ref(&self) -> Option<&super::LedOn> {
+            match &self.substate {
+                TopSubstate::None => None,
+                TopSubstate::Enabled(node) => node.state_ref(),
+                TopSubstate::Disabled(node) => node.state_ref(),
+            }
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOn> {
+            match &mut self.substate {
+                TopSubstate::None => None,
+                TopSubstate::Enabled(node) => node.state_mut(),
+                TopSubstate::Disabled(node) => node.state_mut(),
+            }
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOff> for TopNode {
+        fn state_ref(&self) -> Option<&super::LedOff> {
+            match &self.substate {
+                TopSubstate::None => None,
+                TopSubstate::Enabled(node) => node.state_ref(),
+                TopSubstate::Disabled(node) => node.state_ref(),
+            }
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOff> {
+            match &mut self.substate {
+                TopSubstate::None => None,
+                TopSubstate::Enabled(node) => node.state_mut(),
+                TopSubstate::Disabled(node) => node.state_mut(),
+            }
+        }
+    }
 
     enum TopSubstate {
         None,
@@ -495,23 +795,53 @@ mod state_machine {
         }
     }
 
+    impl moku::StateRef<BlinkyState, super::Top> for BlinkyMachine {
+        fn state_ref(&self) -> Option<&super::Top> {
+            self.top_node.node.state_ref()
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::Top> {
+            self.top_node.node.state_mut()
+        }
+    }
+
     impl moku::StateRef<BlinkyState, super::Disabled> for BlinkyMachine {
         fn state_ref(&self) -> Option<&super::Disabled> {
-            None
+            self.top_node.node.state_ref()
         }
 
         fn state_mut(&mut self) -> Option<&mut super::Disabled> {
-            None
+            self.top_node.node.state_mut()
         }
     }
 
     impl moku::StateRef<BlinkyState, super::Enabled> for BlinkyMachine {
         fn state_ref(&self) -> Option<&super::Enabled> {
-            None
+            self.top_node.node.state_ref()
         }
 
         fn state_mut(&mut self) -> Option<&mut super::Enabled> {
-            None
+            self.top_node.node.state_mut()
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOn> for BlinkyMachine {
+        fn state_ref(&self) -> Option<&super::LedOn> {
+            self.top_node.node.state_ref()
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOn> {
+            self.top_node.node.state_mut()
+        }
+    }
+
+    impl moku::StateRef<BlinkyState, super::LedOff> for BlinkyMachine {
+        fn state_ref(&self) -> Option<&super::LedOff> {
+            self.top_node.node.state_ref()
+        }
+
+        fn state_mut(&mut self) -> Option<&mut super::LedOff> {
+            self.top_node.node.state_mut()
         }
     }
 
@@ -551,16 +881,65 @@ mod tests {
     fn basic() {
         let mut machine = BlinkyMachineBuilder::new(Top {}).build();
 
-        machine.transition(BlinkyState::Enabled);
+        let top: &Top = machine.top_ref();
 
+        let state: Option<&Top> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&Disabled> = machine.state_ref();
+        assert!(state.is_none());
         let state: Option<&Enabled> = machine.state_ref();
-        if let Some(state) = state {
-            println!("{:?}", state.blink_period);
-        }
+        assert!(state.is_none());
+        let state: Option<&LedOn> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&LedOff> = machine.state_ref();
+        assert!(state.is_none());
 
-        loop {
-            std::thread::sleep(Duration::from_millis(500));
-            machine.update();
-        }
+        machine.transition(BlinkyState::Disabled);
+        let state: Option<&Top> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&Disabled> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&Enabled> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&LedOn> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&LedOff> = machine.state_ref();
+        assert!(state.is_none());
+
+        machine.transition(BlinkyState::Enabled);
+        let state: Option<&Top> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&Disabled> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&Enabled> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&LedOn> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&LedOff> = machine.state_ref();
+        assert!(state.is_none());
+
+        machine.transition(BlinkyState::LedOn);
+        let state: Option<&Top> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&Disabled> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&Enabled> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&LedOn> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&LedOff> = machine.state_ref();
+        assert!(state.is_none());
+
+        machine.transition(BlinkyState::LedOff);
+        let state: Option<&Top> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&Disabled> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&Enabled> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&LedOn> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&LedOff> = machine.state_ref();
+        assert!(state.is_some());
     }
 }

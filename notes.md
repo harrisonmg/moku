@@ -1,5 +1,4 @@
 # todo
-- external state refs
 - get full state
 - macro
 

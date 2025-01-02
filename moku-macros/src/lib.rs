@@ -87,10 +87,15 @@ impl<'ast> Visitor<'ast> {
     }
 }
 
-fn has_attribute(attrs: &Vec<Attribute>, name: &str) -> bool {
-    attrs.iter().any(|attr| match &attr.meta {
-        Meta::Path(path) => path.is_ident(name),
-        _ => false,
+/// Filter Attributes based on their Path matching `name` or `moku::{name}`.
+fn filter_attributes<'a>(
+    attrs: &'a Vec<Attribute>,
+    name: &'a str,
+) -> impl Iterator<Item = &'a Attribute> + 'a {
+    let qualified_name = format!("moku::{name}");
+    attrs.iter().filter(move |attr| {
+        let path = attr.meta.path();
+        path.is_ident(name) || path.is_ident(&qualified_name)
     })
 }
 
@@ -102,7 +107,20 @@ impl<'ast> Visit<'ast> for Visitor<'ast> {
             return;
         };
 
-        if has_attribute(&module.attrs, "machine_module") {
+        for attr in filter_attributes(&module.attrs, "machine_module") {
+            // validate attribute arguments
+            match attr.meta {
+                Meta::Path(_) => (),
+                _ => {
+                    self.error = Some(syn::Error::new(
+                        attr.span(),
+                        "moku `machine_module` accepts no arguments, try `#[machine_module]`",
+                    ));
+                    return;
+                }
+            }
+
+            // validate single attribute definition in module
             if self.module.is_some() {
                 self.error = Some(syn::Error::new(
                     module.span(),
@@ -111,6 +129,7 @@ impl<'ast> Visit<'ast> for Visitor<'ast> {
                 return;
             }
 
+            // validate this module has some inline content
             if let Some(content) = &module.content {
                 if content.1.is_empty() {
                     // all is good
@@ -119,6 +138,7 @@ impl<'ast> Visit<'ast> for Visitor<'ast> {
                 }
             }
 
+            // fallthrough error for above validation
             let msg = format!(
                 "a moku machine_module must have empty braces, try `mod {} {{}}`",
                 module.ident

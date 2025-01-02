@@ -2,7 +2,9 @@
 
 use std::marker::PhantomData;
 
-mod output;
+pub use moku_macros::*;
+
+mod input;
 
 pub trait StateEnum: std::fmt::Debug + Copy {}
 
@@ -40,10 +42,8 @@ pub enum StateEntry<T, U: StateEnum> {
 }
 
 pub trait State<T: StateEnum>: Sized {
-    // TODO autogen
     type Superstates<'a>;
 
-    // TODO autogen
     fn enter<'a>(superstates: &mut Self::Superstates<'a>) -> StateEntry<Self, T>;
 
     fn init<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<T> {

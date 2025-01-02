@@ -1,6 +1,5 @@
 use std::time::{Duration, Instant};
 
-use crate::internal::*;
 use crate::*;
 
 use state_machine::{BlinkyMachine, BlinkyMachineBuilder, BlinkyState};
@@ -86,8 +85,6 @@ impl State<BlinkyState> for LedOff {
 // AUTOGEN //
 
 mod state_machine {
-    use std::{cell::RefCell, rc::Weak};
-
     use crate as moku;
 
     use moku::StateRef;

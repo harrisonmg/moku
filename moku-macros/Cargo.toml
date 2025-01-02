@@ -10,3 +10,13 @@ readme = "README.md"
 
 [lib]
 proc-macro = true
+
+[dependencies]
+convert_case = "0.6.0"
+proc-macro2 = "1.0.92"
+quote = "1.0.38"
+
+[dependencies.syn]
+version = "2.0.93"
+default-features = false
+features = [ "full", "parsing", "printing", "visit", "visit-mut", "proc-macro", "extra-traits" ]

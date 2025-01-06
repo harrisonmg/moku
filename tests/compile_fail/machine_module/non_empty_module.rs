@@ -1,5 +1,3 @@
-extern crate moku_macros as moku;
-
 use moku::*;
 
 #[state_machine]
@@ -7,7 +5,9 @@ mod blinky {
     use moku::*;
 
     #[machine_module]
-    struct Module {}
+    mod state_machine_module {
+        const SOMETHING: &str = "something";
+    }
 }
 
 fn main() {}

@@ -20,6 +20,3 @@ quote = "1.0.38"
 version = "2.0.93"
 default-features = false
 features = [ "full", "parsing", "printing", "visit", "visit-mut", "proc-macro", "extra-traits" ]
-
-[dev-dependencies]
-trybuild = { version = "1.0.101", features = ["diff"] }

@@ -1,5 +1,0 @@
-error: expected `mod`
-  --> tests/machine_module/not_on_module.rs:10:5
-   |
-10 |     struct Module {}
-   |     ^^^^^^

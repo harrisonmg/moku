@@ -19,3 +19,4 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [dev-dependencies]
 test-log = "0.2.16"
+trybuild = { version = "1.0.101", features = ["diff"] }

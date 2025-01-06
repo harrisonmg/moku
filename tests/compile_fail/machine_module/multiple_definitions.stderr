@@ -1,0 +1,5 @@
+error: multiple moku `machine_module`s are defined within this module
+  --> tests/compile_fail/machine_module/multiple_definitions.rs:10:5
+   |
+10 |     #[machine_module]
+   |     ^

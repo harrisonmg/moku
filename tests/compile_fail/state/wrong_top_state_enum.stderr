@@ -1,0 +1,5 @@
+error: implementations of moku::TopState in this module must use only BlinkyState as the generic
+  --> tests/compile_fail/state/wrong_top_state_enum.rs:15:5
+   |
+15 |     impl TopState<BlonkyState> for Top {}
+   |     ^^^^

@@ -1,7 +1,5 @@
-error: custom attribute panicked
- --> tests/compile_fail/state/not_on_state_impl.rs:8:5
+error: `moku::superstate` must only be applied to implementations of the `moku::State` trait
+ --> tests/compile_fail/state/not_on_state_impl.rs:9:5
   |
-8 |     #[superstate(Top)]
-  |     ^^^^^^^^^^^^^^^^^^
-  |
-  = help: message: not yet implemented
+9 |     impl Default for Bottom {
+  |     ^^^^

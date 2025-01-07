@@ -5,8 +5,9 @@ use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use syn::{
-    parse::Parse, parse_macro_input, spanned::Spanned, visit::Visit, Attribute, ItemImpl, ItemMod,
-    ItemStruct, Meta, Path,
+    parse::Parse, parse_macro_input, spanned::Spanned, visit::Visit,
+    AngleBracketedGenericArguments, Attribute, GenericArgument, ItemImpl, ItemMod, ItemStruct,
+    Meta, Path, PathArguments, Type, TypePath,
 };
 
 #[proc_macro_attribute]
@@ -27,7 +28,7 @@ pub fn superstate(_args: TokenStream, input: TokenStream) -> TokenStream {
     if imp
         .trait_
         .as_ref()
-        .map_or(true, |tr| !path_matches_any_generic(&tr.1, "State"))
+        .map_or(true, |tr| !path_matches_generic(&tr.1, "State", None))
     {
         syn::Error::new(
             imp.span(),
@@ -73,14 +74,53 @@ fn path_matches(path: &Path, name: &str) -> bool {
     path.is_ident(name) || path.is_ident(&qualified_name)
 }
 
-/// Check that a Path matches `{name}<{generic}>` or `moku::{name}<{generic}>`
-fn path_matches_generic(path: &Path, name: &str, generic: &str) -> bool {
-    todo!()
-}
+/// Check that a Path matches `{name}<{generic}>` or `moku::{name}<{generic}>`.
+///
+/// If generic is None, just check that there is any single generic.
+fn path_matches_generic(path: &Path, name: &str, generic: Option<&str>) -> bool {
+    let args = match path.segments.len() {
+        1 => {
+            let seg = path.segments.first().unwrap();
+            if seg.ident != name {
+                return false;
+            }
 
-/// Check that a Path matches `{name}<{any generic}>` or `moku::{name}<{any generic}>`
-fn path_matches_any_generic(path: &Path, name: &str) -> bool {
-    todo!()
+            &seg.arguments
+        }
+        2 => {
+            let seg = path.segments.first().unwrap();
+            if seg.ident != "moku" {
+                return false;
+            }
+
+            let seg = path.segments.last().unwrap();
+            if seg.ident != name {
+                return false;
+            }
+
+            &seg.arguments
+        }
+        _ => return false,
+    };
+
+    match args {
+        PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
+            if args.len() != 1 {
+                return false;
+            }
+
+            let gen = match generic {
+                None => return true,
+                Some(gen) => gen,
+            };
+
+            match args.first().unwrap() {
+                GenericArgument::Type(Type::Path(TypePath { path, .. })) => path.is_ident(gen),
+                _ => false,
+            }
+        }
+        _ => false,
+    }
 }
 
 /// Filter Attributes based on their Path matching `name` or `moku::{name}`.
@@ -156,9 +196,15 @@ impl<'ast> Visitor<'ast> {
         todo!()
     }
 
-    fn visit_top_state(&mut self, imp: &'ast ItemImpl) {}
+    fn visit_top_state(&mut self, imp: &'ast ItemImpl) {
+        // TODO validate that there is only one top state
+    }
 
-    fn visit_state(&mut self, imp: &'ast ItemImpl) {}
+    fn visit_state(&mut self, imp: &'ast ItemImpl) {
+        // TODO validate that no state is missing a superstate attr
+        // TODO validate that there is one superstate arg
+        // TODO validate that Superstates is not defined
+    }
 }
 
 impl<'ast> Visit<'ast> for Visitor<'ast> {
@@ -223,26 +269,19 @@ impl<'ast> Visit<'ast> for Visitor<'ast> {
 
         let state_enum = self.name.to_string() + "State";
 
-        if path_matches_generic(tr, "TopState", &state_enum) {
+        if path_matches_generic(tr, "TopState", Some(&state_enum)) {
             self.visit_top_state(imp);
-        } else if path_matches_generic(tr, "State", &state_enum) {
+        } else if path_matches_generic(tr, "State", Some(&state_enum)) {
             self.visit_state(imp);
-        } else if path_matches_any_generic(tr, "TopState") {
+        } else if path_matches_generic(tr, "TopState", None) {
             let msg =
-                format!("implementations of moku::TopState in this module must use {state_enum} as the generic");
+                format!("implementations of moku::TopState in this module must use only {state_enum} as the generic");
             self.error = Some(syn::Error::new(imp.span(), msg));
-        } else if path_matches_any_generic(tr, "State") {
+        } else if path_matches_generic(tr, "State", None) {
             let msg =
-                format!("implementations of moku::State in this module must use {state_enum} as the generic");
+                format!("implementations of moku::State in this module must use only {state_enum} as the generic");
             self.error = Some(syn::Error::new(imp.span(), msg));
         }
-
-        // TODO validate that the state impls use the correct StateEnum
-        // TODO validate that no state is missing a superstate attr
-
-        // TODO validate that there is only one top state
-        // TODO validate that Superstates is not defined
-        // TODO validate that there is one superstate arg
     }
 }
 

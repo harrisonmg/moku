@@ -1,4 +1,4 @@
-error: a moku machine_module must have empty braces, try `mod state_machine_module {}`
+error: a `moku::machine_module` must have empty braces, try `mod state_machine_module {}`
  --> tests/compile_fail/machine_module/non_empty_module.rs:7:5
   |
 7 |     #[machine_module]

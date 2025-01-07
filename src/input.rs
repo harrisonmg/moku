@@ -1,4 +1,4 @@
-#[crate::state_machine]
+//#[crate::state_machine]
 mod blinky {
     use std::time::{Duration, Instant};
 

@@ -1,0 +1,7 @@
+error: custom attribute panicked
+ --> tests/compile_fail/state_machine/no_machine_module.rs:3:1
+  |
+3 | #[state_machine]
+  | ^^^^^^^^^^^^^^^^
+  |
+  = help: message: not yet implemented

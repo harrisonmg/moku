@@ -1,0 +1,7 @@
+error: custom attribute panicked
+ --> tests/compile_fail/state/not_on_state_impl.rs:8:5
+  |
+8 |     #[superstate(Top)]
+  |     ^^^^^^^^^^^^^^^^^^
+  |
+  = help: message: not yet implemented

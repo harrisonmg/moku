@@ -6,7 +6,7 @@ error[E0658]: non-inline modules in proc macro input are unstable
   |
   = note: see issue #54727 <https://github.com/rust-lang/rust/issues/54727> for more information
 
-error: a moku machine_module must have empty braces, try `mod state_machine_module {}`
+error: a `moku::machine_module` must have empty braces, try `mod state_machine_module {}`
  --> tests/compile_fail/machine_module/inline_module.rs:7:5
   |
 7 |     #[machine_module]

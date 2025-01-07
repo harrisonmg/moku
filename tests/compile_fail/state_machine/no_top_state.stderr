@@ -1,0 +1,5 @@
+error: no `moku::TopState` was defined in this module
+ --> tests/compile_fail/state_machine/no_top_state.rs:4:1
+  |
+4 | mod blinky {
+  | ^^^

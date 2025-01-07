@@ -25,6 +25,7 @@
                 + need to split out substates + descendents
             + state matches
     * superstate enum
+        + don't need for topstate
         + ref to each superstate
         + function from superstate superstate enum
 - state machine

@@ -7,7 +7,7 @@ use quote::ToTokens;
 use syn::{
     parse::Parse, parse_macro_input, spanned::Spanned, visit::Visit,
     AngleBracketedGenericArguments, Attribute, GenericArgument, ItemImpl, ItemMod, ItemStruct,
-    Meta, Path, PathArguments, Type, TypePath,
+    Meta, MetaList, Path, PathArguments, Type, TypePath,
 };
 
 #[proc_macro_attribute]
@@ -133,11 +133,19 @@ fn filter_attributes<'a>(
         .filter(move |attr| path_matches(&attr.meta.path(), name))
 }
 
+struct VisitedState<'ast> {
+    ident: Ident,
+    superstate: Ident,
+    imp: &'ast ItemImpl,
+    attr: &'ast Attribute,
+    def: Option<&'ast ItemStruct>,
+}
+
 struct Visitor<'ast> {
     name: Ident,
     machine_module: Option<&'ast ItemMod>,
     top_state: Option<Ident>,
-    states: Vec<(Ident, &'ast ItemImpl, Ident)>,
+    states: Vec<VisitedState<'ast>>,
     error: Option<syn::Error>,
 }
 
@@ -191,19 +199,129 @@ impl<'ast> Visitor<'ast> {
             }
         };
 
-        // TODO validate that each superstate is another State or TopState
+        // TODO check that we've found the definition for each state
+
+        // validate that each superstate is another State or TopState
+        for (index, state) in self.states.iter().enumerate() {
+            let matches_top_state = state.superstate == top_state;
+            let matches_other_state =
+                self.states
+                    .iter()
+                    .enumerate()
+                    .any(|(other_index, other_state)| {
+                        index != other_index && state.superstate == other_state.ident
+                    });
+            if !matches_top_state && !matches_other_state {
+                return Err(syn::Error::new(
+                    state.attr.span(),
+                    format!(
+                        "superstate `{}` doesn't match any known `moku::State` or `moku::TopState`",
+                        state.superstate
+                    ),
+                ));
+            }
+        }
 
         todo!()
     }
 
+    /// Visit an implementation of the `TopState` trait.
     fn visit_top_state(&mut self, imp: &'ast ItemImpl) {
-        // TODO validate that there is only one top state
+        if self.top_state.is_some() {
+            self.error = Some(syn::Error::new(
+                imp.span(),
+                "multiple `moku::TopState`s are defined within this module",
+            ));
+        } else {
+            let ident = match imp.self_ty.as_ref() {
+                Type::Path(TypePath { path, .. }) => path.get_ident().map(Clone::clone),
+                _ => None,
+            };
+
+            match ident {
+                Some(ident) => {
+                    self.top_state = Some(ident);
+                }
+                None => {
+                    self.error = Some(syn::Error::new(
+                        imp.self_ty.span(),
+                        "`moku::TopState` must be implemented on a plain struct",
+                    ));
+                }
+            }
+        }
     }
 
+    /// Visit an implementation of the `State` trait.
     fn visit_state(&mut self, imp: &'ast ItemImpl) {
-        // TODO validate that no state is missing a superstate attr
-        // TODO validate that there is one superstate arg
-        // TODO validate that Superstates is not defined
+        if !imp.generics.params.is_empty() {
+            self.error = Some(syn::Error::new(
+                imp.self_ty.span(),
+                "`moku::State`s must not have generic parameters",
+            ));
+            return;
+        }
+
+        let ident = match imp.self_ty.as_ref() {
+            Type::Path(TypePath { path, .. }) => path.get_ident().map(Clone::clone),
+            _ => None,
+        };
+
+        let ident = match ident {
+            Some(ident) => ident,
+            None => {
+                self.error = Some(syn::Error::new(
+                    imp.self_ty.span(),
+                    "`moku::State` must be implemented on a plain struct",
+                ));
+                return;
+            }
+        };
+
+        let mut attrs: Vec<_> = filter_attributes(&imp.attrs, "superstate").collect();
+        match attrs.len() {
+            0 => {
+                self.error = Some(syn::Error::new(
+                    imp.span(),
+                    "no `moku::superstate` attribute defined for this `moku::State`",
+                ));
+                return;
+            }
+            1 => (),
+            _ => {
+                self.error = Some(syn::Error::new(
+                    imp.span(),
+                    "multiple `moku::superstate` attributes defined for this `moku::State`",
+                ));
+                return;
+            }
+        }
+
+        let attr = &attrs.pop().unwrap();
+
+        let superstate: Option<Ident> = match &attr.meta {
+            Meta::List(MetaList { tokens, .. }) => syn::parse2(tokens.clone()).ok(),
+            _ => None,
+        };
+
+        let superstate = match superstate {
+            Some(superstate) => superstate,
+            None => {
+                self.error = Some(syn::Error::new(
+            imp.span(),
+            "the `moku::superstate` attribute requires a single State name as an argument, e.g. `#[superstate(Top)]`",
+        ));
+                return;
+            }
+        };
+
+        self.states.push(VisitedState {
+            ident,
+            superstate,
+            imp,
+            attr,
+            def: None,
+        });
     }
 }
 
@@ -275,12 +393,12 @@ impl<'ast> Visit<'ast> for Visitor<'ast> {
             self.visit_state(imp);
         } else if path_matches_generic(tr, "TopState", None) {
             let msg =
-                format!("implementations of moku::TopState in this module must use only {state_enum} as the generic");
-            self.error = Some(syn::Error::new(imp.span(), msg));
+                format!("implementations of `moku::TopState` in this module must use only `{state_enum}` as the generic");
+            self.error = Some(syn::Error::new(imp.trait_.as_ref().unwrap().1.span(), msg));
         } else if path_matches_generic(tr, "State", None) {
             let msg =
-                format!("implementations of moku::State in this module must use only {state_enum} as the generic");
-            self.error = Some(syn::Error::new(imp.span(), msg));
+                format!("implementations of `moku::State` in this module must use only `{state_enum}` as the generic");
+            self.error = Some(syn::Error::new(imp.trait_.as_ref().unwrap().1.span(), msg));
         }
     }
 }

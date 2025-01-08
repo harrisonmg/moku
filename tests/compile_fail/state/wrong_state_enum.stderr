@@ -1,5 +1,5 @@
-error: implementations of moku::State in this module must use only BlinkyState as the generic
-  --> tests/compile_fail/state/wrong_state_enum.rs:21:5
+error: implementations of `moku::State` in this module must use only `BlinkyState` as the generic
+  --> tests/compile_fail/state/wrong_state_enum.rs:22:10
    |
-21 |     #[superstate(Top)]
-   |     ^
+22 |     impl State<BlonkyState> for Bottom {
+   |          ^^^^^

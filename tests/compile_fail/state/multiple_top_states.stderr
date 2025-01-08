@@ -1,0 +1,5 @@
+error: multiple `moku::TopState`s are defined within this module
+  --> tests/compile_fail/state/multiple_top_states.rs:18:5
+   |
+18 |     impl TopState<BlinkyState> for OtherTop {}
+   |     ^^^^

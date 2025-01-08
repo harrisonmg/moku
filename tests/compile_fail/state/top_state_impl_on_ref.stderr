@@ -1,0 +1,5 @@
+error: `moku::TopState` must be implemented on a plain struct
+  --> tests/compile_fail/state/top_state_impl_on_ref.rs:15:36
+   |
+15 |     impl TopState<BlinkyState> for &Top {}
+   |                                    ^

@@ -1,0 +1,5 @@
+error: `moku::State`s must not have generic parameters
+  --> tests/compile_fail/state/state_has_generic_params.rs:22:36
+   |
+22 |     impl<T> State<BlinkyState> for Bottom<T> {
+   |                                    ^^^^^^

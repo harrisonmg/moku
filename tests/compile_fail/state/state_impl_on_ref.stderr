@@ -1,0 +1,5 @@
+error: `moku::State` must be implemented on a plain struct
+  --> tests/compile_fail/state/state_impl_on_ref.rs:20:33
+   |
+20 |     impl State<BlinkyState> for &Bottom {
+   |                                 ^

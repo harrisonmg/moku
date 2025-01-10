@@ -10,32 +10,24 @@ pub fn path_matches(path: &Path, name: &str) -> bool {
 ///
 /// If generic is None, just check that there is any single generic.
 pub fn path_matches_generic(path: &Path, name: &str, generic: Option<&str>) -> bool {
-    let args = match path.segments.len() {
-        1 => {
-            let seg = path.segments.first().unwrap();
-            if seg.ident != name {
-                return false;
-            }
-
-            &seg.arguments
-        }
+    let seg = match path.segments.len() {
+        1 => path.segments.first().unwrap(),
         2 => {
-            let seg = path.segments.first().unwrap();
-            if seg.ident != "moku" {
+            let first_seg = path.segments.first().unwrap();
+            if first_seg.ident != "moku" {
                 return false;
             }
 
-            let seg = path.segments.last().unwrap();
-            if seg.ident != name {
-                return false;
-            }
-
-            &seg.arguments
+            path.segments.last().unwrap()
         }
         _ => return false,
     };
 
-    match args {
+    if seg.ident != name {
+        return false;
+    }
+
+    match &seg.arguments {
         PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
             if args.len() != 1 {
                 return false;

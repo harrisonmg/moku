@@ -1,0 +1,5 @@
+error: a struct with fields must manually implement the `State::enter` function
+  --> tests/compile_fail/state/no_enter_def.rs:22:10
+   |
+22 |     impl State<BlinkyState> for Bottom {}
+   |          ^^^^^

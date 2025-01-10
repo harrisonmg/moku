@@ -65,8 +65,7 @@ pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 fn generate_state_machine(name: Ident, input: ItemMod) -> Result<ItemMod, syn::Error> {
-    let mut visitor = Visitor::new(name);
-    let metadata = visitor.get_metadata(&input)?;
+    let metadata = Visitor::get_metadata(name, &input)?;
     // TODO use metadata to generate state machine
     Ok(input)
 }

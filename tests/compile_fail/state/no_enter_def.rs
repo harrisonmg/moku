@@ -14,9 +14,11 @@ mod blinky {
     struct Top {}
     impl TopState<BlinkyState> for Top {}
 
-    struct Bottom {}
+    struct Bottom {
+        something: u8,
+    }
 
-    #[superstate(Tob)]
+    #[superstate(Top)]
     impl State<BlinkyState> for Bottom {}
 }
 

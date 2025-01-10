@@ -1,5 +1,5 @@
 error: `moku::superstate` must only be applied to implementations of the `moku::State` trait
- --> tests/compile_fail/state/not_on_state_impl.rs:9:5
+ --> tests/compile_fail/state/attr_not_on_state_impl.rs:9:5
   |
 9 |     impl Default for Bottom {
   |     ^^^^

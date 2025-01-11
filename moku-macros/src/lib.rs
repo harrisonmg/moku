@@ -5,13 +5,12 @@ use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use syn::{parse_macro_input, spanned::Spanned, ItemImpl, ItemMod};
+use unpacker::build_metadata;
 use util::path_matches_generic;
-use visitor::build_metadata;
 
 mod metadata;
+mod unpacker;
 mod util;
-mod visitor;
-mod writer;
 
 #[proc_macro_attribute]
 pub fn machine_module(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -46,12 +45,12 @@ pub fn superstate(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as ItemMod);
+    let module = parse_macro_input!(input as ItemMod);
 
     let name = if args.is_empty() {
         // derive state machine name from module name by default
         Ident::new(
-            &input.ident.to_string().to_case(Case::UpperCamel),
+            &module.ident.to_string().to_case(Case::UpperCamel),
             Span::call_site(),
         )
     } else {
@@ -59,15 +58,13 @@ pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
         parse_macro_input!(args as Ident)
     };
 
-    match generate_state_machine(name, input) {
+    match generate_state_machine(name, module) {
         Err(error) => error.into_compile_error().into(),
         Ok(output) => output.into_token_stream().into(),
     }
 }
 
 fn generate_state_machine(name: Ident, module: ItemMod) -> Result<ItemMod, syn::Error> {
-    let metadata = build_metadata(name, &module)?;
-
-    // TODO use metadata to generate state machine
-    todo!()
+    let metadata = build_metadata(name, module)?;
+    Ok(metadata.write_state_machine())
 }

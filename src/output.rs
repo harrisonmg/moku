@@ -447,12 +447,12 @@ mod state_machine {
         }
 
         fn state_matches(&self, state: BlinkyState) -> bool {
-            return Self::is_state(state)
+            Self::is_state(state)
                 || match self {
                     Self::None => false,
                     Self::LedOn(node) => node.state_matches(state),
                     Self::LedOff(node) => node.state_matches(state),
-                };
+                }
         }
     }
 
@@ -739,12 +739,12 @@ mod state_machine {
         }
 
         fn state_matches(&self, state: BlinkyState) -> bool {
-            return Self::is_state(state)
+            Self::is_state(state)
                 || match self {
                     Self::None => false,
                     Self::Enabled(node) => node.state_matches(state),
                     Self::Disabled(node) => node.state_matches(state),
-                };
+                }
         }
     }
 

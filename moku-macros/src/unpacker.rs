@@ -1,58 +1,56 @@
 use std::collections::HashMap;
 
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Span};
 use syn::{
     spanned::Spanned, Attribute, ImplItem, Item, ItemImpl, ItemMod, ItemStruct, Meta, MetaList,
     Type, TypePath,
 };
 
 use crate::{
-    metadata::Metadata,
+    metadata::{Metadata, State},
     util::{path_matches, path_matches_generic},
 };
 
 /// Collect and validate Metadata about the structure of a `state_machine` module and the usage of attributes.
-pub fn build_metadata(name: Ident, module: &ItemMod) -> Result<Metadata, syn::Error> {
-    let mut visitor = Visitor::new(name, module);
-    visitor.visit()?;
-    visitor.match_state_defs()?;
-    visitor.validate_superstates_types()?;
-    visitor.validate_enter_defs()?;
-    let top_state = visitor.get_top_state()?;
-    visitor.validate_superstates(top_state)?;
-    visitor.build_metadata()
+pub fn build_metadata(name: Ident, module: ItemMod) -> Result<Metadata, syn::Error> {
+    let mut unpacker = Unpacker::new(name, module);
+    unpacker.unpack()?;
+    unpacker.match_state_defs()?;
+    unpacker.validate_superstates_types()?;
+    unpacker.validate_enter_defs()?;
+    let top_state = unpacker.get_top_state()?;
+    unpacker.validate_superstates(top_state)?;
+    unpacker.build_metadata()
 }
 
-fn filter_attributes<'a>(
-    attrs: &'a [Attribute],
-    name: &'a str,
-) -> impl Iterator<Item = &'a Attribute> + 'a {
+fn filter_attributes<'a>(attrs: &'a [Attribute], name: &str) -> Vec<&'a Attribute> {
     attrs
         .iter()
         .filter(move |attr| path_matches(attr.meta.path(), name))
+        .collect()
 }
 
-struct VisitedState<'ast> {
+struct UnpackedState {
     ident: Ident,
     superstate: Ident,
-    imp: &'ast ItemImpl,
-    attr: &'ast Attribute,
-    def: Option<&'ast ItemStruct>,
+    imp: ItemImpl,
+    attr_span: Span,
+    can_autogen_enter: bool,
     autogen_enter: bool,
 }
 
-struct Visitor<'ast> {
+struct Unpacker {
     name: Ident,
-    module: &'ast ItemMod,
-    machine_mod: Option<Ident>,
+    module: ItemMod,
+    machine_mod: Option<ItemMod>,
     top_state: Option<Ident>,
-    states: Vec<VisitedState<'ast>>,
-    structs: HashMap<Ident, &'ast ItemStruct>,
+    states: Vec<UnpackedState>,
+    structs: HashMap<Ident, bool>,
     error: Option<syn::Error>,
 }
 
-impl<'ast> Visitor<'ast> {
-    fn new(name: Ident, module: &'ast ItemMod) -> Self {
+impl Unpacker {
+    fn new(name: Ident, module: ItemMod) -> Self {
         Self {
             name,
             module,
@@ -64,16 +62,16 @@ impl<'ast> Visitor<'ast> {
         }
     }
 
-    /// Build Metadata from the info collected by a Visitor.
-    fn build_metadata(self) -> Result<Metadata, syn::Error> {
+    /// Build Metadata from the info collected by an Unpacker.
+    fn build_metadata(mut self) -> Result<Metadata, syn::Error> {
         let mut metadata = Metadata {
             top_state: self.get_top_state()?.into(),
-            machine_mod: self.get_machine_mod()?.clone(),
+            machine_mod: self.take_machine_mod()?,
             name: self.name,
             states: HashMap::new(),
         };
 
-        for state in &self.states {
+        for state in &mut self.states {
             metadata.add_state(&state.ident, state.autogen_enter);
         }
 
@@ -81,18 +79,26 @@ impl<'ast> Visitor<'ast> {
             metadata.add_relation(&state.superstate, &state.ident)?;
         }
 
+        for state in self.states {
+            metadata.add_state_impl(&state.ident, state.imp);
+        }
+
         Ok(metadata)
     }
 
-    /// Visit each item in the module's content.
-    fn visit(&mut self) -> Result<(), syn::Error> {
-        if let Some(content) = &self.module.content {
-            for item in &content.1 {
-                match item {
-                    Item::Struct(item) => self.visit_item_struct(item),
-                    Item::Mod(item) => self.visit_item_mod(item),
-                    Item::Impl(item) => self.visit_item_impl(item),
-                    _ => (),
+    /// Unpack each item in the state_machine module's content.
+    fn unpack(&mut self) -> Result<(), syn::Error> {
+        if let Some(mut content) = self.module.content.take() {
+            let items: Vec<_> = content.1.drain(..).collect();
+            for item in items {
+                if let Some(item) = match item {
+                    Item::Struct(def) => self.unpack_struct(def),
+                    Item::Mod(module) => self.unpack_mod(module),
+                    Item::Impl(imp) => self.unpack_impl(imp),
+                    _ => Some(item),
+                } {
+                    // restore the items that we won't need to touch
+                    content.1.push(item);
                 }
 
                 // stop if we encounter an issue
@@ -100,6 +106,8 @@ impl<'ast> Visitor<'ast> {
                     return Err(error);
                 }
             }
+
+            self.module.content = Some(content);
         }
 
         Ok(())
@@ -108,12 +116,14 @@ impl<'ast> Visitor<'ast> {
     /// Match each State with it's struct definition.
     fn match_state_defs(&mut self) -> Result<(), syn::Error> {
         for state in &mut self.states {
-            state.def = self.structs.remove(&state.ident);
-            if state.def.is_none() {
-                return Err(syn::Error::new(
-                    state.imp.self_ty.span(),
-                    format!("could not find the struct definition for this State in this module (or this is a duplicate impl of State for {})", state.ident),
-                ));
+            match self.structs.remove(&state.ident) {
+                Some(has_no_fields) => state.can_autogen_enter = has_no_fields,
+                None => {
+                    return Err(syn::Error::new(
+                        state.imp.self_ty.span(),
+                        format!("could not find the struct definition for this State in this module (or this is a duplicate impl of State for {})", state.ident),
+                    ));
+                }
             }
         }
 
@@ -141,8 +151,6 @@ impl<'ast> Visitor<'ast> {
     /// Validate that State::enter is manually defined or can be autogenerated for each State.
     fn validate_enter_defs(&mut self) -> Result<(), syn::Error> {
         for state in &mut self.states {
-            let def = state.def.unwrap();
-            let can_autogen = def.fields.is_empty();
             let has_enter = state.imp.items.iter().any(|item| match item {
                 ImplItem::Fn(fun) => fun.sig.ident == "enter",
                 _ => false,
@@ -150,7 +158,7 @@ impl<'ast> Visitor<'ast> {
 
             if has_enter {
                 state.autogen_enter = false;
-            } else if can_autogen {
+            } else if state.can_autogen_enter {
                 state.autogen_enter = true;
             } else {
                 return Err(syn::Error::new(
@@ -163,9 +171,9 @@ impl<'ast> Visitor<'ast> {
         Ok(())
     }
 
-    /// Get a reference to the machine_module if found.
-    fn get_machine_mod(&self) -> Result<&Ident, syn::Error> {
-        match &self.machine_mod {
+    /// Take the machine_module if found.
+    fn take_machine_mod(&mut self) -> Result<ItemMod, syn::Error> {
+        match self.machine_mod.take() {
             Some(machine_mod) => Ok(machine_mod),
             None => Err(syn::Error::new(
                 self.module.span(),
@@ -199,7 +207,7 @@ impl<'ast> Visitor<'ast> {
                     });
             if !matches_top_state && !matches_other_state {
                 return Err(syn::Error::new(
-                    state.attr.span(),
+                    state.attr_span,
                     format!(
                         "superstate `{}` doesn't match any other known `moku::State` or `moku::TopState`",
                         state.superstate
@@ -211,8 +219,8 @@ impl<'ast> Visitor<'ast> {
         Ok(())
     }
 
-    /// Visit an implementation of the `TopState` trait.
-    fn visit_top_state(&mut self, imp: &'ast ItemImpl) {
+    /// Unpack an implementation of the `TopState` trait.
+    fn unpack_top_state(&mut self, imp: &ItemImpl) {
         if self.top_state.is_some() {
             self.error = Some(syn::Error::new(
                 imp.span(),
@@ -238,8 +246,8 @@ impl<'ast> Visitor<'ast> {
         }
     }
 
-    /// Visit an implementation of the `State` trait.
-    fn visit_state(&mut self, imp: &'ast ItemImpl) {
+    /// Unpack an implementation of the `State` trait.
+    fn unpack_state(&mut self, imp: ItemImpl) {
         if !imp.generics.params.is_empty() {
             self.error = Some(syn::Error::new(
                 imp.self_ty.span(),
@@ -264,7 +272,7 @@ impl<'ast> Visitor<'ast> {
             }
         };
 
-        let mut attrs: Vec<_> = filter_attributes(&imp.attrs, "superstate").collect();
+        let mut attrs = filter_attributes(&imp.attrs, "superstate");
         match attrs.len() {
             0 => {
                 self.error = Some(syn::Error::new(
@@ -293,92 +301,111 @@ impl<'ast> Visitor<'ast> {
         let superstate = match superstate {
             Some(superstate) => superstate,
             None => {
-                self.error = Some(syn::Error::new(
-            imp.span(),
-            "the `moku::superstate` attribute requires a single State name as an argument, e.g. `#[superstate(Top)]`",
-        ));
+                self.error = Some(syn::Error::new( imp.span(), "the `moku::superstate` attribute requires a single State name as an argument, e.g. `#[superstate(Top)]`",));
                 return;
             }
         };
 
-        self.states.push(VisitedState {
+        self.states.push(UnpackedState {
             ident,
             superstate,
+            attr_span: attr.span(),
             imp,
-            attr,
-            def: None,
+            can_autogen_enter: false,
             autogen_enter: false,
         });
     }
 
-    fn visit_item_struct(&mut self, def: &'ast ItemStruct) {
-        // hold onto these for matching with States later
-        self.structs.insert(def.ident.clone(), def);
+    fn unpack_struct(&mut self, def: ItemStruct) -> Option<Item> {
+        // track what structs have fields for State::enter autogen info
+        self.structs
+            .insert(def.ident.clone(), def.fields.is_empty());
+        Some(Item::Struct(def))
     }
 
-    fn visit_item_mod(&mut self, module: &'ast ItemMod) {
+    fn unpack_mod(&mut self, module: ItemMod) -> Option<Item> {
         // short circuit if we've found an issue
         if self.error.is_some() {
-            return;
+            return None;
         };
 
-        for attr in filter_attributes(&module.attrs, "machine_module") {
-            // validate attribute arguments
-            match attr.meta {
-                Meta::Path(_) => (),
-                _ => {
-                    self.error = Some(syn::Error::new(
-                        attr.span(),
-                        "`moku::machine_module` accepts no arguments, try `#[machine_module]`",
-                    ));
-                    return;
-                }
-            }
+        let mut attrs = filter_attributes(&module.attrs, "machine_module");
 
-            // validate single attribute definition in module
-            if self.machine_mod.is_some() {
+        match attrs.len() {
+            0 => {
+                // kick back modules without our attribute
+                return Some(Item::Mod(module));
+            }
+            1 => (),
+            _ => {
                 self.error = Some(syn::Error::new(
                     module.span(),
-                    "multiple `moku::machine_module`s are defined within this module",
+                    "multiple `moku::machine_module` attributes defined for this module",
                 ));
-                return;
+                return None;
             }
-
-            // validate this module has some inline content
-            if let Some(content) = &module.content {
-                if content.1.is_empty() {
-                    // all is good
-                    self.machine_mod = Some(module.ident.clone());
-                    return;
-                }
-            }
-
-            // fallthrough error for above validation
-            let msg = format!(
-                "a `moku::machine_module` must have empty braces, try `mod {} {{}}`",
-                module.ident
-            );
-            self.error = Some(syn::Error::new(module.span(), msg))
         }
+
+        let attr = attrs.pop().unwrap();
+
+        // validate attribute arguments
+        match attr.meta {
+            Meta::Path(_) => (),
+            _ => {
+                self.error = Some(syn::Error::new(
+                    attr.span(),
+                    "`moku::machine_module` accepts no arguments, try `#[machine_module]`",
+                ));
+                return None;
+            }
+        }
+
+        // validate single attribute definition in module
+        if self.machine_mod.is_some() {
+            self.error = Some(syn::Error::new(
+                module.span(),
+                "multiple `moku::machine_module`s are defined within this module",
+            ));
+            return None;
+        }
+
+        // validate this module has some inline content
+        if let Some(content) = &module.content {
+            if content.1.is_empty() {
+                // all is good
+                self.machine_mod = Some(module);
+                return None;
+            }
+        }
+
+        // fallthrough error for above validation
+        let msg = format!(
+            "a `moku::machine_module` must have empty braces, try `mod {} {{}}`",
+            module.ident
+        );
+        self.error = Some(syn::Error::new(module.span(), msg));
+
+        None
     }
 
-    fn visit_item_impl(&mut self, imp: &'ast ItemImpl) {
+    fn unpack_impl(&mut self, imp: ItemImpl) -> Option<Item> {
         // short circuit if we've found an issue
         if self.error.is_some() {
-            return;
+            return None;
         };
 
         let tr = match &imp.trait_ {
-            None => return,
+            None => return None,
             Some(tr) => &tr.1,
         };
 
         let state_enum = self.name.to_string() + "State";
 
         if path_matches_generic(tr, "TopState", Some(&state_enum)) {
-            self.visit_top_state(imp);
+            self.unpack_top_state(&imp);
+            return Some(Item::Impl(imp));
         } else if path_matches_generic(tr, "State", Some(&state_enum)) {
-            self.visit_state(imp);
+            self.unpack_state(imp)
         } else if path_matches_generic(tr, "TopState", None) {
             let msg =
                 format!("implementations of `moku::TopState` in this module must use only `{state_enum}` as the generic");
@@ -388,5 +415,7 @@ impl<'ast> Visitor<'ast> {
                 format!("implementations of `moku::State` in this module must use only `{state_enum}` as the generic");
             self.error = Some(syn::Error::new(imp.trait_.as_ref().unwrap().1.span(), msg));
         }
+
+        None
     }
 }

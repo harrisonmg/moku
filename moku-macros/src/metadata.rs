@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use quote::format_ident;
-use syn::Ident;
+use syn::{Ident, ItemImpl, ItemMod};
 
-#[derive(Clone)]
 pub struct State {
     ident: Ident,
     node: Ident,
@@ -11,6 +10,7 @@ pub struct State {
     superstates_enum: Ident,
     children: Vec<State>,
     autogen_enter: bool,
+    imp: Option<ItemImpl>,
 }
 
 impl From<&Ident> for State {
@@ -22,6 +22,7 @@ impl From<&Ident> for State {
             superstates_enum: format_ident!("{ident}Superstates"),
             children: Vec::new(),
             autogen_enter: false,
+            imp: None,
         }
     }
 }
@@ -76,15 +77,20 @@ pub struct Metadata {
     pub name: Ident,
     pub top_state: State,
     pub states: HashMap<Ident, State>,
-    pub machine_mod: Ident,
+    pub machine_mod: ItemMod,
 }
 
 impl Metadata {
-    /// Add a state machine state
+    /// Add a state machine state.
     pub fn add_state(&mut self, ident: &Ident, autogen_enter: bool) {
         let mut state: State = ident.into();
         state.autogen_enter = autogen_enter;
         self.states.insert(ident.clone(), state);
+    }
+
+    /// Add the State impl item to a state.
+    pub fn add_state_impl(&mut self, ident: &Ident, imp: ItemImpl) {
+        self.states.get_mut(ident).unwrap().imp = Some(imp);
     }
 
     /// Add a parent-child relation to the state graph, while detecting state graph cycles.
@@ -107,5 +113,9 @@ impl Metadata {
                 child.state_chart_acc(0, true),
             ),
         ))
+    }
+
+    pub fn write_state_machine(mut self) -> ItemMod {
+        todo!()
     }
 }

@@ -1,0 +1,5 @@
+error: multiple `moku::machine_module` attributes defined for this module
+ --> tests/compile_fail/machine_module/multiple_attrs.rs:7:5
+  |
+7 |     #[machine_module]
+  |     ^

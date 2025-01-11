@@ -1,5 +1,5 @@
 error: the `moku::superstate` attribute requires a single State name as an argument, e.g. `#[superstate(Top)]`
-  --> tests/compile_fail/state/multiple_superstate_args.rs:17:5
+  --> tests/compile_fail/state/multiple_superstate_args.rs:13:5
    |
-17 |     #[superstate(Top, Top)]
+13 |     #[superstate(Top, Top)]
    |     ^

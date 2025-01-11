@@ -2,7 +2,7 @@ mod blinky {
     use moku::*;
 
     #[machine_module]
-    struct Module {}
+    struct Module;
 }
 
 fn main() {}

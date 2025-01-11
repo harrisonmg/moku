@@ -10,12 +10,15 @@ mod blinky {
     struct Top;
     impl TopState<BlinkyState> for Top {}
 
-    struct Bottom;
+    struct Foo;
 
-    type BottomTy = Bottom;
+    #[superstate(Bar)]
+    impl State<BlinkyState> for Foo {}
 
-    #[superstate(Top)]
-    impl State<BlinkyState> for BottomTy {}
+    struct Bar;
+
+    #[superstate(Foo)]
+    impl State<BlinkyState> for Bar {}
 }
 
 fn main() {}

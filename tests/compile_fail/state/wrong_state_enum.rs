@@ -7,25 +7,11 @@ mod blinky {
     #[machine_module]
     mod state_machine {}
 
-    #[derive(Debug, Clone, Copy)]
-    enum BlinkyState {}
-    impl StateEnum for BlinkyState {}
-
-    #[derive(Debug, Clone, Copy)]
-    enum BlonkyState {}
-    impl StateEnum for BlonkyState {}
-
-    struct Top {}
+    struct Top;
     impl TopState<BlinkyState> for Top {}
 
     #[superstate(Top)]
-    impl State<BlonkyState> for Bottom {
-        type Superstates<'a> = std::marker::PhantomData<&'a ()>;
-
-        fn enter<'a>(_superstates: &mut Self::Superstates<'a>) -> StateEntry<Self, BlinkyState> {
-            StateEntry::State(Self {})
-        }
-    }
+    impl State<BlonkyState> for Bottom {}
 }
 
 fn main() {}

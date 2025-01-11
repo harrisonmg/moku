@@ -1,5 +1,5 @@
 error: multiple `moku::superstate` attributes defined for this `moku::State`
-  --> tests/compile_fail/state/multiple_superstate_attrs.rs:17:5
+  --> tests/compile_fail/state/multiple_superstate_attrs.rs:13:5
    |
-17 |     #[superstate(Top)]
+13 |     #[superstate(Top)]
    |     ^

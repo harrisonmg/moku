@@ -1,5 +1,5 @@
 error: expected `mod`
  --> tests/compile_fail/machine_module/attr_not_on_module.rs:5:5
   |
-5 |     struct Module {}
+5 |     struct Module;
   |     ^^^^^^

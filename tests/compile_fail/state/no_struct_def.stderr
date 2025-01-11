@@ -1,5 +1,5 @@
 error: could not find the struct definition for this State in this module
-  --> tests/compile_fail/state/no_struct_def.rs:22:33
+  --> tests/compile_fail/state/no_struct_def.rs:18:33
    |
-22 |     impl State<BlinkyState> for BottomTy {
+18 |     impl State<BlinkyState> for BottomTy {}
    |                                 ^^^^^^^^

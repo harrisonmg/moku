@@ -11,6 +11,18 @@ use crate::{
     util::{path_matches, path_matches_generic},
 };
 
+/// Collect and validate Metadata about the structure of a `state_machine` module and the usage of attributes.
+pub fn build_metadata(name: Ident, module: &ItemMod) -> Result<Metadata, syn::Error> {
+    let mut visitor = Visitor::new(name, module);
+    visitor.visit()?;
+    visitor.match_state_defs()?;
+    visitor.validate_superstates_types()?;
+    visitor.validate_enter_defs()?;
+    let top_state = visitor.get_top_state()?;
+    visitor.validate_superstates(&top_state)?;
+    visitor.build_metadata()
+}
+
 fn filter_attributes<'a>(
     attrs: &'a Vec<Attribute>,
     name: &'a str,
@@ -32,7 +44,7 @@ struct VisitedState<'ast> {
 pub struct Visitor<'ast> {
     name: Ident,
     module: &'ast ItemMod,
-    machine_mod: Option<&'ast ItemMod>,
+    machine_mod: Option<Ident>,
     top_state: Option<Ident>,
     states: Vec<VisitedState<'ast>>,
     structs: HashMap<Ident, &'ast ItemStruct>,
@@ -52,19 +64,26 @@ impl<'ast> Visitor<'ast> {
         }
     }
 
-    /// Collect and validate Metadata about the structure of a `state_machine` module and the usage of attributes.
-    pub fn get_metadata(name: Ident, module: &'ast ItemMod) -> Result<Metadata, syn::Error> {
-        let mut visitor = Self::new(name, module);
-        visitor.visit()?;
-        visitor.match_state_defs()?;
-        visitor.validate_superstates_types()?;
-        visitor.validate_enter_defs()?;
-        let machine_mod = visitor.get_machine_mod()?;
-        let top_state = visitor.get_top_state()?;
-        visitor.validate_superstates(&top_state)?;
+    /// Build Metadata from the info collected by a Visitor.
+    fn build_metadata(self) -> Result<Metadata, syn::Error> {
+        let machine_mod = self.get_machine_mod()?;
 
-        // TODO create metadata
-        todo!()
+        let mut metadata = Metadata {
+            top_state: self.get_top_state()?.into(),
+            machine_mod: self.get_machine_mod()?.clone(),
+            name: self.name,
+            states: Vec::new(),
+        };
+
+        for state in &self.states {
+            metadata.add_state(&state.ident, state.autogen_enter);
+        }
+
+        for state in &self.states {
+            metadata.add_relation(&state.superstate, &state.ident)?;
+        }
+
+        Ok(metadata)
     }
 
     /// Visit each item in the module's content.
@@ -145,8 +164,8 @@ impl<'ast> Visitor<'ast> {
     }
 
     /// Get a reference to the machine_module if found.
-    fn get_machine_mod(&self) -> Result<&'ast ItemMod, syn::Error> {
-        match self.machine_mod {
+    fn get_machine_mod(&self) -> Result<&Ident, syn::Error> {
+        match &self.machine_mod {
             Some(machine_mod) => Ok(machine_mod),
             None => {
                 return Err(syn::Error::new(
@@ -158,9 +177,9 @@ impl<'ast> Visitor<'ast> {
     }
 
     /// Get the Ident of the TopState if found.
-    fn get_top_state(&self) -> Result<Ident, syn::Error> {
+    fn get_top_state(&self) -> Result<&Ident, syn::Error> {
         match &self.top_state {
-            Some(state) => Ok(state.clone()),
+            Some(state) => Ok(state),
             None => {
                 return Err(syn::Error::new(
                     self.module.span(),
@@ -335,7 +354,7 @@ impl<'ast> Visit<'ast> for Visitor<'ast> {
             if let Some(content) = &module.content {
                 if content.1.is_empty() {
                     // all is good
-                    self.machine_mod = Some(module);
+                    self.machine_mod = Some(module.ident.clone());
                     return;
                 }
             }

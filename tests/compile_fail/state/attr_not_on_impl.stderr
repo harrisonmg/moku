@@ -1,5 +1,5 @@
 error: expected `impl`
- --> tests/compile_fail/state/attr_not_on_impl.rs:7:5
+ --> tests/compile_fail/state/attr_not_on_impl.rs:5:5
   |
-7 |     struct Bottom {}
+5 |     struct Bottom;
   |     ^^^^^^

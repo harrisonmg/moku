@@ -1,10 +1,8 @@
 mod blinky {
     use moku::*;
 
-    struct Top {}
-
     #[superstate(Top)]
-    struct Bottom {}
+    struct Bottom;
 }
 
 fn main() {}

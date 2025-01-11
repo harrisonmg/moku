@@ -1,12 +1,12 @@
 #![allow(unused)]
 
 use convert_case::{Case, Casing};
+use metadata::Metadata;
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use syn::{parse_macro_input, spanned::Spanned, ItemImpl, ItemMod};
 use util::path_matches_generic;
-use visitor::Visitor;
 
 mod metadata;
 mod util;
@@ -64,8 +64,8 @@ pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
-fn generate_state_machine(name: Ident, input: ItemMod) -> Result<ItemMod, syn::Error> {
-    let metadata = Visitor::get_metadata(name, &input)?;
+fn generate_state_machine(name: Ident, module: ItemMod) -> Result<ItemMod, syn::Error> {
+    let metadata = Metadata::new(name, module)?;
     // TODO use metadata to generate state machine
-    Ok(input)
+    todo!()
 }

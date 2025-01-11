@@ -15,7 +15,7 @@ struct Disabled;
 impl State<BlinkyState> for Disabled {
     type Superstates<'a> = state_machine::TopSuperstates<'a>;
 
-    fn enter<'a>(superstates: &mut Self::Superstates<'a>) -> StateEntry<Self, BlinkyState> {
+    fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
         StateEntry::State(Self {})
     }
 }
@@ -27,13 +27,13 @@ struct Enabled {
 impl State<BlinkyState> for Enabled {
     type Superstates<'a> = state_machine::TopSuperstates<'a>;
 
-    fn enter<'a>(superstates: &mut Self::Superstates<'a>) -> StateEntry<Self, BlinkyState> {
+    fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
         StateEntry::State(Self {
             blink_period: Duration::from_secs(2),
         })
     }
 
-    //fn init<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<BlinkyState> {
+    //fn init(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
     //    Some(BlinkyState::LedOn)
     //}
 }
@@ -45,13 +45,13 @@ struct LedOn {
 impl State<BlinkyState> for LedOn {
     type Superstates<'a> = state_machine::EnabledSuperstates<'a>;
 
-    fn enter<'a>(superstates: &mut Self::Superstates<'a>) -> StateEntry<Self, BlinkyState> {
+    fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
         StateEntry::State(Self {
             entry_time: Instant::now(),
         })
     }
 
-    fn update<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<BlinkyState> {
+    fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
         if (self.entry_time.elapsed() >= superstates.enabled.blink_period) {
             Some(BlinkyState::LedOff)
         } else {
@@ -67,13 +67,13 @@ struct LedOff {
 impl State<BlinkyState> for LedOff {
     type Superstates<'a> = state_machine::EnabledSuperstates<'a>;
 
-    fn enter<'a>(superstates: &mut Self::Superstates<'a>) -> StateEntry<Self, BlinkyState> {
+    fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
         StateEntry::State(Self {
             entry_time: Instant::now(),
         })
     }
 
-    fn update<'a>(&mut self, superstates: &mut Self::Superstates<'a>) -> Option<BlinkyState> {
+    fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
         if (self.entry_time.elapsed() >= superstates.enabled.blink_period) {
             Some(BlinkyState::LedOn)
         } else {
@@ -359,10 +359,10 @@ mod state_machine {
             matches!(state, BlinkyState::LedOn | BlinkyState::LedOff)
         }
 
-        fn update<'a>(
+        fn update(
             &mut self,
             state: &mut super::Enabled,
-            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'a>,
+            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'_>,
         ) -> Option<BlinkyState> {
             match self {
                 Self::None => None,
@@ -371,10 +371,10 @@ mod state_machine {
             }
         }
 
-        fn top_down_update<'a>(
+        fn top_down_update(
             &mut self,
             state: &mut super::Enabled,
-            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'a>,
+            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'_>,
         ) -> Option<BlinkyState> {
             match self {
                 Self::None => None,
@@ -387,10 +387,10 @@ mod state_machine {
             }
         }
 
-        fn exit<'a>(
+        fn exit(
             &mut self,
             state: &mut super::Enabled,
-            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'a>,
+            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'_>,
         ) -> Option<BlinkyState> {
             let old_state = std::mem::replace(self, Self::None);
             match old_state {
@@ -400,12 +400,12 @@ mod state_machine {
             }
         }
 
-        fn transition<'a>(
+        fn transition(
             &mut self,
             target: BlinkyState,
             state: &mut super::Enabled,
-            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'a>,
-        ) -> super::TransitionResult<BlinkyState> {
+            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'_>,
+        ) -> moku::internal::TransitionResult<BlinkyState> {
             match self {
                 Self::None => moku::internal::TransitionResult::MoveUp,
                 Self::LedOn(node) => {
@@ -417,11 +417,11 @@ mod state_machine {
             }
         }
 
-        fn enter_substate_towards<'a>(
+        fn enter_substate_towards(
             &mut self,
             target: BlinkyState,
             state: &mut super::Enabled,
-            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'a>,
+            superstates: &mut <super::Enabled as super::State<BlinkyState>>::Superstates<'_>,
         ) -> Option<BlinkyState> {
             match target {
                 BlinkyState::LedOn => {
@@ -651,10 +651,10 @@ mod state_machine {
             !matches!(state, BlinkyState::Top)
         }
 
-        fn update<'a>(
+        fn update(
             &mut self,
             state: &mut super::Top,
-            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'a>,
+            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'_>,
         ) -> Option<BlinkyState> {
             match self {
                 Self::None => None,
@@ -663,10 +663,10 @@ mod state_machine {
             }
         }
 
-        fn top_down_update<'a>(
+        fn top_down_update(
             &mut self,
             state: &mut super::Top,
-            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'a>,
+            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'_>,
         ) -> Option<BlinkyState> {
             match self {
                 Self::None => None,
@@ -679,10 +679,10 @@ mod state_machine {
             }
         }
 
-        fn exit<'a>(
+        fn exit(
             &mut self,
             state: &mut super::Top,
-            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'a>,
+            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'_>,
         ) -> Option<BlinkyState> {
             let old_state = std::mem::replace(self, Self::None);
             match old_state {
@@ -692,12 +692,12 @@ mod state_machine {
             }
         }
 
-        fn transition<'a>(
+        fn transition(
             &mut self,
             target: BlinkyState,
             state: &mut super::Top,
-            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'a>,
-        ) -> super::TransitionResult<BlinkyState> {
+            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'_>,
+        ) -> moku::internal::TransitionResult<BlinkyState> {
             match self {
                 Self::None => moku::internal::TransitionResult::MoveUp,
                 Self::Enabled(node) => {
@@ -709,11 +709,11 @@ mod state_machine {
             }
         }
 
-        fn enter_substate_towards<'a>(
+        fn enter_substate_towards(
             &mut self,
             target: BlinkyState,
             state: &mut super::Top,
-            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'a>,
+            superstates: &mut <super::Top as super::State<BlinkyState>>::Superstates<'_>,
         ) -> Option<BlinkyState> {
             match target {
                 BlinkyState::Disabled => {

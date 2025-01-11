@@ -1,7 +1,6 @@
 #![allow(unused)]
 
 use convert_case::{Case, Casing};
-use metadata::Metadata;
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::ToTokens;

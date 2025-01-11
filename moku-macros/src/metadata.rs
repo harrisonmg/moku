@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 
 use quote::format_ident;
-use syn::{Ident, ItemMod};
+use syn::Ident;
 
-use crate::visitor::build_metadata;
-
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct State {
     ident: Ident,
     node: Ident,
@@ -74,7 +72,6 @@ impl State {
     }
 }
 
-#[derive(Debug)]
 pub struct Metadata {
     pub name: Ident,
     pub top_state: State,

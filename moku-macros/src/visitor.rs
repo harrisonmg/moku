@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use proc_macro2::Ident;
 use syn::{
-    spanned::Spanned, visit::Visit, Attribute, ImplItem, ItemImpl, ItemMod, ItemStruct, Meta,
-    MetaList, Type, TypePath,
+    spanned::Spanned, Attribute, ImplItem, Item, ItemImpl, ItemMod, ItemStruct, Meta, MetaList,
+    Type, TypePath,
 };
 
 use crate::{
@@ -19,17 +19,17 @@ pub fn build_metadata(name: Ident, module: &ItemMod) -> Result<Metadata, syn::Er
     visitor.validate_superstates_types()?;
     visitor.validate_enter_defs()?;
     let top_state = visitor.get_top_state()?;
-    visitor.validate_superstates(&top_state)?;
+    visitor.validate_superstates(top_state)?;
     visitor.build_metadata()
 }
 
 fn filter_attributes<'a>(
-    attrs: &'a Vec<Attribute>,
+    attrs: &'a [Attribute],
     name: &'a str,
 ) -> impl Iterator<Item = &'a Attribute> + 'a {
     attrs
         .iter()
-        .filter(move |attr| path_matches(&attr.meta.path(), name))
+        .filter(move |attr| path_matches(attr.meta.path(), name))
 }
 
 struct VisitedState<'ast> {
@@ -66,8 +66,6 @@ impl<'ast> Visitor<'ast> {
 
     /// Build Metadata from the info collected by a Visitor.
     fn build_metadata(self) -> Result<Metadata, syn::Error> {
-        let machine_mod = self.get_machine_mod()?;
-
         let mut metadata = Metadata {
             top_state: self.get_top_state()?.into(),
             machine_mod: self.get_machine_mod()?.clone(),
@@ -89,9 +87,13 @@ impl<'ast> Visitor<'ast> {
     /// Visit each item in the module's content.
     fn visit(&mut self) -> Result<(), syn::Error> {
         if let Some(content) = &self.module.content {
-            // visit each item separately so that we can override `visit_item_mod`
             for item in &content.1 {
-                self.visit_item(item);
+                match item {
+                    Item::Struct(item) => self.visit_item_struct(item),
+                    Item::Mod(item) => self.visit_item_mod(item),
+                    Item::Impl(item) => self.visit_item_impl(item),
+                    _ => (),
+                }
 
                 // stop if we encounter an issue
                 if let Some(error) = self.error.take() {
@@ -148,15 +150,13 @@ impl<'ast> Visitor<'ast> {
 
             if has_enter {
                 state.autogen_enter = false;
+            } else if can_autogen {
+                state.autogen_enter = true;
             } else {
-                if can_autogen {
-                    state.autogen_enter = true;
-                } else {
-                    return Err(syn::Error::new(
-                        state.imp.trait_.as_ref().unwrap().1.span(),
-                        "a struct with fields must manually implement the `State::enter` function",
-                    ));
-                }
+                return Err(syn::Error::new(
+                    state.imp.trait_.as_ref().unwrap().1.span(),
+                    "a struct with fields must manually implement the `State::enter` function",
+                ));
             }
         }
 
@@ -167,12 +167,10 @@ impl<'ast> Visitor<'ast> {
     fn get_machine_mod(&self) -> Result<&Ident, syn::Error> {
         match &self.machine_mod {
             Some(machine_mod) => Ok(machine_mod),
-            None => {
-                return Err(syn::Error::new(
-                    self.module.span(),
-                    "no `moku::machine_module` was defined in this module",
-                ))
-            }
+            None => Err(syn::Error::new(
+                self.module.span(),
+                "no `moku::machine_module` was defined in this module",
+            )),
         }
     }
 
@@ -180,12 +178,10 @@ impl<'ast> Visitor<'ast> {
     fn get_top_state(&self) -> Result<&Ident, syn::Error> {
         match &self.top_state {
             Some(state) => Ok(state),
-            None => {
-                return Err(syn::Error::new(
-                    self.module.span(),
-                    "no `moku::TopState` was defined in this module",
-                ))
-            }
+            None => Err(syn::Error::new(
+                self.module.span(),
+                "no `moku::TopState` was defined in this module",
+            )),
         }
     }
 
@@ -224,7 +220,7 @@ impl<'ast> Visitor<'ast> {
             ));
         } else {
             let ident = match imp.self_ty.as_ref() {
-                Type::Path(TypePath { path, .. }) => path.get_ident().map(Clone::clone),
+                Type::Path(TypePath { path, .. }) => path.get_ident().cloned(),
                 _ => None,
             };
 
@@ -253,7 +249,7 @@ impl<'ast> Visitor<'ast> {
         }
 
         let ident = match imp.self_ty.as_ref() {
-            Type::Path(TypePath { path, .. }) => path.get_ident().map(Clone::clone),
+            Type::Path(TypePath { path, .. }) => path.get_ident().cloned(),
             _ => None,
         };
 
@@ -314,9 +310,7 @@ impl<'ast> Visitor<'ast> {
             autogen_enter: false,
         });
     }
-}
 
-impl<'ast> Visit<'ast> for Visitor<'ast> {
     fn visit_item_struct(&mut self, def: &'ast ItemStruct) {
         // hold onto these for matching with States later
         self.structs.insert(def.ident.clone(), def);

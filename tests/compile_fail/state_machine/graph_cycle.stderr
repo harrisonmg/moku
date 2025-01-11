@@ -1,0 +1,8 @@
+error: state graph cycle detected in children of Foo:
+       Foo
+       └─ Bar
+          └─ Foo
+  --> tests/compile_fail/state_machine/graph_cycle.rs:20:18
+   |
+20 |     #[superstate(Foo)]
+   |                  ^^^

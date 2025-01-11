@@ -1,0 +1,12 @@
+error: state graph cycle detected in children of Dead:
+       Dead
+       └─ Beef
+          └─ Foo
+             ├─ Bar
+             └─ Fizz
+                └─ Buzz
+                   └─ Dead
+  --> tests/compile_fail/state_machine/long_graph_cycle.rs:40:18
+   |
+40 |     #[superstate(Dead)]
+   |                  ^^^^

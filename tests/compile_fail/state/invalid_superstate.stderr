@@ -1,4 +1,4 @@
-error: superstate `Tob` doesn't match any known `moku::State` or `moku::TopState`
+error: superstate `Tob` doesn't match any other known `moku::State` or `moku::TopState`
   --> tests/compile_fail/state/invalid_superstate.rs:15:5
    |
 15 |     #[superstate(Tob)]

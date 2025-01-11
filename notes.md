@@ -35,10 +35,6 @@
 - builder
     * mostly trivial
 
-# validation
-- graph cycles
-- dead branches
-
 # macro data
 - states
     * build tree from list of relations

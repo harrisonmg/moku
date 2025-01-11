@@ -1,0 +1,5 @@
+error: superstate `Bottom` doesn't match any other known `moku::State` or `moku::TopState`
+  --> tests/compile_fail/state/self_superstate.rs:15:5
+   |
+15 |     #[superstate(Bottom)]
+   |     ^

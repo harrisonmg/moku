@@ -41,7 +41,7 @@ struct VisitedState<'ast> {
     autogen_enter: bool,
 }
 
-pub struct Visitor<'ast> {
+struct Visitor<'ast> {
     name: Ident,
     module: &'ast ItemMod,
     machine_mod: Option<Ident>,
@@ -72,7 +72,7 @@ impl<'ast> Visitor<'ast> {
             top_state: self.get_top_state()?.into(),
             machine_mod: self.get_machine_mod()?.clone(),
             name: self.name,
-            states: Vec::new(),
+            states: HashMap::new(),
         };
 
         for state in &self.states {
@@ -110,7 +110,7 @@ impl<'ast> Visitor<'ast> {
             if state.def.is_none() {
                 return Err(syn::Error::new(
                     state.imp.self_ty.span(),
-                    "could not find the struct definition for this State in this module",
+                    format!("could not find the struct definition for this State in this module (or this is a duplicate impl of State for {})", state.ident),
                 ));
             }
         }
@@ -205,7 +205,7 @@ impl<'ast> Visitor<'ast> {
                 return Err(syn::Error::new(
                     state.attr.span(),
                     format!(
-                        "superstate `{}` doesn't match any known `moku::State` or `moku::TopState`",
+                        "superstate `{}` doesn't match any other known `moku::State` or `moku::TopState`",
                         state.superstate
                     ),
                 ));

@@ -69,6 +69,7 @@ impl Unpacker {
             machine_mod: self.take_machine_mod()?,
             name: self.name,
             states: HashMap::new(),
+            module: self.module,
         };
 
         for state in &mut self.states {

@@ -71,6 +71,19 @@ impl State {
         let vert = if last { '\u{02514}' } else { '\u{0251C}' };
         format!("\n{pad}{vert}\u{02500} {}", self.ident) + &self.state_chart_children(level)
     }
+
+    /// Create a copy that does not include an ItemImpl or children.
+    fn shallow_copy(&self) -> Self {
+        Self {
+            ident: self.ident.clone(),
+            node: self.node.clone(),
+            substate_enum: self.substate_enum.clone(),
+            superstates_enum: self.superstates_enum.clone(),
+            children: Vec::new(),
+            autogen_enter: self.autogen_enter,
+            imp: None,
+        }
+    }
 }
 
 pub struct Metadata {
@@ -78,6 +91,7 @@ pub struct Metadata {
     pub top_state: State,
     pub states: HashMap<Ident, State>,
     pub machine_mod: ItemMod,
+    pub module: ItemMod,
 }
 
 impl Metadata {
@@ -115,7 +129,54 @@ impl Metadata {
         ))
     }
 
+    /// Write the state machine and return the complete state_machine module.
     pub fn write_state_machine(mut self) -> ItemMod {
+        self.write_state_impls();
+        self.drain_state_impls();
+
+        self.write_uses();
+        self.write_state_chart();
+        self.write_state_enum();
+        self.write_machine();
+        self.write_builder();
+        self.write_states();
+
+        self.module
+    }
+
+    fn for_each_state<T, F: FnMut(&mut State, Vec<State>) -> T>(&mut self, fun: F) -> T {
+        todo!()
+    }
+
+    fn write_state_impls(&mut self) {
+        todo!()
+    }
+
+    fn drain_state_impls(&mut self) {
+        todo!()
+    }
+
+    fn write_uses(&mut self) {
+        todo!()
+    }
+
+    fn write_state_chart(&mut self) {
+        todo!()
+    }
+
+    fn write_state_enum(&mut self) {
+        todo!()
+    }
+
+    fn write_machine(&mut self) {
+        todo!()
+    }
+
+    fn write_builder(&mut self) {
+        todo!()
+    }
+
+    fn write_states(&mut self) {
         todo!()
     }
 }

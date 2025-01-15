@@ -87,8 +87,6 @@ impl State<BlinkyState> for LedOff {
 mod state_machine {
     use crate as moku;
 
-    use moku::StateRef;
-
     pub const BLINKY_STATE_CHART: &str = "Top
 \u{0251C}\u{02500} Disabled
 \u{02514}\u{02500} Enabled

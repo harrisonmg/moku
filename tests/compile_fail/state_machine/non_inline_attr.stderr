@@ -1,0 +1,19 @@
+error[E0658]: non-inline modules in proc macro input are unstable
+ --> tests/compile_fail/state_machine/non_inline_attr.rs:4:1
+  |
+4 | mod blinky;
+  | ^^^^^^^^^^^
+  |
+  = note: see issue #54727 <https://github.com/rust-lang/rust/issues/54727> for more information
+
+error: a `moku::state_machine` module must be inline with its attribte, try
+       ```
+       #[moku::state_machine]
+       mod blinky {
+           ...
+       }
+       ```
+ --> tests/compile_fail/state_machine/non_inline_attr.rs:4:1
+  |
+4 | mod blinky;
+  | ^^^

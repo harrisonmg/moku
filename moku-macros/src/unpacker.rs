@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use proc_macro2::{Ident, Span};
+use quote::format_ident;
 use syn::{
     spanned::Spanned, Attribute, ImplItem, Item, ItemImpl, ItemMod, ItemStruct, Meta, MetaList,
     Type, TypePath,
@@ -67,21 +68,23 @@ impl Unpacker {
         let mut metadata = Metadata {
             top_state: self.get_top_state()?.into(),
             machine_mod: self.take_machine_mod()?,
+            state_enum: format_ident!("{}State", self.name),
             name: self.name,
             states: HashMap::new(),
             module: self.module,
         };
 
-        for state in &mut self.states {
-            metadata.add_state(&state.ident, state.autogen_enter);
-        }
+        let relations: Vec<_> = self
+            .states
+            .into_iter()
+            .map(|state| {
+                metadata.add_state(&state.ident, state.autogen_enter, state.imp);
+                (state.ident, state.superstate)
+            })
+            .collect();
 
-        for state in &self.states {
-            metadata.add_relation(&state.superstate, &state.ident)?;
-        }
-
-        for state in self.states {
-            metadata.add_state_impl(&state.ident, state.imp);
+        for (state, superstate) in relations {
+            metadata.add_relation(&superstate, &state)?;
         }
 
         Ok(metadata)
@@ -90,28 +93,42 @@ impl Unpacker {
     /// Unpack each item in the state_machine module's content.
     fn unpack(&mut self) -> Result<(), syn::Error> {
         if let Some(mut content) = self.module.content.take() {
-            let items: Vec<_> = content.1.drain(..).collect();
-            for item in items {
-                if let Some(item) = match item {
-                    Item::Struct(def) => self.unpack_struct(def),
-                    Item::Mod(module) => self.unpack_mod(module),
-                    Item::Impl(imp) => self.unpack_impl(imp),
-                    _ => Some(item),
-                } {
-                    // restore the items that we won't need to touch
-                    content.1.push(item);
+            if !content.1.is_empty() {
+                let items: Vec<_> = content.1.drain(..).collect();
+                for item in items {
+                    if let Some(item) = match item {
+                        Item::Struct(def) => self.unpack_struct(def),
+                        Item::Mod(module) => self.unpack_mod(module),
+                        Item::Impl(imp) => self.unpack_impl(imp),
+                        _ => Some(item),
+                    } {
+                        // restore the items that we won't need to touch
+                        content.1.push(item);
+                    }
+
+                    // stop if we encounter an issue
+                    if let Some(error) = self.error.take() {
+                        return Err(error);
+                    }
                 }
 
-                // stop if we encounter an issue
-                if let Some(error) = self.error.take() {
-                    return Err(error);
-                }
+                self.module.content = Some(content);
+                return Ok(());
             }
-
-            self.module.content = Some(content);
         }
 
-        Ok(())
+        // fallthrough error for above validation
+        let msg = format!(
+            "a `moku::state_machine` module must be inline with its attribte, try
+```
+#[moku::state_machine]
+mod {} {{
+    ...
+}}
+```",
+            self.module.ident
+        );
+        Err(syn::Error::new(self.module.span(), msg))
     }
 
     /// Match each State with it's struct definition.
@@ -410,11 +427,11 @@ impl Unpacker {
         } else if path_matches_generic(tr, "TopState", None) {
             let msg =
                 format!("implementations of `moku::TopState` in this module must use only `{state_enum}` as the generic");
-            self.error = Some(syn::Error::new(imp.trait_.as_ref().unwrap().1.span(), msg));
+            self.error = Some(syn::Error::new(tr.span(), msg));
         } else if path_matches_generic(tr, "State", None) {
             let msg =
                 format!("implementations of `moku::State` in this module must use only `{state_enum}` as the generic");
-            self.error = Some(syn::Error::new(imp.trait_.as_ref().unwrap().1.span(), msg));
+            self.error = Some(syn::Error::new(tr.span(), msg));
         }
 
         None

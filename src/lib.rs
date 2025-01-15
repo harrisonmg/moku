@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 pub use moku_macros::*;
 
 mod input;
-mod output;
+//mod output;
 
 pub trait StateEnum: std::fmt::Debug + Copy {}
 

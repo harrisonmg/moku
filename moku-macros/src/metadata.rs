@@ -7,7 +7,7 @@ use syn::{parse_quote, Ident, Item, ItemImpl, ItemMod};
 pub struct State {
     ident: Ident,
     node: Ident,
-    substate: Ident,
+    substate_enum: Ident,
     superstates_enum: Ident,
     children: Vec<State>,
     autogen_enter: bool,
@@ -19,7 +19,7 @@ impl From<&Ident> for State {
         Self {
             ident: ident.clone(),
             node: format_ident!("{ident}Node"),
-            substate: format_ident!("{ident}Substate"),
+            substate_enum: format_ident!("{ident}Substate"),
             superstates_enum: format_ident!("{ident}Superstates"),
             children: Vec::new(),
             autogen_enter: false,
@@ -78,7 +78,7 @@ impl State {
         Self {
             ident: self.ident.clone(),
             node: self.node.clone(),
-            substate: self.substate.clone(),
+            substate_enum: self.substate_enum.clone(),
             superstates_enum: self.superstates_enum.clone(),
             children: Vec::new(),
             autogen_enter: self.autogen_enter,
@@ -255,7 +255,7 @@ impl Metadata {
         let ident = format_ident!("{}Machine", self.name);
         let state_enum = &self.state_enum;
         let top_state = &self.top_state.ident;
-        let top_substate = &self.top_state.substate;
+        let top_substate = &self.top_state.substate_enum;
 
         self.push_to_machine_mod(parse_quote! {
             pub struct #ident {

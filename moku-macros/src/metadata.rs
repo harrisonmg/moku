@@ -68,9 +68,9 @@ impl State {
         if let Some((last, firsts)) = self.children.split_last() {
             let mut acc = String::new();
             for child in firsts {
-                acc += &child.state_chart_acc(level + 1, false);
+                acc += &child.state_chart_acc(level, false);
             }
-            acc + &last.state_chart_acc(level + 1, true)
+            acc + &last.state_chart_acc(level, true)
         } else {
             String::new()
         }
@@ -80,7 +80,7 @@ impl State {
     fn state_chart_acc(&self, level: usize, last: bool) -> String {
         let pad = " ".repeat(level * 3);
         let vert = if last { '\u{02514}' } else { '\u{0251C}' };
-        format!("\n{pad}{vert}\u{02500} {}", self.ident) + &self.state_chart_children(level)
+        format!("\n{pad}{vert}\u{02500} {}", self.ident) + &self.state_chart_children(level + 1)
     }
 
     /// Create a copy that does not include an ItemImpl or children.

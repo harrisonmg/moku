@@ -1,14 +1,12 @@
 use std::{collections::HashMap, fmt::DebugSet};
 
 use convert_case::{Case, Casing};
-use quote::{format_ident, quote};
+use proc_macro2::Span;
+use quote::{format_ident, quote, ToTokens};
 use syn::{parse_quote, Ident, Item, ItemImpl, ItemMod};
 
 pub struct State {
     ident: Ident,
-    node: Ident,
-    substate_enum: Ident,
-    superstates_enum: Ident,
     children: Vec<State>,
     autogen_enter: bool,
     imp: Option<ItemImpl>,
@@ -18,9 +16,6 @@ impl From<&Ident> for State {
     fn from(ident: &Ident) -> Self {
         Self {
             ident: ident.clone(),
-            node: format_ident!("{ident}Node"),
-            substate_enum: format_ident!("{ident}Substate"),
-            superstates_enum: format_ident!("{ident}Superstates"),
             children: Vec::new(),
             autogen_enter: false,
             imp: None,
@@ -29,6 +24,21 @@ impl From<&Ident> for State {
 }
 
 impl State {
+    /// Get the Ident for this State's Node.
+    fn node_ident(&self) -> Ident {
+        format_ident!("{}Node", self.ident)
+    }
+
+    /// Get the Ident for this State's SubstateEnum.
+    fn substate_enum_ident(&self) -> Ident {
+        format_ident!("{}Substate", self.ident)
+    }
+
+    /// Get the Ident for this State's Superstates.
+    fn superstates_ident(&self) -> Ident {
+        format_ident!("{}Superstates", self.ident)
+    }
+
     /// Add a child to this State or one of its descendents. Returns the child if no parent is
     /// found.
     fn add_child(&mut self, mut child: State, parent: &Ident) -> Option<State> {
@@ -77,9 +87,6 @@ impl State {
     fn shallow_copy(&self) -> Self {
         Self {
             ident: self.ident.clone(),
-            node: self.node.clone(),
-            substate_enum: self.substate_enum.clone(),
-            superstates_enum: self.superstates_enum.clone(),
             children: Vec::new(),
             autogen_enter: self.autogen_enter,
             imp: None,
@@ -130,7 +137,7 @@ pub struct Metadata {
     pub top_state: State,
     pub states: HashMap<Ident, State>,
     pub machine_mod: ItemMod,
-    pub module: ItemMod,
+    pub main_mod: ItemMod,
 }
 
 impl Metadata {
@@ -175,7 +182,7 @@ impl Metadata {
         ))
     }
 
-    /// Write the state machine and return the complete state_machine module.
+    /// Write the state machine and return the complete main module.
     pub fn write_state_machine(mut self) -> ItemMod {
         self.write_state_chart();
         self.write_state_enum();
@@ -183,30 +190,32 @@ impl Metadata {
         self.write_builder();
         self.write_states();
 
-        // put machine_mod back into the main module
-        self.module
+        // put the machine_mod back into the main module
+        let main_mod_content = &mut self
+            .main_mod
             .content
             .as_mut()
-            .expect("write_state_machine: no content in module")
-            .1
-            .push(Item::Mod(self.machine_mod));
+            .expect("main_mod_content: no content in module")
+            .1;
 
-        self.module
+        main_mod_content.push(Item::Mod(self.machine_mod));
+
+        self.main_mod
     }
 
     /// Get a mutable reference to the contents of the machine module.
-    fn machine_mod_contents(&mut self) -> &mut Vec<Item> {
+    fn machine_mod_content(&mut self) -> &mut Vec<Item> {
         &mut self
             .machine_mod
             .content
             .as_mut()
-            .expect("push_to_machine_mod: no content in module")
+            .expect("machine_mod_content: no content in module")
             .1
     }
 
     /// Push an Item into the contents of the machine module.
     fn push_to_machine_mod(&mut self, item: Item) {
-        self.machine_mod_contents().push(item)
+        self.machine_mod_content().push(item)
     }
 
     /// Get an Iterator of all states in this machine.
@@ -220,11 +229,6 @@ impl Metadata {
     fn write_state_chart(&mut self) {
         let ident = format_ident!("{}_STATE_CHART", self.name.to_string().to_case(Case::Upper));
         let chart = self.top_state.state_chart();
-
-        // TODO remove
-        self.push_to_machine_mod(parse_quote! {
-            use crate as moku;
-        });
 
         self.push_to_machine_mod(parse_quote! {
             pub const #ident: &str = #chart;
@@ -246,28 +250,35 @@ impl Metadata {
         let ident = &self.state_enum;
 
         self.push_to_machine_mod(parse_quote! {
-          impl moku::StateEnum for #ident {}
+          impl ::moku::StateEnum for #ident {}
         });
     }
 
     /// Write the StateMachine to the machine module.
     fn write_machine(&mut self) {
         let ident = format_ident!("{}Machine", self.name);
-        let state_enum = &self.state_enum;
-        let top_state = &self.top_state.ident;
-        let top_substate = &self.top_state.substate_enum;
+        let state_enum = self.state_enum.clone();
+        let top_state = self.top_state.ident.clone();
+        let top_substate = self.top_state.substate_enum_ident();
 
         self.push_to_machine_mod(parse_quote! {
             pub struct #ident {
-                top_node: moku::internal::TopNode<#state_enum, super::#top_state, #top_substate>,
+                top_node: ::moku::internal::TopNode<#state_enum, super::#top_state, #top_substate>,
             }
         });
 
-        let state_enum = &self.state_enum;
-        let top_state = &self.top_state.ident;
+        self.push_to_machine_mod(parse_quote! {
+            impl #ident {
+                fn new(top_node: ::moku::internal::TopNode<#state_enum, super::#top_state, #top_substate>) -> Self {
+                    let mut new = Self { top_node };
+                    new.top_node.init();
+                    new
+                }
+            }
+        });
 
         self.push_to_machine_mod(parse_quote! {
-            impl moku::StateMachine<#state_enum, super::#top_state> for #ident {
+            impl ::moku::StateMachine<#state_enum, super::#top_state> for #ident {
                 fn update(&mut self) {
                     self.top_node.update()
                 }
@@ -310,7 +321,7 @@ impl Metadata {
             let state_enum = &self.state_enum;
 
             self.push_to_machine_mod(parse_quote! {
-                impl moku::StateRef<#state_enum, super::#state> for #ident {
+                impl ::moku::StateRef<#state_enum, super::#state> for #ident {
                     fn state_ref(&self) -> Option<&super::#state> {
                         self.top_node.node.state_ref()
                     }
@@ -341,7 +352,7 @@ impl Metadata {
         let name = self.name.to_string();
 
         self.push_to_machine_mod(parse_quote! {
-            impl moku::StateMachineBuilder<#state_enum, super::#top_state, #machine_ident> for #ident {
+            impl ::moku::StateMachineBuilder<#state_enum, super::#top_state, #machine_ident> for #ident {
                 fn new(top_state: super::#top_state) -> Self {
                     Self {
                         top_state,
@@ -355,7 +366,7 @@ impl Metadata {
                 }
 
                 fn build(self) -> #machine_ident {
-                    #machine_ident::new(moku::internal::TopNode::new(
+                    #machine_ident::new(::moku::internal::TopNode::new(
                         self.top_state,
                         self.name.unwrap_or_else(|| String::from(#name)),
                     ))
@@ -366,33 +377,296 @@ impl Metadata {
 
     /// Write the auto-generated elements for each State to their impls and the machine module.
     fn write_states(&mut self) {
-        let items: Vec<Item> = Vec::new();
-        let state_enum = &self.state_enum.clone();
-        let machine_mod = &self.machine_mod.ident.clone();
+        let mut items: Vec<Item> = Vec::new();
+        let state_enum = self.state_enum.clone();
+        let machine_mod = self.machine_mod.ident.clone();
+        let mut state_impls = Vec::new();
+        let all_states: Vec<_> = self.all_states().collect();
 
         self.top_state.for_each_state(|state, ancestors| {
-            let imp = state.imp.as_mut().expect(&format!(
-                "write_states: missing State impl for {}",
-                state.ident
-            ));
+            let is_top_state = ancestors.is_empty();
 
-            if state.autogen_enter {
+            let parent_superstates = match ancestors.last() {
+                None => quote! { ::moku::NoSuperstates },
+                Some(parent) => parent.superstates_ident().into_token_stream(),
+            };
+
+            // State enter and Superstates
+            if !is_top_state {
+                let mut imp = state.imp.take().expect(&format!(
+                    "write_states: missing State impl for {}",
+                    state.ident
+                ));
+
+                if state.autogen_enter {
+                    imp.items.push(parse_quote! {
+                        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, #state_enum> {
+                            StateEntry::State(Self {})
+                        }
+                    });
+                }
+
                 imp.items.push(parse_quote! {
-                    fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, #state_enum> {
-                        StateEntry::State(Self {})
+                    type Superstates<'a> = #machine_mod::#parent_superstates<'a>;
+                });
+
+                state_impls.push(imp);
+            }
+
+            // Node
+            let state_ident = state.ident.clone();
+            let node = state.node_ident();
+            let substate = state.substate_enum_ident();
+
+            items.push(parse_quote! {
+               type #node = ::moku::internal::Node<#state_enum, super::#state_ident, #substate>;
+            });
+
+            // Superstates
+            let superstates = state.superstates_ident();
+
+            let ancestor_idents = ancestors.iter().map(|anc| &anc.ident);
+            let ancestor_idents_snake: Vec<_> = ancestors.iter().map(|anc|
+                    Ident::new(&anc.ident.to_string().to_case(Case::Snake), Span::call_site())
+                ).collect();
+            let state_ident_snake = Ident::new(&state_ident.to_string().to_case(Case::Snake), Span::call_site());
+
+            items.push(parse_quote! {
+               pub struct #superstates<'a> {
+                   #(pub #ancestor_idents_snake: &'a mut super::#ancestor_idents,)*
+                   pub #state_ident_snake: &'a mut super::#state_ident,
+               }
+            });
+
+            items.push(parse_quote! {
+               impl<'a> #superstates<'a> {
+                   pub fn new(state: &'a mut super::#state_ident, superstates: &'a mut #parent_superstates) -> Self {
+                       Self {
+                           #(#ancestor_idents_snake: superstates.#ancestor_idents_snake,)*
+                           #state_ident_snake: state,
+                       }
+                   }
+               }
+            });
+
+            // SubstateEnum
+            let children: Vec<_> = state.children.iter().map(|child| &child.ident).collect();
+            let children_nodes: Vec<_> = state.children.iter().map(|child| child.node_ident()).collect();
+            let descendents = state.descendents();
+
+            items.push(parse_quote! {
+              enum #substate {
+                  None,
+                  #(#children(#children_nodes),)*
+              }
+            });
+
+            let is_leaf_state = children.is_empty();
+
+            if is_leaf_state {
+                items.push(parse_quote! {
+                    impl ::moku::internal::SubstateEnum<#state_enum, super::#state_ident> for #substate {
+                        fn none_variant() -> Self {
+                            Self::None
+                        }
+
+                        fn this_state() -> #state_enum {
+                            #state_enum::#state_ident
+                        }
+
+                        fn is_state(state: #state_enum) -> bool {
+                            matches!(state, #state_enum::#state_ident)
+                        }
+                    }
+                });
+            } else {
+                let children_and_descendents = state.children.iter().map(|child| {
+                    let mut res = child.descendents();
+                    res.push(child.ident.clone());
+                    res
+                });
+
+                let is_ancestor = if is_top_state {
+                    quote! {
+                        fn is_ancestor(state: #state_enum) -> bool {
+                            !matches!(state, #state_enum::#state_ident)
+                        }
+                    }
+                } else {
+                    quote! {
+                        fn is_ancestor(state: #state_enum) -> bool {
+                            matches!(state, #(#state_enum::#descendents)|*)
+                        }
+                    }
+                };
+
+                items.push(parse_quote! {
+                    impl ::moku::internal::SubstateEnum<#state_enum, super::#state_ident> for #substate {
+                        fn none_variant() -> Self {
+                            Self::None
+                        }
+
+                        fn this_state() -> #state_enum {
+                            #state_enum::#state_ident
+                        }
+
+                        fn is_state(state: #state_enum) -> bool {
+                            matches!(state, #state_enum::#state_ident)
+                        }
+
+                        fn current_state(&self) -> #state_enum {
+                            match self {
+                                Self::None => #state_enum::#state_ident,
+                                #(Self::#children(node) => node.current_state(),)*
+                            }
+                        }
+
+                        #is_ancestor
+
+                        fn update(
+                            &mut self,
+                            state: &mut super::#state_ident,
+                            superstates: &mut <super::#state_ident as super::State<#state_enum>>::Superstates<'_>,
+                        ) -> Option<#state_enum> {
+                            match self {
+                                Self::None => None,
+                                #(Self::#children(node) => node.update(&mut #superstates::new(state, superstates)),)*
+                            }
+                        }
+
+                        fn top_down_update(
+                            &mut self,
+                            state: &mut super::#state_ident,
+                            superstates: &mut <super::#state_ident as super::State<#state_enum>>::Superstates<'_>,
+                        ) -> Option<#state_enum> {
+                            match self {
+                                Self::None => None,
+                                #(Self::#children(node) => {
+                                    node.top_down_update(&mut #superstates::new(state, superstates))
+                                })*
+                            }
+                        }
+
+                        fn exit(
+                            &mut self,
+                            state: &mut super::#state_ident,
+                            superstates: &mut <super::#state_ident as super::State<#state_enum>>::Superstates<'_>,
+                        ) -> Option<#state_enum> {
+                            let old_state = std::mem::replace(self, Self::None);
+                            match old_state {
+                                Self::None => None,
+                                #(Self::#children(node) => node.exit(&mut #superstates::new(state, superstates)),)*
+                            }
+                        }
+
+                        fn transition(
+                            &mut self,
+                            target: #state_enum,
+                            state: &mut super::#state_ident,
+                            superstates: &mut <super::#state_ident as super::State<#state_enum>>::Superstates<'_>,
+                        ) -> ::moku::internal::TransitionResult<#state_enum> {
+                            match self {
+                                Self::None => ::moku::internal::TransitionResult::MoveUp,
+                                #(Self::#children(node) => {
+                                    node.transition(target, &mut #superstates::new(state, superstates))
+                                })*
+                            }
+                        }
+
+                        fn enter_substate_towards(
+                            &mut self,
+                            target: #state_enum,
+                            state: &mut super::#state_ident,
+                            superstates: &mut <super::#state_ident as super::State<#state_enum>>::Superstates<'_>,
+                        ) -> Option<#state_enum> {
+                            match target {
+                                #(
+                                    #(#state_enum::#children_and_descendents)|* => {
+                                        match #children_nodes::enter(&mut #superstates::new(state, superstates)) {
+                                            ::moku::internal::NodeEntry::Node(node) => {
+                                                *self = Self::#children(node);
+                                                None
+                                            }
+                                            ::moku::internal::NodeEntry::Transition(new_target) => Some(new_target),
+                                        }
+                                    }
+                                )*
+                                _ => unreachable!(),
+                            }
+                        }
+
+                        fn state_matches(&self, state: #state_enum) -> bool {
+                            Self::is_state(state)
+                                || match self {
+                                    Self::None => false,
+                                    #(Self::#children(node) => node.state_matches(state),)*
+                                }
+                        }
                     }
                 });
             }
 
-            let superstates = &state.superstates_enum;
+            // StateRef
+            for other_state in &all_states {
+                items.push(
+                    if *other_state == state_ident {
+                        parse_quote! {
+                            impl ::moku::StateRef<#state_enum, super::#other_state> for #node {
+                                fn state_ref(&self) -> Option<&super::#other_state> {
+                                    Some(&self.state)
+                                }
 
-            imp.items.push(parse_quote! {
-                type Superstates<'a> = #machine_mod::#superstates<'a>;
-            });
+                                fn state_mut(&mut self) -> Option<&mut super::#other_state> {
+                                    Some(&mut self.state)
+                                }
+                            }
+                        }
+                    } else if descendents.contains(other_state) {
+                        parse_quote! {
+                            impl ::moku::StateRef<#state_enum, super::#other_state> for #node {
+                                fn state_ref(&self) -> Option<&super::#other_state> {
+                                    match &self.substate {
+                                        #substate::None => None,
+                                        #(#substate::#children(node) => node.state_ref(),)*
+                                    }
+                                }
 
-            // TODO populate items
+                                fn state_mut(&mut self) -> Option<&mut super::#other_state> {
+                                    match &mut self.substate {
+                                        #substate::None => None,
+                                        #(#substate::#children(node) => node.state_mut(),)*
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        parse_quote! {
+                            impl ::moku::StateRef<#state_enum, super::#other_state> for #node {
+                                fn state_ref(&self) -> Option<&super::#other_state> {
+                                    None
+                                }
+
+                                fn state_mut(&mut self) -> Option<&mut super::#other_state> {
+                                    None
+                                }
+                            }
+                        }
+                    }
+                );
+            }
         });
 
-        self.machine_mod_contents().extend(items);
+        let main_mod_content = &mut self
+            .main_mod
+            .content
+            .as_mut()
+            .expect("main_mod_content: no content in module")
+            .1;
+
+        for imp in state_impls {
+            main_mod_content.push(Item::Impl(imp));
+        }
+
+        self.machine_mod_content().extend(items);
     }
 }

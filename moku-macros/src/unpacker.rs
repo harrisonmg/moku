@@ -42,7 +42,7 @@ struct UnpackedState {
 
 struct Unpacker {
     name: Ident,
-    module: ItemMod,
+    main_mod: ItemMod,
     machine_mod: Option<ItemMod>,
     top_state: Option<Ident>,
     states: Vec<UnpackedState>,
@@ -51,10 +51,10 @@ struct Unpacker {
 }
 
 impl Unpacker {
-    fn new(name: Ident, module: ItemMod) -> Self {
+    fn new(name: Ident, main_mod: ItemMod) -> Self {
         Self {
             name,
-            module,
+            main_mod,
             machine_mod: None,
             top_state: None,
             states: Vec::new(),
@@ -71,7 +71,7 @@ impl Unpacker {
             state_enum: format_ident!("{}State", self.name),
             name: self.name,
             states: HashMap::new(),
-            module: self.module,
+            main_mod: self.main_mod,
         };
 
         let relations: Vec<_> = self
@@ -92,7 +92,7 @@ impl Unpacker {
 
     /// Unpack each item in the state_machine module's content.
     fn unpack(&mut self) -> Result<(), syn::Error> {
-        if let Some(mut content) = self.module.content.take() {
+        if let Some(mut content) = self.main_mod.content.take() {
             if !content.1.is_empty() {
                 let items: Vec<_> = content.1.drain(..).collect();
                 for item in items {
@@ -112,7 +112,7 @@ impl Unpacker {
                     }
                 }
 
-                self.module.content = Some(content);
+                self.main_mod.content = Some(content);
                 return Ok(());
             }
         }
@@ -126,9 +126,9 @@ mod {} {{
     ...
 }}
 ```",
-            self.module.ident
+            self.main_mod.ident
         );
-        Err(syn::Error::new(self.module.span(), msg))
+        Err(syn::Error::new(self.main_mod.span(), msg))
     }
 
     /// Match each State with it's struct definition.
@@ -194,7 +194,7 @@ mod {} {{
         match self.machine_mod.take() {
             Some(machine_mod) => Ok(machine_mod),
             None => Err(syn::Error::new(
-                self.module.span(),
+                self.main_mod.span(),
                 "no `moku::machine_module` was defined in this module",
             )),
         }
@@ -205,7 +205,7 @@ mod {} {{
         match &self.top_state {
             Some(state) => Ok(state),
             None => Err(syn::Error::new(
-                self.module.span(),
+                self.main_mod.span(),
                 "no `moku::TopState` was defined in this module",
             )),
         }

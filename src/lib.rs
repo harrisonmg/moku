@@ -4,9 +4,6 @@ use std::marker::PhantomData;
 
 pub use moku_macros::*;
 
-mod input;
-//mod output;
-
 pub trait StateEnum: std::fmt::Debug + Copy {}
 
 pub trait StateMachine<T: StateEnum, U: TopState<T>> {
@@ -326,7 +323,7 @@ pub mod internal {
         U: TopState<T>,
         V: SubstateEnum<T, U>,
     {
-        pub fn new(mut top_state: U, name: String) -> Self {
+        pub fn new(top_state: U, name: String) -> Self {
             Self {
                 node: Node::from_state(top_state),
                 name,

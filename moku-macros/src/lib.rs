@@ -45,12 +45,12 @@ pub fn superstate(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
-    let module = parse_macro_input!(input as ItemMod);
+    let main_mod = parse_macro_input!(input as ItemMod);
 
     let name = if args.is_empty() {
         // derive state machine name from module name by default
         Ident::new(
-            &module.ident.to_string().to_case(Case::UpperCamel),
+            &main_mod.ident.to_string().to_case(Case::UpperCamel),
             Span::call_site(),
         )
     } else {
@@ -58,13 +58,13 @@ pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
         parse_macro_input!(args as Ident)
     };
 
-    match generate_state_machine(name, module) {
+    match generate_state_machine(name, main_mod) {
         Err(error) => error.into_compile_error().into(),
         Ok(output) => output.into_token_stream().into(),
     }
 }
 
-fn generate_state_machine(name: Ident, module: ItemMod) -> Result<ItemMod, syn::Error> {
-    let metadata = build_metadata(name, module)?;
+fn generate_state_machine(name: Ident, main_mod: ItemMod) -> Result<ItemMod, syn::Error> {
+    let metadata = build_metadata(name, main_mod)?;
     Ok(metadata.write_state_machine())
 }

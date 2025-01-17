@@ -9,7 +9,7 @@ use syn::{
 
 use crate::{
     metadata::{Metadata, State},
-    util::{path_matches, path_matches_generic},
+    util::{filter_attributes, path_matches_generic},
 };
 
 /// Collect and validate Metadata about the structure of a `state_machine` module and the usage of attributes.
@@ -22,13 +22,6 @@ pub fn build_metadata(name: Ident, module: ItemMod) -> Result<Metadata, syn::Err
     let top_state = unpacker.get_top_state()?;
     unpacker.validate_superstates(top_state)?;
     unpacker.build_metadata()
-}
-
-fn filter_attributes<'a>(attrs: &'a [Attribute], name: &str) -> Vec<&'a Attribute> {
-    attrs
-        .iter()
-        .filter(move |attr| path_matches(attr.meta.path(), name))
-        .collect()
 }
 
 struct UnpackedState {

@@ -1,44 +1,6 @@
-# autogen
-- state trait
-    * superstate assoc type
-    * init function
-- state chart string const
-- state enum
-- per state
-    * state node type
-        + impl state ref
-            + some for matcing
-            + dispatch for descendents
-            + none for rest
-    * substate enum
-        + none variant
-        + this state
-        + is state
-        + for parent states
-            + current state
-            + is ancestor
-            + update
-            + top down update
-            + exit
-            + transition
-            + enter substate towards
-                + need to split out substates + descendents
-            + state matches
-    * superstate enum
-        + don't need for topstate
-        + ref to each superstate
-        + function from superstate superstate enum
-- state machine
-    * private new fn
-    * trait impl
-    * trivial state ref
-- builder
-    * mostly trivial
-
-# macro data
-- states
-    * build tree from list of relations
-        + descendent list per substate
+# TODO
+- state machine tests
+- documentation
 
 # features
 - no dynamic memory allocation

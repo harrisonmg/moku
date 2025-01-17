@@ -1,9 +1,12 @@
-use syn::{AngleBracketedGenericArguments, GenericArgument, Path, PathArguments, Type, TypePath};
+use syn::{
+    AngleBracketedGenericArguments, Attribute, GenericArgument, Path, PathArguments, Type, TypePath,
+};
 
-/// Check if a Path matches `name` or `moku::{name}`.
+/// Check if a Path matches `{name}` or `moku::{name}`.
 pub fn path_matches(path: &Path, name: &str) -> bool {
-    let qualified_name = format!("moku::{name}");
-    path.is_ident(name) || path.is_ident(&qualified_name)
+    path.is_ident(name)
+    //let qualified_name = format!("moku::{name}");
+    //path.is_ident(name) || path.is_ident(&qualified_name)
 }
 
 /// Check that a Path matches `{name}<{generic}>` or `moku::{name}<{generic}>`.
@@ -45,4 +48,28 @@ pub fn path_matches_generic(path: &Path, name: &str, generic: Option<&str>) -> b
         }
         _ => false,
     }
+}
+
+/// Filter a list of attributes down to those matching `{name}` or `moku::{name}`.
+pub fn filter_attributes<'a>(attrs: &'a [Attribute], name: &str) -> Vec<&'a Attribute> {
+    attrs
+        .iter()
+        .filter(move |attr| {
+            let path = attr.meta.path();
+            let seg = match path.segments.len() {
+                1 => path.segments.first().unwrap(),
+                2 => {
+                    let first_seg = path.segments.first().unwrap();
+                    if first_seg.ident != "moku" {
+                        return false;
+                    }
+
+                    path.segments.last().unwrap()
+                }
+                _ => return false,
+            };
+
+            seg.ident == name
+        })
+        .collect()
 }

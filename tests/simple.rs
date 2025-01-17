@@ -6,7 +6,6 @@ mod blinky {
 
     #[machine_module]
     mod state_machine {}
-
     use state_machine::BlinkyState;
 
     struct Top;

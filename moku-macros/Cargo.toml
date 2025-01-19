@@ -19,4 +19,4 @@ quote = "1.0.38"
 [dependencies.syn]
 version = "2.0.93"
 default-features = false
-features = [ "full", "parsing", "printing", "visit", "visit-mut", "proc-macro" ]
+features = [ "full", "parsing", "printing", "visit", "visit-mut", "proc-macro", "extra-traits" ]

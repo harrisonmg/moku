@@ -30,16 +30,16 @@ pub fn superstate(_args: TokenStream, input: TokenStream) -> TokenStream {
     if imp
         .trait_
         .as_ref()
-        .map_or(true, |tr| !path_matches_generic(&tr.1, "State", None))
+        .map_or(false, |tr| path_matches_generic(&tr.1, "State", None))
     {
+        input
+    } else {
         syn::Error::new(
             imp.span(),
             "`moku::superstate` must only be applied to implementations of the `moku::State` trait",
         )
         .to_compile_error()
         .into()
-    } else {
-        input
     }
 }
 

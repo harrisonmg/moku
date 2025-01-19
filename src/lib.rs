@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use std::marker::PhantomData;
 
 pub use moku_macros::*;
@@ -44,18 +42,22 @@ pub trait State<T: StateEnum>: Sized {
 
     fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T>;
 
+    #[allow(unused_variables)]
     fn init(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
 
+    #[allow(unused_variables)]
     fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
 
+    #[allow(unused_variables)]
     fn top_down_update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
 
+    #[allow(unused_variables)]
     fn exit(self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
@@ -80,22 +82,27 @@ pub struct NoSuperstates<'a>(PhantomData<&'a ()>);
 impl<T: StateEnum, U: TopState<T>> State<T> for U {
     type Superstates<'a> = NoSuperstates<'a>;
 
+    #[allow(unused_variables)]
     fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T> {
         unreachable!()
     }
 
+    #[allow(unused_variables)]
     fn init(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
         TopState::init(self)
     }
 
+    #[allow(unused_variables)]
     fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
         TopState::update(self)
     }
 
+    #[allow(unused_variables)]
     fn top_down_update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
         TopState::top_down_update(self)
     }
 
+    #[allow(unused_variables)]
     fn exit(self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
         unreachable!()
     }
@@ -125,14 +132,17 @@ pub mod internal {
             Self::this_state()
         }
 
+        #[allow(unused_variables)]
         fn is_ancestor(state: T) -> bool {
             false
         }
 
+        #[allow(unused_variables)]
         fn update(&mut self, state: &mut U, superstates: &mut U::Superstates<'_>) -> Option<T> {
             None
         }
 
+        #[allow(unused_variables)]
         fn top_down_update(
             &mut self,
             state: &mut U,
@@ -141,10 +151,12 @@ pub mod internal {
             None
         }
 
+        #[allow(unused_variables)]
         fn exit(&mut self, state: &mut U, superstates: &mut U::Superstates<'_>) -> Option<T> {
             None
         }
 
+        #[allow(unused_variables)]
         fn transition(
             &mut self,
             target: T,
@@ -154,6 +166,7 @@ pub mod internal {
             TransitionResult::MoveUp
         }
 
+        #[allow(unused_variables)]
         fn enter_substate_towards(
             &mut self,
             target: T,
@@ -343,6 +356,7 @@ pub mod internal {
             if let Some(target) = self.node.update(&mut NoSuperstates(PhantomData)) {
                 self.transition(target);
             }
+            info!("\u{02514}Update complete");
         }
 
         pub fn top_down_update(&mut self) {
@@ -350,6 +364,7 @@ pub mod internal {
             if let Some(target) = self.node.top_down_update(&mut NoSuperstates(PhantomData)) {
                 self.transition(target);
             }
+            info!("\u{02514}Top-down update complete");
         }
 
         pub fn transition_quiet(&mut self, target: T) {

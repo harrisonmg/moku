@@ -18,5 +18,6 @@ moku-macros = { version = "0.1.0", path = "moku-macros" }
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }
 
 [dev-dependencies]
+env_logger = "0.11.6"
 test-log = "0.2.16"
 trybuild = { version = "1.0.101", features = ["diff"] }

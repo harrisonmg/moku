@@ -414,19 +414,22 @@ mod {} {{
 
         if path_matches_generic(tr, "TopState", Some(&state_enum)) {
             self.unpack_top_state(&imp);
-            return Some(Item::Impl(imp));
+            Some(Item::Impl(imp))
         } else if path_matches_generic(tr, "State", Some(&state_enum)) {
-            self.unpack_state(imp)
+            self.unpack_state(imp);
+            None
         } else if path_matches_generic(tr, "TopState", None) {
             let msg =
                 format!("implementations of `moku::TopState` in this module must use only `{state_enum}` as the generic");
             self.error = Some(syn::Error::new(tr.span(), msg));
+            None
         } else if path_matches_generic(tr, "State", None) {
             let msg =
                 format!("implementations of `moku::State` in this module must use only `{state_enum}` as the generic");
             self.error = Some(syn::Error::new(tr.span(), msg));
+            None
+        } else {
+            Some(Item::Impl(imp))
         }
-
-        None
     }
 }

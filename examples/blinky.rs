@@ -111,6 +111,7 @@ fn main() {
         println!("");
         match line.unwrap().to_lowercase().as_str() {
             "" => machine.update(),
+            "top" => machine.transition(BlinkyState::Top),
             "disabled" => machine.transition(BlinkyState::Disabled),
             "enabled" => machine.transition(BlinkyState::Enabled),
             "ledon" => machine.transition(BlinkyState::LedOn),

@@ -1,6 +1,5 @@
 # TODO
 - fix auto-complete in machine_module
-- finish blinky example
 - state machine tests
 - documentation
 

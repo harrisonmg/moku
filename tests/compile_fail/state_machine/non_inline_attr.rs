@@ -1,6 +1,6 @@
 use moku::*;
 
 #[state_machine]
-mod blinky;
+mod dummy_mod;
 
 fn main() {}

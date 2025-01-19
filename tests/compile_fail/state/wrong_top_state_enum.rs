@@ -7,6 +7,10 @@ mod blinky {
     #[machine_module]
     mod state_machine {}
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum BlonkyState {}
+    impl StateEnum for BlonkyState {}
+
     struct Top;
     impl TopState<BlonkyState> for Top {}
 }

@@ -227,7 +227,10 @@ impl Metadata {
 
     /// Write the state chart to the machine module.
     fn write_state_chart(&mut self) {
-        let ident = format_ident!("{}_STATE_CHART", self.name.to_string().to_case(Case::Upper));
+        let ident = format_ident!(
+            "{}_STATE_CHART",
+            self.name.to_string().to_case(Case::UpperSnake)
+        );
         let chart = self.top_state.state_chart();
 
         self.push_to_machine_mod(parse_quote! {

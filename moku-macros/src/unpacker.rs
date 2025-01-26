@@ -406,7 +406,7 @@ mod {} {{
         };
 
         let tr = match &imp.trait_ {
-            None => return None,
+            None => return Some(Item::Impl(imp)),
             Some(tr) => &tr.1,
         };
 

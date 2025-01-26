@@ -40,25 +40,21 @@ pub enum StateEntry<T, U: StateEnum> {
 pub trait State<T: StateEnum>: Sized {
     type Superstates<'a>;
 
-    fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T>;
+    fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T>;
 
-    #[allow(unused_variables)]
-    fn init(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
 
-    #[allow(unused_variables)]
-    fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
 
-    #[allow(unused_variables)]
-    fn top_down_update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
 
-    #[allow(unused_variables)]
-    fn exit(self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
 }
@@ -82,28 +78,23 @@ pub struct NoSuperstates<'a>(PhantomData<&'a ()>);
 impl<T: StateEnum, U: TopState<T>> State<T> for U {
     type Superstates<'a> = NoSuperstates<'a>;
 
-    #[allow(unused_variables)]
-    fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T> {
+    fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T> {
         unreachable!()
     }
 
-    #[allow(unused_variables)]
-    fn init(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         TopState::init(self)
     }
 
-    #[allow(unused_variables)]
-    fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         TopState::update(self)
     }
 
-    #[allow(unused_variables)]
-    fn top_down_update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         TopState::top_down_update(self)
     }
 
-    #[allow(unused_variables)]
-    fn exit(self, superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         unreachable!()
     }
 }

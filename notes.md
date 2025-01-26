@@ -1,6 +1,4 @@
 # TODO
-- fix auto-complete in machine_module
-- state machine tests
 - documentation
 
 # features
@@ -9,3 +7,7 @@
 
 # shortcomings
 - states must be Sized and cannot contain generics parameters
+
+# warnings
+- warn against calling TopState or State trait methods
+- warn against using internal mod stuff

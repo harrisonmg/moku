@@ -1,8 +1,8 @@
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 pub use moku_macros::*;
 
-pub trait StateEnum: std::fmt::Debug + Copy {}
+pub trait StateEnum: core::fmt::Debug + Copy {}
 
 pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     fn update(&mut self);

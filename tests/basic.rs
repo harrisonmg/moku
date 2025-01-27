@@ -1,5 +1,3 @@
-use core::panic;
-
 use basic::{
     state_machine::{BasicMachineBuilder, BasicState, BASIC_STATE_CHART},
     Bar, Foo, Iron, Top, Wet,

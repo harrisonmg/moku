@@ -105,7 +105,7 @@ impl State {
         mut fun: &mut F,
         mut ancestors: &mut Vec<State>,
     ) {
-        fun(self, &ancestors);
+        fun(self, ancestors);
         ancestors.push(self.shallow_copy());
         for child in &mut self.children {
             child.for_each_state_acc(fun, ancestors);
@@ -153,7 +153,7 @@ impl Metadata {
     pub fn add_state_impl(&mut self, ident: &Ident, imp: ItemImpl) {
         self.states
             .get_mut(ident)
-            .expect(&format!("add_state_impl: could not find state {}", ident))
+            .unwrap_or_else(|| panic!("add_state_impl: could not find state {}", ident))
             .imp = Some(imp);
     }
 
@@ -162,7 +162,7 @@ impl Metadata {
         let mut child = self
             .states
             .remove(child)
-            .expect(&format!("add_relation: could not find child {}", child));
+            .unwrap_or_else(|| panic!("add_relation: could not find child {}", child));
 
         for state in self.states.values_mut().chain([&mut self.top_state]) {
             if let Some(reject) = state.add_child(child, parent) {
@@ -222,7 +222,7 @@ impl Metadata {
     fn all_states(&self) -> impl Iterator<Item = Ident> {
         [self.top_state.ident.clone()]
             .into_iter()
-            .chain(self.top_state.descendents().into_iter())
+            .chain(self.top_state.descendents())
     }
 
     /// Write the state chart to the machine module.
@@ -396,7 +396,7 @@ impl Metadata {
 
             // State enter and Superstates
             if !is_top_state {
-                let mut imp = state.imp.take().expect(&format!(
+                let mut imp = state.imp.take().unwrap_or_else(|| panic!(
                     "write_states: missing State impl for {}",
                     state.ident
                 ));

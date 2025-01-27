@@ -105,10 +105,10 @@ fn main() {
     println!("\nBlinky state chart:\n\n{}\n", BLINKY_STATE_CHART);
 
     let mut machine = new_machine();
-    println!("");
+    println!();
 
     for line in std::io::stdin().lines() {
-        println!("");
+        println!();
         match line.unwrap().to_lowercase().as_str() {
             "" => machine.update(),
             "top" => machine.transition(BlinkyState::Top),
@@ -118,6 +118,6 @@ fn main() {
             "ledoff" => machine.transition(BlinkyState::LedOff),
             _ => println!("unrecognized input, try again"),
         };
-        println!("");
+        println!();
     }
 }

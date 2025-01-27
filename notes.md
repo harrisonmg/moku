@@ -2,10 +2,10 @@
 - documentation
 
 # features
-- no dynamic memory allocation
 - low stack usage
     - test
 - no_std option
+- no dynamic memory allocation
 
 # shortcomings
 - states must be Sized and cannot contain generic parameters

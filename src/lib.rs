@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use core::marker::PhantomData;
 
 pub use moku_macros::*;
@@ -10,7 +12,10 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     fn transition(&mut self, target: T);
     fn state(&self) -> T;
     fn name(&self) -> &str;
+
+    #[cfg(feature = "std")]
     fn set_name(&mut self, name: String);
+
     fn state_matches(&self, state: T) -> bool;
     fn top_ref(&self) -> &U;
     fn top_mut(&mut self) -> &mut U;
@@ -28,7 +33,10 @@ where
     V: StateMachine<T, U>,
 {
     fn new(top_state: U) -> Self;
-    fn name(self, name: &str) -> Self;
+
+    #[cfg(feature = "std")]
+    fn name(self, name: String) -> Self;
+
     fn build(self) -> V;
 }
 
@@ -100,7 +108,7 @@ impl<T: StateEnum, U: TopState<T>> State<T> for U {
 }
 
 pub mod internal {
-    use std::marker::PhantomData;
+    use core::marker::PhantomData;
 
     use log::info;
 
@@ -318,7 +326,12 @@ pub mod internal {
         V: SubstateEnum<T, U>,
     {
         pub node: Node<T, U, V>,
+
+        #[cfg(feature = "std")]
         name: String,
+
+        #[cfg(not(feature = "std"))]
+        name: &'static str,
     }
 
     impl<T, U, V> TopNode<T, U, V>
@@ -327,7 +340,16 @@ pub mod internal {
         U: TopState<T>,
         V: SubstateEnum<T, U>,
     {
+        #[cfg(feature = "std")]
         pub fn new(top_state: U, name: String) -> Self {
+            Self {
+                node: Node::from_state(top_state),
+                name,
+            }
+        }
+
+        #[cfg(not(feature = "std"))]
+        pub fn new(top_state: U, name: &'static str) -> Self {
             Self {
                 node: Node::from_state(top_state),
                 name,
@@ -336,14 +358,14 @@ pub mod internal {
 
         pub fn init(&mut self) {
             if let Some(target) = TopState::init(&mut self.node.state) {
-                info!("{}: Initial transition to {target:?}", self.name);
+                info!("{}: Initial transition to {target:?}", self.name());
                 self.transition_quiet(target);
                 info!("\u{02514}Transition complete");
             }
         }
 
         pub fn update(&mut self) {
-            info!("{}: Updating", self.name);
+            info!("{}: Updating", self.name());
             if let Some(target) = self.node.update(&mut NoSuperstates(PhantomData)) {
                 self.transition(target);
             }
@@ -351,7 +373,7 @@ pub mod internal {
         }
 
         pub fn top_down_update(&mut self) {
-            info!("{}: Top-down updating", self.name);
+            info!("{}: Top-down updating", self.name());
             if let Some(target) = self.node.top_down_update(&mut NoSuperstates(PhantomData)) {
                 self.transition(target);
             }
@@ -384,9 +406,14 @@ pub mod internal {
         }
 
         pub fn name(&self) -> &str {
-            &self.name
+            #[cfg(feature = "std")]
+            return &self.name;
+
+            #[cfg(not(feature = "std"))]
+            return self.name;
         }
 
+        #[cfg(feature = "std")]
         pub fn set_name(&mut self, name: String) {
             self.name = name;
         }

@@ -3,6 +3,7 @@ use basic::{
     Bar, Foo, Iron, Top, Wet,
 };
 use moku::*;
+use test_log::test;
 
 #[state_machine]
 mod basic {
@@ -281,7 +282,7 @@ fn machine_name() {
     assert_eq!(machine.name(), "Basic");
 
     let mut machine = BasicMachineBuilder::new(Top::default())
-        .name("Kantan")
+        .name("Kantan".to_owned())
         .build();
     assert_eq!(machine.name(), "Kantan");
 

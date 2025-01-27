@@ -11,6 +11,9 @@ readme = "README.md"
 [lib]
 proc-macro = true
 
+[features]
+std = []
+
 [dependencies]
 convert_case = "0.6.0"
 proc-macro2 = "1.0.92"

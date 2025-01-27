@@ -1,3 +1,5 @@
+use test_log::test;
+
 #[test]
 fn compile_pass() {
     let t = trybuild::TestCases::new();

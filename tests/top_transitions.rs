@@ -1,4 +1,5 @@
 use moku::*;
+use test_log::test;
 use top_trans::{
     state_machine::{TopTransMachineBuilder, TopTransState, TOP_TRANS_STATE_CHART},
     Top,
@@ -59,19 +60,19 @@ fn state_chart() {
 #[test]
 fn init() {
     let machine = TopTransMachineBuilder::new(Top).build();
-    assert!(matches!(machine.state(), TopTransState::A))
+    assert!(matches!(machine.state(), TopTransState::A));
 }
 
 #[test]
 fn update() {
     let mut machine = TopTransMachineBuilder::new(Top).build();
     machine.update();
-    assert!(matches!(machine.state(), TopTransState::B))
+    assert!(matches!(machine.state(), TopTransState::B));
 }
 
 #[test]
 fn top_down_update() {
     let mut machine = TopTransMachineBuilder::new(Top).build();
     machine.top_down_update();
-    assert!(matches!(machine.state(), TopTransState::C))
+    assert!(matches!(machine.state(), TopTransState::C));
 }

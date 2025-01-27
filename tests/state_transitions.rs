@@ -3,6 +3,7 @@ use state_trans::{
     state_machine::{StateTransMachineBuilder, StateTransState, STATE_TRANS_STATE_CHART},
     Top,
 };
+use test_log::test;
 
 #[state_machine]
 mod state_trans {
@@ -89,7 +90,7 @@ fn state_chart() {
 fn init() {
     let mut machine = StateTransMachineBuilder::new(Top).build();
     machine.transition(StateTransState::A);
-    assert!(matches!(machine.state(), StateTransState::B))
+    assert!(matches!(machine.state(), StateTransState::B));
 }
 
 #[test]
@@ -97,7 +98,7 @@ fn update() {
     let mut machine = StateTransMachineBuilder::new(Top).build();
     machine.transition(StateTransState::B);
     machine.update();
-    assert!(matches!(machine.state(), StateTransState::C))
+    assert!(matches!(machine.state(), StateTransState::C));
 }
 
 #[test]
@@ -105,7 +106,7 @@ fn top_down_update() {
     let mut machine = StateTransMachineBuilder::new(Top).build();
     machine.transition(StateTransState::C);
     machine.top_down_update();
-    assert!(matches!(machine.state(), StateTransState::D))
+    assert!(matches!(machine.state(), StateTransState::D));
 }
 
 #[test]
@@ -113,12 +114,12 @@ fn exit() {
     let mut machine = StateTransMachineBuilder::new(Top).build();
     machine.transition(StateTransState::D);
     machine.transition(StateTransState::Top);
-    assert!(matches!(machine.state(), StateTransState::E))
+    assert!(matches!(machine.state(), StateTransState::E));
 }
 
 #[test]
 fn enter() {
     let mut machine = StateTransMachineBuilder::new(Top).build();
     machine.transition(StateTransState::F);
-    assert!(matches!(machine.state(), StateTransState::Top))
+    assert!(matches!(machine.state(), StateTransState::Top));
 }

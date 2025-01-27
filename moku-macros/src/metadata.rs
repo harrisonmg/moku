@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::DebugSet};
 
 use convert_case::{Case, Casing};
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use syn::{parse_quote, Ident, Item, ItemImpl, ItemMod};
 
@@ -280,6 +280,16 @@ impl Metadata {
             }
         });
 
+        let set_name = if cfg!(feature = "std") {
+            quote! {
+                fn set_name(&mut self, name: String) {
+                    self.top_node.set_name(name)
+                }
+            }
+        } else {
+            TokenStream::new()
+        };
+
         self.push_to_machine_mod(parse_quote! {
             impl ::moku::StateMachine<#state_enum, super::#top_state> for #ident {
                 fn update(&mut self) {
@@ -302,9 +312,7 @@ impl Metadata {
                     self.top_node.name()
                 }
 
-                fn set_name(&mut self, name: String) {
-                    self.top_node.set_name(name)
-                }
+                #set_name
 
                 fn state_matches(&self, state: #state_enum) -> bool {
                     self.top_node.state_matches(state)
@@ -343,35 +351,70 @@ impl Metadata {
         let machine_ident = format_ident!("{}Machine", self.name);
         let top_state = &self.top_state.ident;
 
+        let name_field = if cfg!(feature = "std") {
+            quote! {
+                name: Option<String>,
+            }
+        } else {
+            TokenStream::new()
+        };
+
         self.push_to_machine_mod(parse_quote! {
             pub struct #ident {
                 top_state: super::#top_state,
-                name: Option<String>,
+                #name_field
             }
         });
 
+        let name_field = if cfg!(feature = "std") {
+            quote! {
+                name: None,
+            }
+        } else {
+            TokenStream::new()
+        };
+
+        let name_setter = if cfg!(feature = "std") {
+            quote! {
+                fn name(mut self, name: String) -> Self {
+                    self.name = Some(name);
+                    self
+                }
+            }
+        } else {
+            TokenStream::new()
+        };
+
+        let name = self.name.to_string();
+
+        let name_arg = if cfg!(feature = "std") {
+            quote! {
+                self.name.unwrap_or_else(|| String::from(#name)),
+            }
+        } else {
+            quote! {
+                #name
+            }
+        };
+
         let state_enum = &self.state_enum;
         let top_state = &self.top_state.ident;
-        let name = self.name.to_string();
 
         self.push_to_machine_mod(parse_quote! {
             impl ::moku::StateMachineBuilder<#state_enum, super::#top_state, #machine_ident> for #ident {
                 fn new(top_state: super::#top_state) -> Self {
                     Self {
                         top_state,
-                        name: None,
+                        #name_field
                     }
                 }
 
-                fn name(mut self, name: &str) -> Self {
-                    self.name = Some(name.to_owned());
-                    self
-                }
+                #name_setter
 
                 fn build(self) -> #machine_ident {
                     #machine_ident::new(::moku::internal::TopNode::new(
                         self.top_state,
-                        self.name.unwrap_or_else(|| String::from(#name)),
+                        #name_arg
                     ))
                 }
             }
@@ -555,7 +598,7 @@ impl Metadata {
                             state: &mut super::#state_ident,
                             superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
                         ) -> Option<#state_enum> {
-                            let old_state = std::mem::replace(self, Self::None);
+                            let old_state = core::mem::replace(self, Self::None);
                             match old_state {
                                 Self::None => None,
                                 #(Self::#children(node) => node.exit(&mut #superstates::new(state, superstates)),)*

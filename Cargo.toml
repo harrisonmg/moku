@@ -9,6 +9,13 @@ repository = "https://github.com/harrisonmg/moku"
 readme = "README.md"
 
 [workspace]
+members = [
+ "tests/no-std"
+]
+
+[features]
+default = ["std"]
+std = ["moku-macros/std"]
 
 [dependencies]
 log = "0.4.22"

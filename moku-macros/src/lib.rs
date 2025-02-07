@@ -63,6 +63,7 @@ pub fn superstate(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
+    // validate that this attribute is attached to a module
     let main_mod = match parse::<ItemMod>(input.clone()) {
         Ok(main_mod) => main_mod,
         Err(error) => {
@@ -73,9 +74,9 @@ pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
     // Past this point, don't return the input along with the compile error here.
     //
     // If we've found an error at this point, the lack of autogen code will cause a ton of
-    // red herring compile errors within the machine mod. Better to let the errors be
-    // outside of the module due to its lack of existence, to make the true error easier
-    // for the user to find within the module.
+    // red herring compile errors within the machine module. Better to let the errors be
+    // outside of the module due to its lack of existence in order to make the true error
+    // easier for the user to find within the module.
     //
     // This will stop rust-analyzer completions from working while the error persists.
 

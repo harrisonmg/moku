@@ -10,7 +10,7 @@ readme = "README.md"
 
 [workspace]
 members = [
- "tests/no_std"
+ "tests/no-std"
 ]
 
 [features]

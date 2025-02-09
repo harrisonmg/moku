@@ -11,3 +11,4 @@ A hierarchical state machine (HSM) is a state machine where common functionaliti
 
 ## When would I use moku?
 - When you want to avoid writing and testing the boilerplate required to define and run an HSM
+- When you need more flexibility

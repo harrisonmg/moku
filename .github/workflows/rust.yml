@@ -24,5 +24,5 @@ jobs:
       run: cargo test --verbose
 
     - name: Run no_std tests
-      working-directory: tests/no_std
+      working-directory: tests/no-std
       run: cargo test --verbose

@@ -5,7 +5,7 @@ mod blinky {
     use moku::*;
 
     #[machine_module]
-    mod state_machine_module {
+    mod machine {
         const SOMETHING: &str = "something";
     }
 }

@@ -5,7 +5,7 @@ mod blinky {
     use moku::*;
 
     #[machine_module]
-    mod state_machine {}
+    mod machine {}
 
     struct Top {}
     impl TopState<BlinkyState> for &Top {}

@@ -8,19 +8,26 @@ mod blinky {
     use moku::*;
 
     #[machine_module]
-    mod state_machine {}
-    use state_machine::{BlinkyMachine, BlinkyMachineBuilder};
-    pub use state_machine::{BlinkyState, BLINKY_STATE_CHART};
+    mod machine {}
+    use machine::{BlinkyMachine, BlinkyMachineBuilder};
+    pub use machine::{BlinkyState, BLINKY_STATE_CHART};
 
     pub fn new_machine() -> BlinkyMachine {
-        BlinkyMachineBuilder::new(Top {}).build()
+        BlinkyMachineBuilder::new(Top {
+            // In the real world, `StateMachine::update` would be called at some regular interval,
+            // and this period may be set > 0 to control the blinking frequency.
+            blink_period: Duration::ZERO,
+        })
+        .build()
     }
 
-    pub struct Top;
+    pub struct Top {
+        blink_period: Duration,
+    }
 
     impl TopState<BlinkyState> for Top {
         fn init(&mut self) -> Option<BlinkyState> {
-            Some(BlinkyState::Disabled)
+            Some(BlinkyState::Enabled)
         }
     }
 
@@ -29,20 +36,10 @@ mod blinky {
     #[superstate(Top)]
     impl State<BlinkyState> for Disabled {}
 
-    struct Enabled {
-        blink_period: Duration,
-    }
+    struct Enabled;
 
     #[superstate(Top)]
     impl State<BlinkyState> for Enabled {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
-            StateEntry::State(Self {
-                // In the real world, `StateMachine::update` would be called at some regular interval,
-                // and this period may be set > 0 to control the blinking frequency.
-                blink_period: Duration::from_secs(0),
-            })
-        }
-
         fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
             Some(BlinkyState::LedOn)
         }
@@ -61,7 +58,7 @@ mod blinky {
         }
 
         fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
-            if self.entry_time.elapsed() >= superstates.enabled.blink_period {
+            if self.entry_time.elapsed() >= superstates.top.blink_period {
                 Some(BlinkyState::LedOff)
             } else {
                 None
@@ -82,7 +79,7 @@ mod blinky {
         }
 
         fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
-            if self.entry_time.elapsed() >= superstates.enabled.blink_period {
+            if self.entry_time.elapsed() >= superstates.top.blink_period {
                 Some(BlinkyState::LedOn)
             } else {
                 None

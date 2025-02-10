@@ -8,8 +8,8 @@ mod event_queue {
     use moku::*;
 
     #[machine_module]
-    mod state_machine {}
-    pub use state_machine::*;
+    mod machine {}
+    pub use machine::*;
 
     pub enum Event {
         A,

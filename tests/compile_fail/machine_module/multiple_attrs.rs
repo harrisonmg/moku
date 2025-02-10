@@ -6,7 +6,7 @@ mod blinky {
 
     #[machine_module]
     #[machine_module]
-    mod state_machine_module {}
+    mod machine {}
 }
 
 fn main() {}

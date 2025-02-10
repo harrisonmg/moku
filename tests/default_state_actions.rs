@@ -1,5 +1,5 @@
 use dft::{
-    state_machine::{DftMachineBuilder, DftState},
+    machine::{DftMachineBuilder, DftState},
     Top,
 };
 use moku::*;
@@ -10,9 +10,9 @@ mod dft {
     use moku::*;
 
     #[machine_module]
-    pub mod state_machine {}
+    pub mod machine {}
 
-    use state_machine::DftState;
+    use machine::DftState;
 
     pub struct Top;
 

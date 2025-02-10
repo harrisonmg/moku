@@ -1,6 +1,6 @@
 use moku::*;
 use state_trans::{
-    state_machine::{StateTransMachineBuilder, StateTransState, STATE_TRANS_STATE_CHART},
+    machine::{StateTransMachineBuilder, StateTransState, STATE_TRANS_STATE_CHART},
     Top,
 };
 use test_log::test;
@@ -10,9 +10,9 @@ mod state_trans {
     use moku::*;
 
     #[machine_module]
-    pub mod state_machine {}
+    pub mod machine {}
 
-    use state_machine::StateTransState;
+    use machine::StateTransState;
 
     pub struct Top;
 

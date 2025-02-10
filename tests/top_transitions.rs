@@ -1,7 +1,7 @@
 use moku::*;
 use test_log::test;
 use top_trans::{
-    state_machine::{TopTransMachineBuilder, TopTransState, TOP_TRANS_STATE_CHART},
+    machine::{TopTransMachineBuilder, TopTransState, TOP_TRANS_STATE_CHART},
     Top,
 };
 
@@ -10,9 +10,9 @@ mod top_trans {
     use moku::*;
 
     #[machine_module]
-    pub mod state_machine {}
+    pub mod machine {}
 
-    use state_machine::TopTransState;
+    use machine::TopTransState;
 
     pub struct Top;
 

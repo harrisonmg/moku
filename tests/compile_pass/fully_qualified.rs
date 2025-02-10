@@ -1,9 +1,9 @@
 #[::moku::state_machine]
 mod blinky {
     #[::moku::machine_module]
-    mod state_machine {}
+    mod machine {}
 
-    use state_machine::BlinkyState;
+    use machine::BlinkyState;
 
     struct Top;
 

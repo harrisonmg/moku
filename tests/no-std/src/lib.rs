@@ -16,9 +16,9 @@ mod basic {
     use moku::*;
 
     #[machine_module]
-    pub mod state_machine {}
+    pub mod machine {}
 
-    use state_machine::BasicState;
+    use machine::BasicState;
 
     #[derive(Default)]
     pub struct Top {
@@ -225,7 +225,7 @@ mod tests {
     use super::moku::*;
 
     use super::basic::{
-        state_machine::{BasicMachineBuilder, BasicState, BASIC_STATE_CHART},
+        machine::{BasicMachineBuilder, BasicState, BASIC_STATE_CHART},
         Bar, Foo, Iron, Top, Wet,
     };
 

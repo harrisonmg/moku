@@ -5,10 +5,10 @@ mod blinky {
     use moku::*;
 
     #[machine_module]
-    mod state_machine_module {}
+    mod machine {}
 
     #[machine_module]
-    mod other_state_machine_module {}
+    mod other_machine {}
 }
 
 fn main() {}

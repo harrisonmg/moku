@@ -5,7 +5,7 @@ mod blinky {
     use moku::*;
 
     #[machine_module]
-    mod state_machine {}
+    mod machine {}
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     enum BlonkyState {}

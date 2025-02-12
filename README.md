@@ -50,8 +50,10 @@ The simplest possible moku state machine can be defined as follows:
 // state definitions and an empty module for it to generate the state machine within.
 #[moku::state_machine]
 mod blinky {
+    use moku::*;
+
     // The `machine_module` attribute marks the module moku will use for autogeneration.
-    #[moku::machine_module]
+    #[machine_module]
     mod machine {}
 
     // Moku has generated `BlinkyState`, an enum of all states.
@@ -62,7 +64,7 @@ mod blinky {
     struct Top;
 
     // The top state is indicated by implementing the `TopState` trait for a struct.
-    impl moku::TopState<BlinkyState> for Top {}
+    impl TopState<BlinkyState> for Top {}
 }
 ```
 
@@ -78,34 +80,35 @@ Let's add some more states inside the `blinky` module:
 ```rust
 # #[moku::state_machine]
 # mod blinky {
-#     #[moku::machine_module]
+#     use moku::*;
+#     #[machine_module]
 #     mod machine {}
 #     use machine::BlinkyState;
 #     struct Top;
-#     impl moku::TopState<BlinkyState> for Top {}
+#     impl TopState<BlinkyState> for Top {}
     // ...
 
     struct Disabled;
 
     // Every `State` must use the `superstate` attribute to indicate what state
     // it is a substate of.
-    #[moku::superstate(Top)]
-    impl moku::State<BlinkyState> for Disabled {}
+    #[superstate(Top)]
+    impl State<BlinkyState> for Disabled {}
 
     struct Enabled;
 
-    #[moku::superstate(Top)]
-    impl moku::State<BlinkyState> for Enabled {}
+    #[superstate(Top)]
+    impl State<BlinkyState> for Enabled {}
 
     struct LedOn;
 
-    #[moku::superstate(Enabled)]
-    impl moku::State<BlinkyState> for LedOn {}
+    #[superstate(Enabled)]
+    impl State<BlinkyState> for LedOn {}
 
     struct LedOff;
 
-    #[moku::superstate(Enabled)]
-    impl moku::State<BlinkyState> for LedOff {}
+    #[superstate(Enabled)]
+    impl State<BlinkyState> for LedOff {}
 
     // ...
 # }
@@ -135,7 +138,8 @@ Let's add some functionality to our states:
 ```rust
 # #[moku::state_machine]
 # mod blinky {
-#     #[moku::machine_module]
+#     use moku::*;
+#     #[machine_module]
 #     mod machine {}
 #     use machine::BlinkyState;
     // ...
@@ -149,7 +153,7 @@ Let's add some functionality to our states:
         blink_time: std::time::Duration,
     }
 
-    impl moku::TopState<BlinkyState> for Top {
+    impl TopState<BlinkyState> for Top {
         // By implementing the `init` method, we can define the initial transition taken
         // after transitioning into a state.
         //
@@ -164,12 +168,12 @@ Let's add some functionality to our states:
 
     // ...
 #     struct Disabled;
-#     #[moku::superstate(Top)]
-#     impl moku::State<BlinkyState> for Disabled {}
+#     #[superstate(Top)]
+#     impl State<BlinkyState> for Disabled {}
 #     struct Enabled;
 
-    #[moku::superstate(Top)]
-    impl moku::State<BlinkyState> for Enabled {
+    #[superstate(Top)]
+    impl State<BlinkyState> for Enabled {
         fn init(
             &mut self,
             _superstates: &mut Self::Superstates<'_>
@@ -183,8 +187,8 @@ Let's add some functionality to our states:
         entry_time: std::time::Instant,
     }
 
-    #[moku::superstate(Enabled)]
-    impl moku::State<BlinkyState> for LedOn {
+    #[superstate(Enabled)]
+    impl State<BlinkyState> for LedOn {
         // The `enter` method acts as a constructor for the state when it becomes active.
         // States do not persist when they are inactive.
         //
@@ -195,11 +199,11 @@ Let's add some functionality to our states:
         // state construction fails.
         fn enter(
             _superstates: &mut Self::Superstates<'_>
-        ) -> moku::StateEntry<Self, BlinkyState> {
+        ) -> StateEntry<Self, BlinkyState> {
             // pseudocode to turn the LED on
             // led_gpio.set_high()
 
-            moku::StateEntry::State(Self {
+            StateEntry::State(Self {
                 entry_time: std::time::Instant::now(),
             })
         }
@@ -225,15 +229,15 @@ Let's add some functionality to our states:
         entry_time: std::time::Instant,
     }
 
-    #[moku::superstate(Enabled)]
-    impl moku::State<BlinkyState> for LedOff {
+    #[superstate(Enabled)]
+    impl State<BlinkyState> for LedOff {
         fn enter(
             _superstates: &mut Self::Superstates<'_>
-        ) -> moku::StateEntry<Self, BlinkyState> {
+        ) -> StateEntry<Self, BlinkyState> {
             // pseudocode to turn the LED off
             // led_gpio.set_low()
 
-            moku::StateEntry::State(Self {
+            StateEntry::State(Self {
                 entry_time: std::time::Instant::now(),
             })
         }
@@ -260,21 +264,22 @@ Finally, let's use our state machine!
 ```rust
 # #[moku::state_machine]
 # mod blinky {
-#     #[moku::machine_module]
+#     use moku::*;
+#     #[machine_module]
 #     pub mod machine {}
 #     use machine::BlinkyState;
 #    pub struct Top { pub blink_time: std::time::Duration }
-#    impl moku::TopState<BlinkyState> for Top {
+#    impl TopState<BlinkyState> for Top {
 #        fn init(&mut self) -> Option<BlinkyState> {
 #            Some(BlinkyState::Enabled)
 #        }
 #    }
 #     struct Disabled;
-#     #[moku::superstate(Top)]
-#     impl moku::State<BlinkyState> for Disabled {}
+#     #[superstate(Top)]
+#     impl State<BlinkyState> for Disabled {}
 #     struct Enabled;
-#     #[moku::superstate(Top)]
-#     impl moku::State<BlinkyState> for Enabled {
+#     #[superstate(Top)]
+#     impl State<BlinkyState> for Enabled {
 #         fn init(
 #             &mut self,
 #             _superstates: &mut Self::Superstates<'_>
@@ -283,12 +288,12 @@ Finally, let's use our state machine!
 #         }
 #     }
 #     struct LedOn { entry_time: std::time::Instant }
-#     #[moku::superstate(Enabled)]
-#     impl moku::State<BlinkyState> for LedOn {
+#     #[superstate(Enabled)]
+#     impl State<BlinkyState> for LedOn {
 #         fn enter(
 #             _superstates: &mut Self::Superstates<'_>
-#         ) -> moku::StateEntry<Self, BlinkyState> {
-#             moku::StateEntry::State(Self {
+#         ) -> StateEntry<Self, BlinkyState> {
+#             StateEntry::State(Self {
 #                 entry_time: std::time::Instant::now(),
 #             })
 #         }
@@ -304,12 +309,12 @@ Finally, let's use our state machine!
 #         }
 #     }
 #     pub struct LedOff { pub entry_time: std::time::Instant }
-#     #[moku::superstate(Enabled)]
-#     impl moku::State<BlinkyState> for LedOff {
+#     #[superstate(Enabled)]
+#     impl State<BlinkyState> for LedOff {
 #         fn enter(
 #             _superstates: &mut Self::Superstates<'_>
-#         ) -> moku::StateEntry<Self, BlinkyState> {
-#             moku::StateEntry::State(Self {
+#         ) -> StateEntry<Self, BlinkyState> {
+#             StateEntry::State(Self {
 #                 entry_time: std::time::Instant::now(),
 #             })
 #         }

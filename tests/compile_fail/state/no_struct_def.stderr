@@ -1,5 +1,0 @@
-error: could not find the struct definition for this State in this module (or this is a duplicate impl of State for BottomTy)
-  --> tests/compile_fail/state/no_struct_def.rs:18:33
-   |
-18 |     impl State<BlinkyState> for BottomTy {}
-   |                                 ^^^^^^^^

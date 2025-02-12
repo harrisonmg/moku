@@ -16,7 +16,7 @@ use crate::{
 pub fn build_metadata(name: Ident, module: ItemMod) -> Result<Metadata, syn::Error> {
     let mut unpacker = Unpacker::new(name, module);
     unpacker.unpack()?;
-    unpacker.match_state_defs()?;
+    unpacker.check_state_defs();
     unpacker.validate_superstates_types()?;
     unpacker.validate_enter_defs()?;
     let top_state = unpacker.get_top_state()?;
@@ -29,7 +29,8 @@ struct UnpackedState {
     superstate: Ident,
     imp: ItemImpl,
     attr_span: Span,
-    can_autogen_enter: bool,
+    def_found: bool,
+    has_fields: bool,
     autogen_enter: bool,
 }
 
@@ -124,21 +125,19 @@ mod {} {{
         Err(syn::Error::new(self.main_mod.span(), msg))
     }
 
-    /// Match each State with it's struct definition.
-    fn match_state_defs(&mut self) -> Result<(), syn::Error> {
+    /// Check each found State struct definition with it's struct definition.
+    fn check_state_defs(&mut self) {
         for state in &mut self.states {
             match self.structs.remove(&state.ident) {
-                Some(has_no_fields) => state.can_autogen_enter = has_no_fields,
-                None => {
-                    return Err(syn::Error::new(
-                        state.imp.self_ty.span(),
-                        format!("could not find the struct definition for this State in this module (or this is a duplicate impl of State for {})", state.ident),
-                    ));
+                Some(has_fields) => {
+                    state.def_found = true;
+                    state.has_fields = has_fields;
                 }
-            }
+                None => {
+                    state.def_found = false;
+                }
+            };
         }
-
-        Ok(())
     }
 
     /// Validate that the Superstates associated type is not manually defined for any State.
@@ -169,12 +168,19 @@ mod {} {{
 
             if has_enter {
                 state.autogen_enter = false;
-            } else if state.can_autogen_enter {
-                state.autogen_enter = true;
+            } else if state.def_found {
+                if state.has_fields {
+                    return Err(syn::Error::new(
+                        state.imp.trait_.as_ref().unwrap().1.span(),
+                        "a struct with fields must manually implement the `State::enter` function",
+                    ));
+                } else {
+                    state.autogen_enter = true;
+                }
             } else {
                 return Err(syn::Error::new(
                     state.imp.trait_.as_ref().unwrap().1.span(),
-                    "a struct with fields must manually implement the `State::enter` function",
+                    "a struct that is not defined in this module must manually implement the `State::enter` function",
                 ));
             }
         }
@@ -322,15 +328,17 @@ mod {} {{
             superstate,
             attr_span: attr.span(),
             imp,
-            can_autogen_enter: false,
+            def_found: false,
+            has_fields: false,
             autogen_enter: false,
         });
     }
 
     fn unpack_struct(&mut self, def: ItemStruct) -> Option<Item> {
-        // track what structs have fields for State::enter autogen info
+        // track what structs have no fields for State::enter autogen info
         self.structs
-            .insert(def.ident.clone(), def.fields.is_empty());
+            .insert(def.ident.clone(), !def.fields.is_empty());
+
         Some(Item::Struct(def))
     }
 

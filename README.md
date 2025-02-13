@@ -367,6 +367,8 @@ machine.update();
 // │Exiting LedOn
 // │Entering LedOff
 // └Transition complete
+// │Updating Enabled
+// │Updating Top
 // └Update complete
 
 // `top_down_update()` calls each state's `top_down_update()` method,

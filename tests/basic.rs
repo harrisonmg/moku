@@ -101,6 +101,26 @@ mod basic {
         }
     }
 
+    struct Qux;
+
+    #[superstate(Foo)]
+    impl State<BasicState> for Qux {}
+
+    struct Quux;
+
+    #[superstate(Qux)]
+    impl State<BasicState> for Quux {}
+
+    struct Quz;
+
+    #[superstate(Foo)]
+    impl State<BasicState> for Quz {}
+
+    struct Quuz;
+
+    #[superstate(Quz)]
+    impl State<BasicState> for Quuz {}
+
     #[derive(Default)]
     pub struct Bar {
         pub access: u8,
@@ -270,6 +290,10 @@ fn state_chart() {
         BASIC_STATE_CHART,
         "Top
 ├─ Foo
+│  ├─ Qux
+│  │  └─ Quux
+│  └─ Quz
+│     └─ Quuz
 └─ Bar
    ├─ Iron
    └─ Wet"

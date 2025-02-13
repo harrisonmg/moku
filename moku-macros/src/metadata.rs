@@ -60,27 +60,43 @@ impl State {
 
     /// Generate a simple text state chart of this State and its children.
     fn state_chart(&self) -> String {
-        format!("{}", self.ident) + &self.state_chart_children(0)
+        format!("{}", self.ident) + &self.state_chart_children(&mut Vec::new())
     }
 
     /// Helper function for formatting the children of a `state_chart`.
-    fn state_chart_children(&self, level: usize) -> String {
+    fn state_chart_children(&self, levels: &mut Vec<bool>) -> String {
         if let Some((last, firsts)) = self.children.split_last() {
             let mut acc = String::new();
+
             for child in firsts {
-                acc += &child.state_chart_acc(level, false);
+                acc += &child.state_chart_acc(levels, false);
             }
-            acc + &last.state_chart_acc(level, true)
+
+            acc + &last.state_chart_acc(levels, true)
         } else {
             String::new()
         }
     }
 
     /// Helper function for recursively formatting `state_chart`.
-    fn state_chart_acc(&self, level: usize, last: bool) -> String {
-        let pad = " ".repeat(level * 3);
+    fn state_chart_acc(&self, levels: &mut Vec<bool>, last: bool) -> String {
+        let mut pad = String::new();
+        for bar in levels.iter() {
+            if *bar {
+                pad += "\u{02502}  ";
+            } else {
+                pad += "   ";
+            }
+        }
+
         let vert = if last { '\u{02514}' } else { '\u{0251C}' };
-        format!("\n{pad}{vert}\u{02500} {}", self.ident) + &self.state_chart_children(level + 1)
+
+        levels.push(!last);
+        let ret =
+            format!("\n{pad}{vert}\u{02500} {}", self.ident) + &self.state_chart_children(levels);
+        levels.pop();
+
+        ret
     }
 
     /// Create a copy that does not include an ItemImpl or children.
@@ -177,7 +193,7 @@ impl Metadata {
             parent.span(),
             format!(
                 "state graph cycle detected in children of {parent}:\n{parent}{}",
-                child.state_chart_acc(0, true),
+                child.state_chart_acc(&mut Vec::new(), true),
             ),
         ))
     }

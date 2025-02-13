@@ -1,3 +1,4 @@
+//#![warn(missing_docs)]
 #![doc = include_str!("../README.md")]
 #![cfg_attr(not(feature = "std"), no_std)]
 
@@ -75,45 +76,289 @@ pub use moku_macros::machine_module;
 /// ## Example
 /// ```
 /// #[moku::state_machine]
-/// mod blinky {
+/// mod example {
 ///     use moku::*;
 ///
 ///     #[machine_module]
 ///     mod machine {}
 ///
-///     use machine::BlinkyState;
+///     use machine::ExampleState;
 ///
 ///     struct Top;
-///     impl TopState<BlinkyState> for Top {}
+///     impl TopState<ExampleState> for Top {}
 ///
 ///     struct Foo;
 ///
 ///     #[superstate(Top)]
-///     impl State<BlinkyState> for Foo {}
+///     impl State<ExampleState> for Foo {}
 ///
 ///     struct Bar;
 ///
 ///     #[superstate(Foo)]
-///     impl State<BlinkyState> for Bar {}
+///     impl State<ExampleState> for Bar {}
 /// }
 /// ```
 pub use moku_macros::superstate;
 
+/// A flat list of all states in a state machine.
 pub trait StateEnum: core::fmt::Debug + Copy {}
 
+/// A state machine.
 pub trait StateMachine<T: StateEnum, U: TopState<T>> {
+    /// Update the state machine.
+    ///
+    /// Starting with the deepest state, calls [State::update] (or [TopState::update]).
+    ///
+    /// If any state returns `Some(state)` from its update method, that transition will be
+    /// completed and the state machine will continue updating states starting from the nearest
+    /// common ancestor of the previous state and the new state after transition.
+    ///
+    /// TODO: Actually implement that.
+    ///
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// ├─ Foo
+    /// │  └─ Bar
+    /// └─ Fizz
+    ///    └─ Buzz
+    /// ```
+    /// If the [State::update] method of the `Bar` state will return `Some(ExampleState::Buzz)`,
+    /// then:
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// #     pub struct Top;
+    /// #     impl TopState<ExampleState> for Top {}
+    /// #
+    /// #     struct Foo;
+    /// #     #[superstate(Top)]
+    /// #     impl State<ExampleState> for Foo {}
+    /// #
+    /// #     struct Bar;
+    /// #     #[superstate(Foo)]
+    /// #     impl State<ExampleState> for Bar {}
+    /// #
+    /// #     struct Fizz;
+    /// #     #[superstate(Top)]
+    /// #     impl State<ExampleState> for Fizz {}
+    /// #
+    /// #     struct Buzz;
+    /// #     #[superstate(Fizz)]
+    /// #     impl State<ExampleState> for Buzz {}
+    /// # }
+    /// # use moku::{StateMachine, StateMachineBuilder};
+    /// # use example::ExampleState;
+    /// # let mut machine = example::machine::ExampleMachineBuilder::new(example::Top).build();
+    /// # machine.transition(ExampleState::Bar);
+    /// assert!(matches!(machine.state(), ExampleState::Bar));
+    /// machine.update();
+    /// ```
+    /// Will have the log output of:
+    /// ```text
+    /// Example: Updating
+    /// │Updating Bar
+    /// Example: Transitioning from Bar to Buzz
+    /// │Exiting Bar
+    /// │Exiting Foo
+    /// │Entering Fizz
+    /// │Entering Buzz
+    /// └Transition complete
+    /// │Updating Top
+    /// └Update complete
+    /// ```
+    /// `Top` being the nearest common ancestor of the starting state, `Bar`, and the new state,
+    /// `Buzz`, so the update continues from `Top`.
     fn update(&mut self);
+
+    /// Top-down update the state machine.
+    ///
+    /// Starting with the [TopState], calls [State::update] (or [TopState::update]).
+    ///
+    /// If any state returns `Some(state)` from its update method, that transition will be
+    /// completed and the state machine will continue updating states starting from the first
+    /// active descendent of the nearest common ancestor of the previous state and the new state
+    /// after transition.
+    ///
+    /// TODO: Actually implement that.
+    ///
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// ├─ Foo
+    /// │  └─ Bar
+    /// └─ Fizz
+    ///    └─ Buzz
+    /// ```
+    /// If the [State::top_down_update] method of the `Foo` state will return `Some(ExampleState::Fizz)`,
+    /// then:
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// #     pub struct Top;
+    /// #     impl TopState<ExampleState> for Top {}
+    /// #
+    /// #     struct Foo;
+    /// #     #[superstate(Top)]
+    /// #     impl State<ExampleState> for Foo {}
+    /// #
+    /// #     struct Bar;
+    /// #     #[superstate(Foo)]
+    /// #     impl State<ExampleState> for Bar {}
+    /// #
+    /// #     struct Fizz;
+    /// #     #[superstate(Top)]
+    /// #     impl State<ExampleState> for Fizz {}
+    /// #
+    /// #     struct Buzz;
+    /// #     #[superstate(Fizz)]
+    /// #     impl State<ExampleState> for Buzz {}
+    /// # }
+    /// # use moku::{StateMachine, StateMachineBuilder};
+    /// # use example::ExampleState;
+    /// # let mut machine = example::machine::ExampleMachineBuilder::new(example::Top).build();
+    /// # machine.transition(ExampleState::Foo);
+    /// assert!(matches!(machine.state(), ExampleState::Foo));
+    /// machine.top_down_update();
+    /// ```
+    /// Will have the log output of:
+    /// ```text
+    /// Example: Top-down updating
+    /// │Updating Top
+    /// │Updating Foo
+    /// Example: Transitioning from Foo to Fizz
+    /// │Exiting Foo
+    /// │Entering Fizz
+    /// └Transition complete
+    /// │Updating Fizz
+    /// └Update complete
+    /// ```
+    /// `Top` being the nearest common ancestor of the starting state, `Foo`, and the new state,
+    /// `Fizz`, so the top-down update continues from the first acitve descendent of `Top`: `Fizz`.
     fn top_down_update(&mut self);
+
+    /// Attempt to transition the [StateMachine] to the target state.
+    ///
+    /// Subject to short-circuit transtions (from [State::enter] or [State::exit]) and initial
+    /// transitions (from [State::init] or [TopState::init]).
     fn transition(&mut self, target: T);
+
+    /// Get the current state of the [StateMachine].
+    ///
+    /// Returns the deepest active state.
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// └─ Foo
+    ///    └─ Bar
+    /// ```
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// #     pub struct Top;
+    /// #     impl TopState<ExampleState> for Top {}
+    /// #
+    /// #     struct Foo;
+    /// #     #[superstate(Top)]
+    /// #     impl State<ExampleState> for Foo {}
+    /// #
+    /// #     struct Bar;
+    /// #     #[superstate(Foo)]
+    /// #     impl State<ExampleState> for Bar {}
+    /// # }
+    /// # use moku::{StateMachine, StateMachineBuilder};
+    /// # use example::ExampleState;
+    /// # let mut machine = example::machine::ExampleMachineBuilder::new(example::Top).build();
+    /// machine.transition(ExampleState::Bar);
+    /// assert!(matches!(machine.state(), ExampleState::Bar));
+    /// ```
     fn state(&self) -> T;
+
+    /// Check if a given state matches the current state of this [StateMachine] or any active
+    /// superstate.
+    ///
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// ├─ Foo
+    /// │  └─ Bar
+    /// └─ Fizz
+    /// ```
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// #     pub struct Top;
+    /// #     impl TopState<ExampleState> for Top {}
+    /// #
+    /// #     struct Foo;
+    /// #     #[superstate(Top)]
+    /// #     impl State<ExampleState> for Foo {}
+    /// #
+    /// #     struct Bar;
+    /// #     #[superstate(Foo)]
+    /// #     impl State<ExampleState> for Bar {}
+    /// #
+    /// #     struct Fizz;
+    /// #     #[superstate(Top)]
+    /// #     impl State<ExampleState> for Fizz {}
+    /// # }
+    /// # use moku::{StateMachine, StateMachineBuilder};
+    /// # use example::ExampleState;
+    /// # let mut machine = example::machine::ExampleMachineBuilder::new(example::Top).build();
+    /// machine.transition(ExampleState::Bar);
+    /// assert!(machine.state_matches(ExampleState::Top));
+    /// assert!(machine.state_matches(ExampleState::Foo));
+    /// assert!(machine.state_matches(ExampleState::Bar));
+    /// assert!(!machine.state_matches(ExampleState::Fizz));
+    /// ```
+    fn state_matches(&self, state: T) -> bool;
+
+    fn top_ref(&self) -> &U;
+
+    fn top_mut(&mut self) -> &mut U;
+
+    /// Get the name of this [StateMachine] instance.
+    ///
+    /// This name is used in moku log messages.
     fn name(&self) -> &str;
 
+    /// Set the name of this [StateMachine] instance.
+    ///
+    /// This name is used in moku log messages.
     #[cfg(feature = "std")]
     fn set_name(&mut self, name: String);
-
-    fn state_matches(&self, state: T) -> bool;
-    fn top_ref(&self) -> &U;
-    fn top_mut(&mut self) -> &mut U;
 }
 
 pub trait StateRef<T: StateEnum, U: State<T>> {
@@ -202,6 +447,9 @@ impl<T: StateEnum, U: TopState<T>> State<T> for U {
     }
 }
 
+/// Types and traits for autogenerated state machine code.
+///
+/// The contents of this module is intended to be used only by the code that is generated by moku.
 pub mod internal {
     use core::marker::PhantomData;
 
@@ -209,33 +457,51 @@ pub mod internal {
 
     use super::*;
 
+    /// The result of the attempted transition on a branch of the state tree.
     pub enum TransitionResult<T> {
+        /// The target state has been reached and the transition is done.
         Done,
+
+        /// The target state does not exist in the branch and the machine must move up the tree
+        /// towards the root to find it.
         MoveUp,
+
+        /// A short circuit transition occurred during the transition; this new target should
+        /// replace the previous target state.
         NewTransition(T),
     }
 
+    /// The substate of a [State].
+    ///
+    /// Also aggregates some functionality that would be attributed to the [State].
     pub trait SubstateEnum<T: StateEnum, U: State<T>> {
+        /// The variant that represents no substate, i.e. being in exactly this state.
         fn none_variant() -> Self;
 
+        /// The [StateEnum] variant that this [SubstateEnum] represents.
         fn this_state() -> T;
 
+        /// Does this state match exactly a given [StateEnum] variant?
         fn is_state(state: T) -> bool;
 
+        /// The current leaf state of this branch.
         fn current_state(&self) -> T {
             Self::this_state()
         }
 
+        /// Is this state an ancesstor the the given state?
         #[allow(unused_variables)]
         fn is_ancestor(state: T) -> bool {
             false
         }
 
+        /// Update this state and its active descendents.
         #[allow(unused_variables)]
         fn update(&mut self, state: &mut U, superstates: &mut U::Superstates<'_>) -> Option<T> {
             None
         }
 
+        /// Top-down update this state and its active descendents.
         #[allow(unused_variables)]
         fn top_down_update(
             &mut self,
@@ -245,11 +511,13 @@ pub mod internal {
             None
         }
 
+        /// Exit this state and its active descendents.
         #[allow(unused_variables)]
         fn exit(&mut self, state: &mut U, superstates: &mut U::Superstates<'_>) -> Option<T> {
             None
         }
 
+        /// Transition this state and its active descendents.
         #[allow(unused_variables)]
         fn transition(
             &mut self,
@@ -260,6 +528,9 @@ pub mod internal {
             TransitionResult::MoveUp
         }
 
+        /// Enter the substate that moves towards a target state.
+        ///
+        /// Panics if called when the target state is not a descendent of this state.
         #[allow(unused_variables)]
         fn enter_substate_towards(
             &mut self,
@@ -270,21 +541,27 @@ pub mod internal {
             unreachable!()
         }
 
+        /// Does this state or any active descendents match a given state?
         fn state_matches(&self, state: T) -> bool {
             Self::is_state(state)
         }
     }
 
+    /// The result of trying to enter a [Node].
     pub enum NodeEntry<T, U, V>
     where
         T: StateEnum,
         U: State<T>,
         V: SubstateEnum<T, U>,
     {
+        /// Entry was successful, here is the new [Node].
         Node(Node<T, U, V>),
+
+        /// Entry resulted in a short-circuit transition.
         Transition(T),
     }
 
+    /// A node in the state tree.
     pub struct Node<T, U, V>
     where
         T: StateEnum,
@@ -302,6 +579,7 @@ pub mod internal {
         U: State<T>,
         V: SubstateEnum<T, U>,
     {
+        /// Make a new [Node] from a [State].
         pub fn from_state(state: U) -> Self {
             Self {
                 state,
@@ -310,6 +588,7 @@ pub mod internal {
             }
         }
 
+        /// Enter this node.
         pub fn enter(superstates: &mut U::Superstates<'_>) -> NodeEntry<T, U, V> {
             info!("\u{02502}Entering {:?}", V::this_state());
             match U::enter(superstates) {
@@ -325,6 +604,7 @@ pub mod internal {
             }
         }
 
+        /// Update this node and its active descendents.
         pub fn update(&mut self, superstates: &mut U::Superstates<'_>) -> Option<T> {
             match self.substate.update(&mut self.state, superstates) {
                 Some(target) => Some(target),
@@ -335,6 +615,7 @@ pub mod internal {
             }
         }
 
+        /// Top-down update this node and its active descendents.
         pub fn top_down_update(&mut self, superstates: &mut U::Superstates<'_>) -> Option<T> {
             info!("\u{02502}Top-down updating {:?}", V::this_state());
             match self.state.top_down_update(superstates) {
@@ -343,6 +624,7 @@ pub mod internal {
             }
         }
 
+        /// Exit this node and its active descendents.
         pub fn exit(self, superstates: &mut U::Superstates<'_>) -> Option<T> {
             info!("\u{02502}Exiting {:?}", V::this_state());
             self.state.exit(superstates).inspect(|target| {
@@ -350,6 +632,7 @@ pub mod internal {
             })
         }
 
+        /// Transition this node and its active descendents.
         pub fn transition(
             &mut self,
             target: T,
@@ -405,15 +688,18 @@ pub mod internal {
             }
         }
 
+        /// Get the current leaf state of this branch.
         pub fn current_state(&self) -> T {
             self.substate.current_state()
         }
 
+        /// Does this node or any active descendents match a given state?
         pub fn state_matches(&self, state: T) -> bool {
             self.substate.state_matches(state)
         }
     }
 
+    /// The root node of a state tree.
     pub struct TopNode<T, U, V>
     where
         T: StateEnum,
@@ -435,6 +721,7 @@ pub mod internal {
         U: TopState<T>,
         V: SubstateEnum<T, U>,
     {
+        /// Make a new [TopNode] from a [TopState] and a machine instance name.
         #[cfg(feature = "std")]
         pub fn new(top_state: U, name: String) -> Self {
             Self {
@@ -443,6 +730,7 @@ pub mod internal {
             }
         }
 
+        /// Make a new [TopNode] from a [TopState] and a machine instance name.
         #[cfg(not(feature = "std"))]
         pub fn new(top_state: U, name: &'static str) -> Self {
             Self {
@@ -451,6 +739,7 @@ pub mod internal {
             }
         }
 
+        /// Perform the initial transition of this node.
         pub fn init(&mut self) {
             if let Some(target) = TopState::init(&mut self.node.state) {
                 info!("{}: Initial transition to {target:?}", self.name());
@@ -459,6 +748,7 @@ pub mod internal {
             }
         }
 
+        /// Update this node and its active descendents.
         pub fn update(&mut self) {
             info!("{}: Updating", self.name());
             if let Some(target) = self.node.update(&mut NoSuperstates(PhantomData)) {
@@ -467,6 +757,7 @@ pub mod internal {
             info!("\u{02514}Update complete");
         }
 
+        /// Top-down update this node and its active descendents.
         pub fn top_down_update(&mut self) {
             info!("{}: Top-down updating", self.name());
             if let Some(target) = self.node.top_down_update(&mut NoSuperstates(PhantomData)) {
@@ -475,6 +766,8 @@ pub mod internal {
             info!("\u{02514}Top-down update complete");
         }
 
+        /// Transition this node and its active descendents without logging the start and end of
+        /// the transition.
         pub fn transition_quiet(&mut self, target: T) {
             match self
                 .node
@@ -486,6 +779,7 @@ pub mod internal {
             }
         }
 
+        /// Transition this node and its active descendents.
         pub fn transition(&mut self, target: T) {
             info!(
                 "{}: Transitioning from {:?} to {target:?}",
@@ -496,10 +790,12 @@ pub mod internal {
             info!("\u{02514}Transition complete");
         }
 
+        /// Get the current leaf state of this state tree.
         pub fn state(&self) -> T {
             self.node.current_state()
         }
 
+        /// Get the name of this machine instance.
         pub fn name(&self) -> &str {
             #[cfg(feature = "std")]
             return &self.name;
@@ -508,11 +804,13 @@ pub mod internal {
             return self.name;
         }
 
+        /// Set the name of this machine instance.
         #[cfg(feature = "std")]
         pub fn set_name(&mut self, name: String) {
             self.name = name;
         }
 
+        /// Does this node or any active descendents match a given state?
         pub fn state_matches(&self, state: T) -> bool {
             self.node.state_matches(state)
         }

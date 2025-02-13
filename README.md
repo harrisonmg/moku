@@ -114,7 +114,7 @@ Let's add some more states inside the `blinky` module:
 # }
 ```
 
-At this point, `BLINKY_STATE_CHART` will look like
+At this point, `BLINKY_STATE_CHART` will look like:
 ```txt
 Top
 ├─ Disabled
@@ -123,8 +123,9 @@ Top
    └─ LedOff
 ```
 
-and `BlinkyState` will look something like
+and `BlinkyState` will look like:
 ```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlinkyState {
     Top,
     Disabled,
@@ -262,6 +263,7 @@ Let's add some functionality to our states:
 
 Finally, let's use our state machine!
 ```rust
+# // NOTE: The blinky mod below should be hidden with rustdoc.
 # #[moku::state_machine]
 # mod blinky {
 #     use moku::*;

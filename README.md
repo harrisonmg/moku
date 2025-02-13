@@ -372,7 +372,7 @@ machine.update();
 // └Update complete
 
 // `top_down_update()` calls each state's `top_down_update()` method,
-// starting from the `TopState`
+// starting from the `TopState`.
 machine.top_down_update();
 
 // log output:
@@ -408,6 +408,7 @@ machine.transition(BlinkyState::Disabled);
 // └Transition complete
 
 ```
+If a transition occurs during an update or top-down update, the update will continue from the nearest common ancestor between the previous state and the new state. See [StateMachine::update] and [StateMachine::top_down_update] for more details.
 
 ## Event handling
 It is common to implement state machines alongside an event type, where each active state handles events as they are generated. Often state machine transitions are defined via a centralized table of states and events. Moku focuses on the autogeneration of state machine boilerplate, leaving event queues and handling for users to implement at their discretion.

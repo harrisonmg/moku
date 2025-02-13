@@ -113,8 +113,6 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// completed and the state machine will continue updating states starting from the nearest
     /// common ancestor of the previous state and the new state after transition.
     ///
-    /// TODO: Actually implement that.
-    ///
     /// # Example
     /// For some machine:
     /// ```text
@@ -127,7 +125,7 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// If the [State::update] method of the `Bar` state will return `Some(ExampleState::Buzz)`,
     /// then:
     /// ```
-    /// # #[moku::state_machine]
+    /// # #[state_machine]
     /// # mod example {
     /// #     use moku::*;
     /// #
@@ -155,9 +153,10 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// #     #[superstate(Fizz)]
     /// #     impl State<ExampleState> for Buzz {}
     /// # }
-    /// # use moku::{StateMachine, StateMachineBuilder};
-    /// # use example::ExampleState;
-    /// # let mut machine = example::machine::ExampleMachineBuilder::new(example::Top).build();
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
     /// # machine.transition(ExampleState::Bar);
     /// assert!(matches!(machine.state(), ExampleState::Bar));
     /// machine.update();
@@ -188,8 +187,6 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// active descendent of the nearest common ancestor of the previous state and the new state
     /// after transition.
     ///
-    /// TODO: Actually implement that.
-    ///
     /// # Example
     /// For some machine:
     /// ```text
@@ -202,7 +199,7 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// If the [State::top_down_update] method of the `Foo` state will return `Some(ExampleState::Fizz)`,
     /// then:
     /// ```
-    /// # #[moku::state_machine]
+    /// # #[state_machine]
     /// # mod example {
     /// #     use moku::*;
     /// #
@@ -230,9 +227,10 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// #     #[superstate(Fizz)]
     /// #     impl State<ExampleState> for Buzz {}
     /// # }
-    /// # use moku::{StateMachine, StateMachineBuilder};
-    /// # use example::ExampleState;
-    /// # let mut machine = example::machine::ExampleMachineBuilder::new(example::Top).build();
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
     /// # machine.transition(ExampleState::Foo);
     /// assert!(matches!(machine.state(), ExampleState::Foo));
     /// machine.top_down_update();
@@ -240,14 +238,14 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// Will have the log output of:
     /// ```text
     /// Example: Top-down updating
-    /// │Updating Top
-    /// │Updating Foo
+    /// │Top-down updating Top
+    /// │Top-down updating Foo
     /// │Transitioning from Foo to Fizz
     /// ││Exiting Foo
     /// ││Entering Fizz
     /// │└Transition complete
-    /// │Updating Fizz
-    /// └Update complete
+    /// │Top-down updating Fizz
+    /// └Top-down update complete
     /// ```
     /// `Top` being the nearest common ancestor of the starting state, `Foo`, and the new state,
     /// `Fizz`, so the top-down update continues from the first acitve descendent of `Top`: `Fizz`.
@@ -257,6 +255,35 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     ///
     /// Subject to short circuit transtions (from [State::enter] or [State::exit]) and initial
     /// transitions (from [State::init] or [TopState::init]).
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// #     pub struct Top;
+    /// #     impl TopState<ExampleState> for Top {}
+    /// #
+    /// #     struct Foo;
+    /// #     #[superstate(Top)]
+    /// #     impl State<ExampleState> for Foo {}
+    /// #
+    /// #     struct Bar;
+    /// #     #[superstate(Foo)]
+    /// #     impl State<ExampleState> for Bar {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
+    /// machine.transition(ExampleState::Bar);
+    /// assert!(matches!(machine.state(), ExampleState::Bar));
+    /// ```
     fn transition(&mut self, target: T);
 
     /// Get the current state of the [StateMachine].
@@ -290,9 +317,10 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// #     #[superstate(Foo)]
     /// #     impl State<ExampleState> for Bar {}
     /// # }
-    /// # use moku::{StateMachine, StateMachineBuilder};
-    /// # use example::ExampleState;
-    /// # let mut machine = example::machine::ExampleMachineBuilder::new(example::Top).build();
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
     /// machine.transition(ExampleState::Bar);
     /// assert!(matches!(machine.state(), ExampleState::Bar));
     /// ```
@@ -345,18 +373,119 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// ```
     fn state_matches(&self, state: T) -> bool;
 
+    /// Get a reference to the top state.
+    ///
+    /// # Example
+    /// ```
+    /// # #[state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// // ...
+    ///      pub struct Top {
+    ///         pub foo: u8,
+    ///      }
+    ///
+    ///      impl TopState<ExampleState> for Top {}
+    /// // ...
+    /// # }
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top { foo: 8 }).build();
+    ///
+    /// dbg!(machine.top_ref().foo);
+    /// ```
     fn top_ref(&self) -> &U;
 
+    /// Get a mutable reference to the top state.
+    ///
+    /// # Example
+    /// ```
+    /// # #[state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// // ...
+    ///      pub struct Top {
+    ///         pub foo: u8,
+    ///      }
+    ///
+    ///      impl TopState<ExampleState> for Top {}
+    /// // ...
+    /// # }
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top { foo: 8 }).build();
+    ///
+    /// machine.top_mut().foo = 8;
+    /// ```
     fn top_mut(&mut self) -> &mut U;
 
-    /// Get the name of this [StateMachine] instance.
+    /// Get the name of this state machine.
     ///
     /// This name is used in moku log messages.
+    ///
+    /// # Example
+    /// ```
+    /// # #[state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// #     pub struct Top;
+    /// #
+    /// #     impl TopState<ExampleState> for Top {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
+    /// assert_eq!(machine.name(), "Example");
+    /// ```
     fn name(&self) -> &str;
 
-    /// Set the name of this [StateMachine] instance.
+    /// Set the name of this state machine.
     ///
     /// This name is used in moku log messages.
+    ///
+    /// # Example
+    /// ```
+    /// # #[state_machine]
+    /// # mod example {
+    /// #     use moku::*;
+    /// #
+    /// #     #[machine_module]
+    /// #     pub mod machine {}
+    /// #
+    /// #     pub use machine::ExampleState;
+    /// #
+    /// #     pub struct Top;
+    /// #
+    /// #     impl TopState<ExampleState> for Top {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
+    /// machine.set_name("Kikai".to_owned());
+    /// assert_eq!(machine.name(), "Kikai");
+    /// ```
     #[cfg(feature = "std")]
     fn set_name(&mut self, name: String);
 }
@@ -501,6 +630,16 @@ pub mod internal {
             None
         }
 
+        /// Update this state and its active descendents if in need of update after a transition.
+        #[allow(unused_variables)]
+        fn update_in_need(
+            &mut self,
+            state: &mut U,
+            superstates: &mut U::Superstates<'_>,
+        ) -> Option<T> {
+            None
+        }
+
         /// Top-down update this state and its active descendents.
         #[allow(unused_variables)]
         fn top_down_update(
@@ -510,6 +649,20 @@ pub mod internal {
         ) -> Option<T> {
             None
         }
+
+        /// Top-down update this state and its active descendents if in need of update after a
+        /// transition.
+        #[allow(unused_variables)]
+        fn top_down_update_in_need(
+            &mut self,
+            state: &mut U,
+            superstates: &mut U::Superstates<'_>,
+        ) -> Option<T> {
+            None
+        }
+
+        /// Clear the top-down update flag from the nodes of this state's active descendents.
+        fn clear_top_down_updated(&mut self) {}
 
         /// Exit this state and its active descendents.
         #[allow(unused_variables)]
@@ -575,9 +728,11 @@ pub mod internal {
         U: State<T>,
         V: SubstateEnum<T, U>,
     {
+        phantom: PhantomData<T>,
         pub state: U,
         pub substate: V,
-        phantom: PhantomData<T>,
+        needs_update: bool,
+        top_down_updated: bool,
     }
 
     impl<T, U, V> Node<T, U, V>
@@ -589,9 +744,11 @@ pub mod internal {
         /// Make a new [Node] from a [State].
         pub fn from_state(state: U) -> Self {
             Self {
+                phantom: PhantomData,
                 state,
                 substate: V::none_variant(),
-                phantom: PhantomData,
+                needs_update: false,
+                top_down_updated: false,
             }
         }
 
@@ -604,9 +761,11 @@ pub mod internal {
             );
             match U::enter(superstates) {
                 StateEntry::State(state) => NodeEntry::Node(Self {
+                    phantom: PhantomData,
                     state,
                     substate: V::none_variant(),
-                    phantom: PhantomData,
+                    needs_update: false,
+                    top_down_updated: false,
                 }),
                 StateEntry::Transition(target) => {
                     info!(
@@ -620,22 +779,65 @@ pub mod internal {
 
         /// Update this node and its active descendents.
         pub fn update(&mut self, superstates: &mut U::Superstates<'_>) -> Option<T> {
+            self.needs_update = true;
             match self.substate.update(&mut self.state, superstates) {
                 Some(target) => Some(target),
                 None => {
                     info!("\u{02502}Updating {:?}", V::this_state());
+                    self.needs_update = false;
                     self.state.update(superstates)
                 }
+            }
+        }
+
+        /// Update this node and its active descendents if in need of update after a transition.
+        pub fn update_in_need(&mut self, superstates: &mut U::Superstates<'_>) -> Option<T> {
+            if self.needs_update {
+                match self.substate.update_in_need(&mut self.state, superstates) {
+                    Some(target) => Some(target),
+                    None => {
+                        info!("\u{02502}Updating {:?}", V::this_state());
+                        self.needs_update = false;
+                        self.state.update(superstates)
+                    }
+                }
+            } else {
+                None
             }
         }
 
         /// Top-down update this node and its active descendents.
         pub fn top_down_update(&mut self, superstates: &mut U::Superstates<'_>) -> Option<T> {
             info!("\u{02502}Top-down updating {:?}", V::this_state());
+            self.top_down_updated = true;
             match self.state.top_down_update(superstates) {
                 Some(target) => Some(target),
                 None => self.substate.top_down_update(&mut self.state, superstates),
             }
+        }
+
+        /// Top-down update this node and its active descendents if in need of update after a
+        /// transition.
+        pub fn top_down_update_in_need(
+            &mut self,
+            superstates: &mut U::Superstates<'_>,
+        ) -> Option<T> {
+            if !self.top_down_updated {
+                info!("\u{02502}Top-down updating {:?}", V::this_state());
+                self.top_down_updated = true;
+                if let Some(target) = self.state.top_down_update(superstates) {
+                    return Some(target);
+                }
+            }
+
+            self.substate
+                .top_down_update_in_need(&mut self.state, superstates)
+        }
+
+        /// Clear the top-down update flag from this node and its active descendents.
+        pub fn clear_top_down_updated(&mut self) {
+            self.top_down_updated = false;
+            self.substate.clear_top_down_updated();
         }
 
         /// Exit this node and its active descendents.
@@ -751,7 +953,7 @@ pub mod internal {
         U: TopState<T>,
         V: SubstateEnum<T, U>,
     {
-        /// Make a new [TopNode] from a [TopState] and a machine instance name.
+        /// Make a new [TopNode] from a [TopState] and a machine name.
         #[cfg(feature = "std")]
         pub fn new(top_state: U, name: String) -> Self {
             Self {
@@ -760,7 +962,7 @@ pub mod internal {
             }
         }
 
-        /// Make a new [TopNode] from a [TopState] and a machine instance name.
+        /// Make a new [TopNode] from a [TopState] and a machine name.
         #[cfg(not(feature = "std"))]
         pub fn new(top_state: U, name: &'static str) -> Self {
             Self {
@@ -783,6 +985,13 @@ pub mod internal {
             info!("{}: Updating", self.name());
             if let Some(target) = self.node.update(&mut NoSuperstates(PhantomData)) {
                 self.transition(target, true);
+
+                while self.node.needs_update {
+                    if let Some(target) = self.node.update_in_need(&mut NoSuperstates(PhantomData))
+                    {
+                        self.transition(target, true);
+                    }
+                }
             }
             info!("\u{02514}Update complete");
         }
@@ -790,9 +999,19 @@ pub mod internal {
         /// Top-down update this node and its active descendents.
         pub fn top_down_update(&mut self) {
             info!("{}: Top-down updating", self.name());
+
             if let Some(target) = self.node.top_down_update(&mut NoSuperstates(PhantomData)) {
                 self.transition(target, true);
+
+                while let Some(target) = self
+                    .node
+                    .top_down_update_in_need(&mut NoSuperstates(PhantomData))
+                {
+                    self.transition(target, true);
+                }
             }
+
+            self.node.clear_top_down_updated();
             info!("\u{02514}Top-down update complete");
         }
 
@@ -839,7 +1058,7 @@ pub mod internal {
             self.node.current_state()
         }
 
-        /// Get the name of this machine instance.
+        /// Get the name of this machine.
         pub fn name(&self) -> &str {
             #[cfg(feature = "std")]
             return &self.name;
@@ -848,7 +1067,7 @@ pub mod internal {
             return self.name;
         }
 
-        /// Set the name of this machine instance.
+        /// Set the name of this machine.
         #[cfg(feature = "std")]
         pub fn set_name(&mut self, name: String) {
             self.name = name;

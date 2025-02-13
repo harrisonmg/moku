@@ -596,6 +596,17 @@ impl Metadata {
                             }
                         }
 
+                        fn update_in_need(
+                            &mut self,
+                            state: &mut super::#state_ident,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                        ) -> Option<#state_enum> {
+                            match self {
+                                Self::None => None,
+                                #(Self::#children(node) => node.update_in_need(&mut #superstates::new(state, superstates)),)*
+                            }
+                        }
+
                         fn top_down_update(
                             &mut self,
                             state: &mut super::#state_ident,
@@ -606,6 +617,26 @@ impl Metadata {
                                 #(Self::#children(node) => {
                                     node.top_down_update(&mut #superstates::new(state, superstates))
                                 })*
+                            }
+                        }
+
+                        fn top_down_update_in_need(
+                            &mut self,
+                            state: &mut super::#state_ident,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                        ) -> Option<#state_enum> {
+                            match self {
+                                Self::None => None,
+                                #(Self::#children(node) => {
+                                    node.top_down_update_in_need(&mut #superstates::new(state, superstates))
+                                })*
+                            }
+                        }
+
+                        fn clear_top_down_updated(&mut self) {
+                            match self {
+                                Self::None => (),
+                                #(Self::#children(node) => node.clear_top_down_updated(),)*
                             }
                         }
 

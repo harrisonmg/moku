@@ -363,10 +363,10 @@ machine.update();
 // ----------
 // Blinky: Updating
 // │Updating LedOn
-// Blinky: Transitioning from LedOn to LedOff
-// │Exiting LedOn
-// │Entering LedOff
-// └Transition complete
+// │Transitioning from LedOn to LedOff
+// ││Exiting LedOn
+// ││Entering LedOff
+// │└Transition complete
 // │Updating Enabled
 // │Updating Top
 // └Update complete

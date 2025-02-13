@@ -166,12 +166,12 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// ```text
     /// Example: Updating
     /// │Updating Bar
-    /// Example: Transitioning from Bar to Buzz
-    /// │Exiting Bar
-    /// │Exiting Foo
-    /// │Entering Fizz
-    /// │Entering Buzz
-    /// └Transition complete
+    /// │Transitioning from Bar to Buzz
+    /// ││Exiting Bar
+    /// ││Exiting Foo
+    /// ││Entering Fizz
+    /// ││Entering Buzz
+    /// │└Transition complete
     /// │Updating Top
     /// └Update complete
     /// ```
@@ -242,10 +242,10 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// Example: Top-down updating
     /// │Updating Top
     /// │Updating Foo
-    /// Example: Transitioning from Foo to Fizz
-    /// │Exiting Foo
-    /// │Entering Fizz
-    /// └Transition complete
+    /// │Transitioning from Foo to Fizz
+    /// ││Exiting Foo
+    /// ││Entering Fizz
+    /// │└Transition complete
     /// │Updating Fizz
     /// └Update complete
     /// ```
@@ -255,7 +255,7 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
 
     /// Attempt to transition the [StateMachine] to the target state.
     ///
-    /// Subject to short-circuit transtions (from [State::enter] or [State::exit]) and initial
+    /// Subject to short circuit transtions (from [State::enter] or [State::exit]) and initial
     /// transitions (from [State::init] or [TopState::init]).
     fn transition(&mut self, target: T);
 
@@ -513,7 +513,12 @@ pub mod internal {
 
         /// Exit this state and its active descendents.
         #[allow(unused_variables)]
-        fn exit(&mut self, state: &mut U, superstates: &mut U::Superstates<'_>) -> Option<T> {
+        fn exit(
+            &mut self,
+            state: &mut U,
+            superstates: &mut U::Superstates<'_>,
+            in_update: bool,
+        ) -> Option<T> {
             None
         }
 
@@ -524,6 +529,7 @@ pub mod internal {
             target: T,
             state: &mut U,
             superstates: &mut U::Superstates<'_>,
+            in_update: bool,
         ) -> TransitionResult<T> {
             TransitionResult::MoveUp
         }
@@ -537,6 +543,7 @@ pub mod internal {
             target: T,
             state: &mut U,
             superstates: &mut U::Superstates<'_>,
+            in_update: bool,
         ) -> Option<T> {
             unreachable!()
         }
@@ -557,7 +564,7 @@ pub mod internal {
         /// Entry was successful, here is the new [Node].
         Node(Node<T, U, V>),
 
-        /// Entry resulted in a short-circuit transition.
+        /// Entry resulted in a short circuit transition.
         Transition(T),
     }
 
@@ -589,8 +596,12 @@ pub mod internal {
         }
 
         /// Enter this node.
-        pub fn enter(superstates: &mut U::Superstates<'_>) -> NodeEntry<T, U, V> {
-            info!("\u{02502}Entering {:?}", V::this_state());
+        pub fn enter(superstates: &mut U::Superstates<'_>, in_update: bool) -> NodeEntry<T, U, V> {
+            info!(
+                "{}\u{02502}Entering {:?}",
+                if in_update { "\u{02502}" } else { "" },
+                V::this_state()
+            );
             match U::enter(superstates) {
                 StateEntry::State(state) => NodeEntry::Node(Self {
                     state,
@@ -598,7 +609,10 @@ pub mod internal {
                     phantom: PhantomData,
                 }),
                 StateEntry::Transition(target) => {
-                    info!("\u{02502}Short circuit transition to {target:?}");
+                    info!(
+                        "{}\u{02502}Short circuit transition to {target:?}",
+                        if in_update { "\u{02502}" } else { "" },
+                    );
                     NodeEntry::Transition(target)
                 }
             }
@@ -625,10 +639,18 @@ pub mod internal {
         }
 
         /// Exit this node and its active descendents.
-        pub fn exit(self, superstates: &mut U::Superstates<'_>) -> Option<T> {
-            info!("\u{02502}Exiting {:?}", V::this_state());
+        pub fn exit(self, superstates: &mut U::Superstates<'_>, in_update: bool) -> Option<T> {
+            info!(
+                "{}\u{02502}Exiting {:?}",
+                if in_update { "\u{02502}" } else { "" },
+                V::this_state()
+            );
+
             self.state.exit(superstates).inspect(|target| {
-                info!("\u{02502}Short circuit transition to {target:?}");
+                info!(
+                    "{}\u{02502}Short circuit transition to {target:?}",
+                    if in_update { "\u{02502}" } else { "" },
+                );
             })
         }
 
@@ -637,33 +659,41 @@ pub mod internal {
             &mut self,
             target: T,
             superstates: &mut U::Superstates<'_>,
+            in_update: bool,
         ) -> TransitionResult<T> {
             // try to transition the current substate towards the target state
             match self
                 .substate
-                .transition(target, &mut self.state, superstates)
+                .transition(target, &mut self.state, superstates, in_update)
             {
                 // substate is the target state
                 TransitionResult::Done => TransitionResult::Done,
 
                 // substate is not the target state or an ancestor of it
                 TransitionResult::MoveUp => {
-                    if let Some(new_target) = self.substate.exit(&mut self.state, superstates) {
+                    if let Some(new_target) =
+                        self.substate.exit(&mut self.state, superstates, in_update)
+                    {
                         // substate exit resulted in a short circuit transition
-                        self.transition(new_target, superstates)
+                        self.transition(new_target, superstates, in_update)
                     } else if V::is_ancestor(target) {
                         if let Some(new_target) = self.substate.enter_substate_towards(
                             target,
                             &mut self.state,
                             superstates,
+                            in_update,
                         ) {
                             // substate transition resulted in a short circuit transition
                             TransitionResult::NewTransition(new_target)
                         } else {
                             // substate successfully moved towards target state,
                             // continue transitioning downwards
-                            self.substate
-                                .transition(target, &mut self.state, superstates)
+                            self.substate.transition(
+                                target,
+                                &mut self.state,
+                                superstates,
+                                in_update,
+                            )
                         }
                     } else if V::is_state(target) {
                         // this state is the target
@@ -743,7 +773,7 @@ pub mod internal {
         pub fn init(&mut self) {
             if let Some(target) = TopState::init(&mut self.node.state) {
                 info!("{}: Initial transition to {target:?}", self.name());
-                self.transition_quiet(target);
+                self.transition_quiet(target, false);
                 info!("\u{02514}Transition complete");
             }
         }
@@ -752,7 +782,7 @@ pub mod internal {
         pub fn update(&mut self) {
             info!("{}: Updating", self.name());
             if let Some(target) = self.node.update(&mut NoSuperstates(PhantomData)) {
-                self.transition(target);
+                self.transition(target, true);
             }
             info!("\u{02514}Update complete");
         }
@@ -761,33 +791,47 @@ pub mod internal {
         pub fn top_down_update(&mut self) {
             info!("{}: Top-down updating", self.name());
             if let Some(target) = self.node.top_down_update(&mut NoSuperstates(PhantomData)) {
-                self.transition(target);
+                self.transition(target, true);
             }
             info!("\u{02514}Top-down update complete");
         }
 
         /// Transition this node and its active descendents without logging the start and end of
         /// the transition.
-        pub fn transition_quiet(&mut self, target: T) {
+        pub fn transition_quiet(&mut self, target: T, in_update: bool) {
             match self
                 .node
-                .transition(target, &mut NoSuperstates(PhantomData))
+                .transition(target, &mut NoSuperstates(PhantomData), in_update)
             {
                 TransitionResult::Done => (),
                 TransitionResult::MoveUp => unreachable!(),
-                TransitionResult::NewTransition(new_target) => self.transition_quiet(new_target),
+                TransitionResult::NewTransition(new_target) => {
+                    self.transition_quiet(new_target, in_update)
+                }
             }
         }
 
         /// Transition this node and its active descendents.
-        pub fn transition(&mut self, target: T) {
+        pub fn transition(&mut self, target: T, in_update: bool) {
+            if in_update {
+                info!(
+                    "\u{02502}Transitioning from {:?} to {target:?}",
+                    self.state(),
+                );
+            } else {
+                info!(
+                    "{}: Transitioning from {:?} to {target:?}",
+                    self.name(),
+                    self.state(),
+                );
+            }
+
+            self.transition_quiet(target, in_update);
+
             info!(
-                "{}: Transitioning from {:?} to {target:?}",
-                self.name(),
-                self.state()
+                "{}\u{02514}Transition complete",
+                if in_update { "\u{02502}" } else { "" },
             );
-            self.transition_quiet(target);
-            info!("\u{02514}Transition complete");
         }
 
         /// Get the current leaf state of this state tree.

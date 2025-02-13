@@ -317,7 +317,7 @@ impl Metadata {
                 }
 
                 fn transition(&mut self, target: #state_enum) {
-                    self.top_node.transition(target);
+                    self.top_node.transition(target, false);
                 }
 
                 fn state(&self) -> #state_enum {
@@ -462,7 +462,7 @@ impl Metadata {
 
                 if state.autogen_enter {
                     imp.items.push(parse_quote! {
-                        fn enter(superstates: &mut Self::Superstates<'_>) -> ::moku::StateEntry<Self, #state_enum> {
+                        fn enter(_superstates: &mut Self::Superstates<'_>) -> ::moku::StateEntry<Self, #state_enum> {
                             ::moku::StateEntry::State(Self {})
                         }
                     });
@@ -613,11 +613,15 @@ impl Metadata {
                             &mut self,
                             state: &mut super::#state_ident,
                             superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            in_update: bool,
                         ) -> Option<#state_enum> {
                             let old_state = core::mem::replace(self, Self::None);
                             match old_state {
                                 Self::None => None,
-                                #(Self::#children(node) => node.exit(&mut #superstates::new(state, superstates)),)*
+                                #(Self::#children(node) => node.exit(
+                                        &mut #superstates::new(state, superstates),
+                                        in_update,
+                                ),)*
                             }
                         }
 
@@ -626,11 +630,12 @@ impl Metadata {
                             target: #state_enum,
                             state: &mut super::#state_ident,
                             superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            in_update: bool,
                         ) -> ::moku::internal::TransitionResult<#state_enum> {
                             match self {
                                 Self::None => ::moku::internal::TransitionResult::MoveUp,
                                 #(Self::#children(node) => {
-                                    node.transition(target, &mut #superstates::new(state, superstates))
+                                    node.transition(target, &mut #superstates::new(state, superstates), in_update)
                                 })*
                             }
                         }
@@ -640,11 +645,15 @@ impl Metadata {
                             target: #state_enum,
                             state: &mut super::#state_ident,
                             superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            in_update: bool,
                         ) -> Option<#state_enum> {
                             match target {
                                 #(
                                     #(#state_enum::#children_and_descendents)|* => {
-                                        match #children_nodes::enter(&mut #superstates::new(state, superstates)) {
+                                        match #children_nodes::enter(
+                                            &mut #superstates::new(state, superstates),
+                                            in_update,
+                                        ) {
                                             ::moku::internal::NodeEntry::Node(node) => {
                                                 *self = Self::#children(node);
                                                 None

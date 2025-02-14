@@ -4,7 +4,11 @@
 [![Documentation](https://docs.rs/moku/badge.svg)](https://docs.rs/moku)
 ![License](https://img.shields.io/crates/l/moku.svg)
 
-Moku is a Rust library for creating hierarchical state machines. While it's also useful for creating flat state machines, nested states are a first-class feature of moku.
+Moku is a Rust library for creating hierarchical state machines.
+
+While it's also useful for creating flat state machines, nested states are a first-class feature.
+
+Though it may be _impure_ to store data inside of states, in practice it is often useful for states to hold some data (e.g. file handles, perf counters, etc) and to allow substates and external code to access that data. This is also a core feature of moku.
 
 ## Features
 - Autogeneration of boilerplate, including

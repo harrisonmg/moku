@@ -206,6 +206,10 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     ///
     /// Starting with the [TopState], calls [State::update] (or [TopState::update]).
     ///
+    /// Useful for propagating changes to state fields before called [StateMachine::update], or for
+    /// simply inverting the precedence of transitions (superstates may trigger transitions before
+    /// their substates).
+    ///
     /// If any state returns `Some(state)` from its update method, that transition will be
     /// completed and the state machine will continue updating states starting from the first
     /// active descendent of the nearest common ancestor of the previous state and the new state
@@ -220,7 +224,7 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// └─ Fizz
     ///    └─ Buzz
     /// ```
-    /// If the [State::top_down_update] method of the `Foo` state will return `Some(ExampleState::Fizz)`,
+    /// If the [State::top_down_update] method of the `Foo` state will return `Some(ExampleState::Buzz)`,
     /// then:
     /// ```
     /// # #[state_machine]
@@ -267,8 +271,10 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
     /// │Transitioning from Foo to Fizz
     /// ││Exiting Foo
     /// ││Entering Fizz
+    /// ││Entering Buzz
     /// │└Transition complete
     /// │Top-down updating Fizz
+    /// │Top-down updating Buzz
     /// └Top-down update complete
     /// ```
     /// `Top` being the nearest common ancestor of the starting state, `Foo`, and the new state,

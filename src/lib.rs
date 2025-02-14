@@ -516,6 +516,8 @@ pub trait StateMachine<T: StateEnum, U: TopState<T>> {
 }
 
 /// Trait for getting references to active states.
+///
+/// Will be implemented by a [StateMachine] for every one of its states.
 pub trait StateRef<T: StateEnum, U: State<T>> {
     /// Get a reference to the state, if currently active.
     ///
@@ -690,6 +692,10 @@ pub enum StateEntry<T, U: StateEnum> {
 }
 
 /// A [StateMachine] state.
+///
+/// Implement this trait for each state in a [state_machine] module.
+///
+/// Must be attributed with exactly one [superstate].
 pub trait State<T: StateEnum>: Sized {
     /// Type containing mutable references to all active superstates of this state.
     ///
@@ -921,6 +927,8 @@ pub trait State<T: StateEnum>: Sized {
 }
 
 /// The topmost state of a [StateMachine].
+///
+/// Implement this trait for exactly one state in a [state_machine] module.
 pub trait TopState<T: StateEnum>: Sized {
     /// Called when a [StateMachine] initializes (upon calling [StateMachineBuilder::build]) and
     /// upon transitions directly to this state.

@@ -1,6 +1,6 @@
 [package]
 name = "moku"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A library for creating hierarchical state machines"
@@ -23,7 +23,7 @@ std = ["moku-macros/std"]
 
 [dependencies]
 log = "0.4.22"
-moku-macros = { version = "0.1.0", path = "moku-macros" }
+moku-macros = { version = "0.2.0", path = "moku-macros" }
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(tarpaulin_include)'] }

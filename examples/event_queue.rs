@@ -1,10 +1,10 @@
-use event_queue::*;
+use std::collections::VecDeque;
+
+use example::*;
 use moku::*;
 
-#[state_machine(Example)]
-mod event_queue {
-    use std::collections::VecDeque;
-
+#[state_machine]
+mod example {
     use moku::*;
 
     #[machine_module]
@@ -16,92 +16,51 @@ mod event_queue {
         B,
     }
 
-    #[derive(Default)]
-    pub struct Top {
-        events: VecDeque<Event>,
-    }
+    pub struct Top;
 
-    impl Top {
-        fn current_event(&self) -> Option<&Event> {
-            self.events.front()
-        }
-
-        pub fn pop_event(&mut self) {
-            self.events.pop_front();
-        }
-
-        pub fn push_event(&mut self, event: Event) {
-            self.events.push_back(event)
-        }
-
-        pub fn has_events(&self) -> bool {
-            !self.events.is_empty()
-        }
-    }
-
-    impl TopState<ExampleState> for Top {
-        fn update(&mut self) -> Option<ExampleState> {
-            // handle events here
-            if let Some(event) = self.current_event() {
-                match event {
-                    Event::A => Some(ExampleState::Foo),
-                    Event::B => Some(ExampleState::Bar),
-                }
-            } else {
-                None
-            }
-        }
-    }
+    impl TopState<ExampleState> for Top {}
 
     struct Foo;
 
     #[superstate(Top)]
-    impl State<ExampleState> for Foo {
-        fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<ExampleState> {
-            // handle events here
-            // can override superstate event handling with transitions
-            if let Some(event) = superstates.top.current_event() {
-                match event {
-                    Event::A => Some(ExampleState::Bar),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        }
-    }
+    impl State<ExampleState> for Foo {}
 
     struct Bar;
 
     #[superstate(Top)]
-    impl State<ExampleState> for Bar {
-        fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<ExampleState> {
-            // handle events here
-            // can override superstate event handling with transitions
-            if let Some(event) = superstates.top.current_event() {
-                match event {
-                    Event::B => Some(ExampleState::Foo),
-                    _ => None,
-                }
-            } else {
-                None
-            }
-        }
+    impl State<ExampleState> for Bar {}
+}
+
+fn handle_event(machine: &mut ExampleMachine, event: &Event) {
+    let transition = match machine.state() {
+        ExampleState::Top => match event {
+            Event::A => Some(ExampleState::Foo),
+            Event::B => Some(ExampleState::Bar),
+        },
+        ExampleState::Foo => match event {
+            Event::A => Some(ExampleState::Bar),
+            _ => None,
+        },
+        ExampleState::Bar => match event {
+            Event::B => Some(ExampleState::Foo),
+            _ => None,
+        },
+    };
+
+    if let Some(state) = transition {
+        machine.transition(state);
     }
 }
 
 fn main() {
-    let mut machine = ExampleMachineBuilder::new(Top::default()).build();
+    let mut machine = ExampleMachineBuilder::new(Top).build();
+    let mut events = VecDeque::new();
 
     // generate events
-    machine.top_mut().push_event(Event::A);
-    machine.top_mut().push_event(Event::B);
+    events.push_back(Event::A);
+    events.push_back(Event::B);
 
-    while machine.top_ref().has_events() {
-        // process one event
-        machine.update();
-
-        // clear that event
-        machine.top_mut().pop_event();
+    for event in events {
+        handle_event(&mut machine, &event);
     }
 }

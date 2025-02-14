@@ -20,7 +20,4 @@ Includes an interactive CLI to manipulate and update the machine while displayin
 `cargo doc --open --document-private-items --example blinky`
 
 ## event_queue
-Shows a very basic implementation of an event queue within a moku state machine.
-
-## transition_table
-Shows a very basic implementation of an event queue with event transitions defined using a centralized transition table.
+Shows a very basic implementation of an event queue with event transitions defined in a centralized location.

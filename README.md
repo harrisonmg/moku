@@ -181,7 +181,7 @@ Let's add some functionality to our states:
     impl State<BlinkyState> for Enabled {
         fn init(
             &mut self,
-            _superstates: &mut Self::Superstates<'_>
+            _superstates: &mut Self::Superstates<'_>,
         ) -> Option<BlinkyState> {
             // When we transition into the `Enabled` state, transition into the `LedOn` state.
             Some(BlinkyState::LedOn)
@@ -203,7 +203,7 @@ Let's add some functionality to our states:
         // entering the state - for instance towards a fault state if some aspect of
         // state construction fails.
         fn enter(
-            _superstates: &mut Self::Superstates<'_>
+            _superstates: &mut Self::Superstates<'_>,
         ) -> StateEntry<Self, BlinkyState> {
             // pseudocode to turn the LED on
             // led_gpio.set_high()
@@ -217,7 +217,7 @@ Let's add some functionality to our states:
         // This type will contain a mutable reference to each active superstate.
         fn update(
             &mut self,
-            superstates: &mut Self::Superstates<'_>
+            superstates: &mut Self::Superstates<'_>,
         ) -> Option<BlinkyState> {
             // We can use `superstates` to access the `blink_time` field of the `Top` state.
             if self.entry_time.elapsed() >= superstates.top.blink_time {
@@ -237,7 +237,7 @@ Let's add some functionality to our states:
     #[superstate(Enabled)]
     impl State<BlinkyState> for LedOff {
         fn enter(
-            _superstates: &mut Self::Superstates<'_>
+            _superstates: &mut Self::Superstates<'_>,
         ) -> StateEntry<Self, BlinkyState> {
             // pseudocode to turn the LED off
             // led_gpio.set_low()
@@ -249,7 +249,7 @@ Let's add some functionality to our states:
 
         fn update(
             &mut self,
-            superstates: &mut Self::Superstates<'_>
+            superstates: &mut Self::Superstates<'_>,
         ) -> Option<BlinkyState> {
             if self.entry_time.elapsed() >= superstates.top.blink_time {
                 // If we've met or exceeded the blink time, transition to the `LedOn` state.
@@ -289,7 +289,7 @@ Finally, let's use our state machine!
 #     impl State<BlinkyState> for Enabled {
 #         fn init(
 #             &mut self,
-#             _superstates: &mut Self::Superstates<'_>
+#             _superstates: &mut Self::Superstates<'_>,
 #         ) -> Option<BlinkyState> {
 #             Some(BlinkyState::LedOn)
 #         }
@@ -298,7 +298,7 @@ Finally, let's use our state machine!
 #     #[superstate(Enabled)]
 #     impl State<BlinkyState> for LedOn {
 #         fn enter(
-#             _superstates: &mut Self::Superstates<'_>
+#             _superstates: &mut Self::Superstates<'_>,
 #         ) -> StateEntry<Self, BlinkyState> {
 #             StateEntry::State(Self {
 #                 entry_time: std::time::Instant::now(),
@@ -306,7 +306,7 @@ Finally, let's use our state machine!
 #         }
 #         fn update(
 #             &mut self,
-#             superstates: &mut Self::Superstates<'_>
+#             superstates: &mut Self::Superstates<'_>,
 #         ) -> Option<BlinkyState> {
 #             if self.entry_time.elapsed() >= superstates.top.blink_time {
 #                 Some(BlinkyState::LedOff)
@@ -319,7 +319,7 @@ Finally, let's use our state machine!
 #     #[superstate(Enabled)]
 #     impl State<BlinkyState> for LedOff {
 #         fn enter(
-#             _superstates: &mut Self::Superstates<'_>
+#             _superstates: &mut Self::Superstates<'_>,
 #         ) -> StateEntry<Self, BlinkyState> {
 #             StateEntry::State(Self {
 #                 entry_time: std::time::Instant::now(),
@@ -327,7 +327,7 @@ Finally, let's use our state machine!
 #         }
 #         fn update(
 #             &mut self,
-#             superstates: &mut Self::Superstates<'_>
+#             superstates: &mut Self::Superstates<'_>,
 #         ) -> Option<BlinkyState> {
 #             if self.entry_time.elapsed() >= superstates.top.blink_time {
 #                 Some(BlinkyState::LedOn)

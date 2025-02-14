@@ -8,6 +8,10 @@ homepage = "https://github.com/harrisonmg/moku"
 repository = "https://github.com/harrisonmg/moku"
 readme = "README.md"
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [workspace]
 members = [
  "tests/no-std"

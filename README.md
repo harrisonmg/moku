@@ -139,6 +139,8 @@ pub enum BlinkyState {
 
 Let's add some functionality to our states:
 ```rust
+# // NOTE: The lines prefixed with `#` below should be hidden with rustdoc.
+# //       Visit https://docs.rs/moku instead for your viewing pleasure.
 # #[moku::state_machine]
 # mod blinky {
 #     use moku::*;
@@ -265,7 +267,8 @@ Let's add some functionality to our states:
 
 Finally, let's use our state machine!
 ```rust
-# // NOTE: the lines prefixed with `#` below should be hidden with rustdoc.
+# // NOTE: The lines prefixed with `#` below should be hidden with rustdoc.
+# //       Visit https://docs.rs/moku instead for your viewing pleasure.
 # #[moku::state_machine]
 # mod blinky {
 #     use moku::*;

@@ -20,7 +20,7 @@ Moku is a Rust library for creating hierarchical state machines. While it's also
 - `no_std` support
 
 ## Shortcomings
-Because moku generates a tree of sum types to represent the state machine, states must be `Sized` and do not support generic parameters.
+Because moku generates a tree of sum types to represent the state machine, states must be `Sized` and do not support generic parameters (though generics can be used behind type aliases).
 
 ## What is a hierarchical state machine?
 A hierarchical state machine (HSM) is a type of finite state machine where states can be nested inside of other states. Common functionalities between substates, such as state entry and exit actions, can be grouped by implementing them for the superstate. Beyond the convenient programming implications of HSMs, they often provide a more logical way of modeling systems.
@@ -78,6 +78,8 @@ The `Blinky` name that prepends each of these items is automatically chosen base
 
 Let's add some more states inside the `blinky` module:
 ```rust
+# // NOTE: The lines prefixed with `#` below should be hidden with rustdoc.
+# //       Visit https://docs.rs/moku instead for your viewing pleasure.
 # #[moku::state_machine]
 # mod blinky {
 #     use moku::*;
@@ -263,7 +265,7 @@ Let's add some functionality to our states:
 
 Finally, let's use our state machine!
 ```rust
-# // NOTE: The blinky mod below should be hidden with rustdoc.
+# // NOTE: the lines prefixed with `#` below should be hidden with rustdoc.
 # #[moku::state_machine]
 # mod blinky {
 #     use moku::*;

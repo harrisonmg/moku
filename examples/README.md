@@ -1,7 +1,7 @@
 # Examples
 
 ## blinky
-The classic HSM example - a machine that blinks an LED when enabled.
+A classic HSM example - a machine that blinks an LED when enabled.
 
 ```
 Top
@@ -20,4 +20,7 @@ Includes an interactive CLI to manipulate and update the machine while displayin
 `cargo doc --open --document-private-items --example blinky`
 
 ## event_queue
-Shows a very basic implementation of an event queue with event transitions defined in a centralized location.
+A basic implementation of an event queue with event transitions defined in a centralized location.
+
+## test_mock
+A basic usage of conditional compilation to substitute a test mock into a state machine.

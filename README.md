@@ -422,13 +422,13 @@ machine.transition(BlinkyState::Disabled);
 ```
 If a transition occurs during an update or top-down update, the update will continue from the nearest common ancestor between the previous state and the new state. See [StateMachine::update] and [StateMachine::top_down_update] for more details.
 
-An interactive example of blinky can be found in the `examples/` directory. Try it out with:
+An interactive example of blinky can be found in the [`examples/`](https://github.com/harrisonmg/moku/tree/main/examples) directory. Try it out with:
 ```text
 cargo run --example blinky
 ```
 
 ## Examples
-Along with an interactive example of the blinky machine described above, the following examples are included in the `examples/` directory.
+Along with an interactive example of the blinky machine described above, the following examples are included in the [`examples/`](https://github.com/harrisonmg/moku/tree/main/examples) directory.
 
 ### Event handling
 It's common to implement state machines alongside an event type, where each active state handles events as they are generated. Often state machine transitions are defined via a centralized table of states and events. Moku focuses on the autogeneration of state machine boilerplate, leaving event queues and handling for users to implement at their discretion.

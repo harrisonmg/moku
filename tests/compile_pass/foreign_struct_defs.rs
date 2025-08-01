@@ -11,11 +11,16 @@ mod blinky {
 
     use machine::BlinkyState;
 
+    struct Event;
+    type EventTy = Event;
+    impl StateMachineEvent for EventTy;
+
     struct Top;
-    impl TopState<BlinkyState> for Top {}
+    type TopTy = Top;
+
+    impl TopState<BlinkyState> for TopTy {}
 
     struct Bottom;
-
     type BottomTy = Bottom;
 
     #[superstate(Top)]

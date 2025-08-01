@@ -16,21 +16,24 @@ mod example {
         B,
     }
 
+    impl StateMachineEvent for Event {}
+
     pub struct Top;
 
-    impl TopState<ExampleState> for Top {}
+    impl TopState<ExampleState, Event> for Top {}
 
     struct Foo;
 
     #[superstate(Top)]
-    impl State<ExampleState> for Foo {}
+    impl State<ExampleState, Event> for Foo {}
 
     struct Bar;
 
     #[superstate(Top)]
-    impl State<ExampleState> for Bar {}
+    impl State<ExampleState, Event> for Bar {}
 }
 
+// TODO
 fn handle_event(machine: &mut ExampleMachine, event: &Event) {
     let transition = match machine.state() {
         ExampleState::Top => match event {

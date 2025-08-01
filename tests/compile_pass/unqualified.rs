@@ -9,6 +9,10 @@ mod blinky {
 
     use machine::BlinkyState;
 
+    struct Event;
+
+    impl StateMachineEvent for MyEvent {}
+
     struct Top;
 
     impl TopState<BlinkyState> for Top {}

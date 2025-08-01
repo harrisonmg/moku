@@ -9,7 +9,7 @@ use syn::{
 
 use crate::{
     metadata::{Metadata, State},
-    util::{filter_attributes, path_matches_generic},
+    util::{filter_attributes, generics_match, path_matches},
 };
 
 /// Collect and validate Metadata about the structure of a `state_machine` module and the usage of attributes.
@@ -38,6 +38,7 @@ struct Unpacker {
     name: Ident,
     main_mod: ItemMod,
     machine_mod: Option<ItemMod>,
+    event: Option<Ident>,
     top_state: Option<Ident>,
     states: Vec<UnpackedState>,
     structs: HashMap<Ident, bool>,
@@ -50,6 +51,7 @@ impl Unpacker {
             name,
             main_mod,
             machine_mod: None,
+            event: None,
             top_state: None,
             states: Vec::new(),
             structs: HashMap::new(),
@@ -60,6 +62,7 @@ impl Unpacker {
     /// Build Metadata from the info collected by an Unpacker.
     fn build_metadata(mut self) -> Result<Metadata, syn::Error> {
         let mut metadata = Metadata {
+            event: self.take_event(),
             top_state: self.get_top_state()?.into(),
             machine_mod: self.take_machine_mod()?,
             state_enum: format_ident!("{}State", self.name),
@@ -89,6 +92,12 @@ impl Unpacker {
         if let Some(mut content) = self.main_mod.content.take() {
             if !content.1.is_empty() {
                 let items: Vec<_> = content.1.drain(..).collect();
+
+                for item in &items {
+                    // first pass to check for StateMachineEvent type
+                    // TODO
+                }
+
                 for item in items {
                     if let Some(item) = match item {
                         Item::Struct(def) => self.unpack_struct(def),
@@ -199,6 +208,13 @@ mod {} {{
         }
     }
 
+    /// Take the Ident of the StateMachineEvent if found, else ().
+    fn take_event(&mut self) -> Ident {
+        self.event
+            .take()
+            .unwrap_or_else(|| Ident::new("()", Span::call_site()))
+    }
+
     /// Get the Ident of the TopState if found.
     fn get_top_state(&self) -> Result<&Ident, syn::Error> {
         match &self.top_state {
@@ -257,6 +273,33 @@ mod {} {{
                     self.error = Some(syn::Error::new(
                         imp.self_ty.span(),
                         "`moku::TopState` must be implemented on a plain struct",
+                    ));
+                }
+            }
+        }
+    }
+
+    /// Unpack an implementation of the `StateMachineEvent` trait.
+    fn unpack_event(&mut self, imp: &ItemImpl) {
+        if self.event.is_some() {
+            self.error = Some(syn::Error::new(
+                imp.span(),
+                "multiple `moku::StateMachineEvent`s are defined within this module",
+            ));
+        } else {
+            let ident = match imp.self_ty.as_ref() {
+                Type::Path(TypePath { path, .. }) => path.get_ident().cloned(),
+                _ => None,
+            };
+
+            match ident {
+                Some(ident) => {
+                    self.top_state = Some(ident);
+                }
+                None => {
+                    self.error = Some(syn::Error::new(
+                        imp.self_ty.span(),
+                        "`moku::StateMachineEvent` must be implemented on a plain enum or struct",
                     ));
                 }
             }
@@ -343,11 +386,6 @@ mod {} {{
     }
 
     fn unpack_mod(&mut self, module: ItemMod) -> Option<Item> {
-        // short circuit if we've found an issue
-        if self.error.is_some() {
-            return None;
-        };
-
         let mut attrs = filter_attributes(&module.attrs, "machine_module");
 
         match attrs.len() {
@@ -408,33 +446,44 @@ mod {} {{
     }
 
     fn unpack_impl(&mut self, imp: ItemImpl) -> Option<Item> {
-        // short circuit if we've found an issue
-        if self.error.is_some() {
-            return None;
-        };
-
         let tr = match &imp.trait_ {
             None => return Some(Item::Impl(imp)),
             Some(tr) => &tr.1,
         };
 
         let state_enum = self.name.to_string() + "State";
+        let event = self
+            .event
+            .as_ref()
+            .map_or_else(|| "()".to_string(), |event| event.to_string());
+        let generics = [state_enum.as_str(), event.as_str()];
 
-        if path_matches_generic(tr, "TopState", Some(&state_enum)) {
-            self.unpack_top_state(&imp);
-            Some(Item::Impl(imp))
-        } else if path_matches_generic(tr, "State", Some(&state_enum)) {
-            self.unpack_state(imp);
-            None
-        } else if path_matches_generic(tr, "TopState", None) {
-            let msg =
-                format!("implementations of `moku::TopState` in this module must use only `{state_enum}` as the generic");
-            self.error = Some(syn::Error::new(tr.span(), msg));
-            None
-        } else if path_matches_generic(tr, "State", None) {
-            let msg =
-                format!("implementations of `moku::State` in this module must use only `{state_enum}` as the generic");
-            self.error = Some(syn::Error::new(tr.span(), msg));
+        if path_matches(tr, "TopState") {
+            if !generics_match(tr, &generics) {
+                let msg = if self.event.is_some() {
+                    format!(
+                        "the impl of moku::TopState must use the generics <{state_enum}, {event}>"
+                    )
+                } else {
+                    format!("the impl of moku::TopState must use the generic <{state_enum}>")
+                };
+                self.error = Some(syn::Error::new(tr.span(), msg));
+                None
+            } else {
+                self.unpack_top_state(&imp);
+                Some(Item::Impl(imp))
+            }
+        } else if path_matches(tr, "State") {
+            if !generics_match(tr, &generics) {
+                let msg = if self.event.is_some() {
+                    format!("impls of moku::State must use the generics <{state_enum}, {event}>")
+                } else {
+                    format!("impls of moku::State must use the generic <{state_enum}>")
+                };
+                self.error = Some(syn::Error::new(tr.span(), msg));
+            } else {
+                self.unpack_state(imp);
+            }
             None
         } else {
             Some(Item::Impl(imp))

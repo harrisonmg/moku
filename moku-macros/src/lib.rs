@@ -6,7 +6,8 @@ use proc_macro2::{Ident, Span};
 use quote::ToTokens;
 use syn::{parse, parse_macro_input, spanned::Spanned, ItemImpl, ItemMod};
 use unpacker::build_metadata;
-use util::path_matches_generic;
+
+use crate::util::path_matches;
 
 mod metadata;
 mod unpacker;
@@ -47,7 +48,7 @@ pub fn superstate(_args: TokenStream, input: TokenStream) -> TokenStream {
     if imp
         .trait_
         .as_ref()
-        .map_or(false, |tr| path_matches_generic(&tr.1, "State", None))
+        .map_or(false, |tr| path_matches(&tr.1, "State"))
     {
         input
     } else {

@@ -5,6 +5,10 @@ mod blinky {
 
     use machine::BlinkyState;
 
+    struct Event;
+
+    impl moku::StateMachineEvent for MyEvent {}
+
     struct Top;
 
     impl moku::TopState<BlinkyState> for Top {}

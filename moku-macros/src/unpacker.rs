@@ -212,7 +212,7 @@ mod {} {{
     fn take_event(&mut self) -> Ident {
         self.event
             .take()
-            .unwrap_or_else(|| Ident::new("()", Span::call_site()))
+            .unwrap_or_else(|| Ident::new("()", Span::call_site())) // TODO this is not valid
     }
 
     /// Get the Ident of the TopState if found.

@@ -347,9 +347,10 @@ impl Metadata {
 
         for state in self.all_states() {
             let state_enum = &self.state_enum;
+            let event = &self.event;
 
             self.push_to_machine_mod(parse_quote! {
-                impl ::moku::StateRef<#state_enum, super::#state> for #ident {
+                impl ::moku::StateRef<#state_enum, super::#state, #event> for #ident {
                     fn state_ref(&self) -> Option<&super::#state> {
                         self.top_node.node.state_ref()
                     }

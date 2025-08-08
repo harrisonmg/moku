@@ -44,12 +44,6 @@ mod blinky {
             Some(BlinkyState::LedOn)
         }
     }
-    #[superstate(Top)]
-    impl State<BlinkyState> for Enabled {
-        fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
-            Some(BlinkyState::LedOn)
-        }
-    }
 
     struct LedOn {
         entry_time: Instant,

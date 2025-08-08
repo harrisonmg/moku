@@ -20,17 +20,17 @@ mod example {
 
     pub struct Top;
 
-    impl TopState<ExampleState, Event> for Top {}
+    impl TopState<ExampleState> for Top {}
 
     struct Foo;
 
     #[superstate(Top)]
-    impl State<ExampleState, Event> for Foo {}
+    impl State<ExampleState> for Foo {}
 
     struct Bar;
 
     #[superstate(Top)]
-    impl State<ExampleState, Event> for Bar {}
+    impl State<ExampleState> for Bar {}
 }
 
 // TODO update example

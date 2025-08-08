@@ -13,7 +13,7 @@ mod blinky {
 
     struct Event;
     type EventTy = Event;
-    impl StateMachineEvent for EventTy;
+    impl StateMachineEvent for EventTy {}
 
     struct Top;
     type TopTy = Top;
@@ -23,7 +23,7 @@ mod blinky {
     struct Bottom;
     type BottomTy = Bottom;
 
-    #[superstate(Top)]
+    #[superstate(TopTy)]
     impl State<BlinkyState> for BottomTy {
         fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
             StateEntry::State(Self {})

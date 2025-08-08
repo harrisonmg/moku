@@ -31,7 +31,7 @@ pub fn generics_match(path: &Path, state_enum: &Ident, event: &Option<Ident>) ->
 
     match &seg.arguments {
         PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
-            if args.len() == 0 {
+            if args.is_empty() {
                 return false;
             }
 

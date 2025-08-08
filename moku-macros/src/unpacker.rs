@@ -97,9 +97,8 @@ impl Unpacker {
 
                 for item in &items {
                     // first pass to check for StateMachineEvent type
-                    match item {
-                        Item::Impl(imp) => self.find_event(imp),
-                        _ => (),
+                    if let Item::Impl(imp) = item {
+                        self.find_event(imp)
                     }
 
                     // stop if we encounter an issue
@@ -472,7 +471,10 @@ mod {} {{
         };
 
         if path_matches(tr, "TopState") {
-            if !generics_match(tr, &self.state_enum, &self.event) {
+            if generics_match(tr, &self.state_enum, &self.event) {
+                self.unpack_top_state(&imp);
+                Some(Item::Impl(imp))
+            } else {
                 let msg = if let Some(event) = &self.event {
                     format!(
                         "this impl of moku::TopState must use the generics <{}, {}>",
@@ -486,12 +488,11 @@ mod {} {{
                 };
                 self.error = Some(syn::Error::new(tr.span(), msg));
                 None
-            } else {
-                self.unpack_top_state(&imp);
-                Some(Item::Impl(imp))
             }
         } else if path_matches(tr, "State") {
-            if !generics_match(tr, &self.state_enum, &self.event) {
+            if generics_match(tr, &self.state_enum, &self.event) {
+                self.unpack_state(imp);
+            } else {
                 let msg = if let Some(event) = &self.event {
                     format!(
                         "impls of moku::State must use the generics <{}, {}>",
@@ -504,8 +505,6 @@ mod {} {{
                     )
                 };
                 self.error = Some(syn::Error::new(tr.span(), msg));
-            } else {
-                self.unpack_state(imp);
             }
             None
         } else {

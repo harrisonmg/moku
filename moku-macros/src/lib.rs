@@ -48,7 +48,7 @@ pub fn superstate(_args: TokenStream, input: TokenStream) -> TokenStream {
     if imp
         .trait_
         .as_ref()
-        .map_or(false, |tr| path_matches(&tr.1, "State"))
+        .is_some_and(|tr| path_matches(&tr.1, "State"))
     {
         input
     } else {

@@ -297,7 +297,7 @@ mod {} {{
 
             match ident {
                 Some(ident) => {
-                    self.top_state = Some(ident);
+                    self.event = Some(ident);
                 }
                 None => {
                     self.error = Some(syn::Error::new(

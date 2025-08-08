@@ -1,0 +1,5 @@
+error: `moku::StateMachineEvent` must be implemented on a plain enum or struct
+  --> tests/compile_fail/event/event_impl_on_generic.rs:14:35
+   |
+14 |     impl<T> StateMachineEvent for Event<T> {}
+   |                                   ^^^^^

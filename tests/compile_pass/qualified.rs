@@ -11,17 +11,17 @@ mod blinky {
 
     struct Top;
 
-    impl moku::TopState<BlinkyState> for Top {}
+    impl moku::TopState<BlinkyState, Event> for Top {}
 
     struct Disabled;
 
     #[moku::superstate(Top)]
-    impl moku::State<BlinkyState> for Disabled {}
+    impl moku::State<BlinkyState, Event> for Disabled {}
 
     struct Enabled;
 
     #[moku::superstate(Top)]
-    impl moku::State<BlinkyState> for Enabled {}
+    impl moku::State<BlinkyState, Event> for Enabled {}
 }
 
 fn main() {}

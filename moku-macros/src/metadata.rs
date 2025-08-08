@@ -309,7 +309,7 @@ impl Metadata {
         };
 
         self.push_to_machine_mod(parse_quote! {
-            impl ::moku::StateMachine<#state_enum, super::#top_state> for #ident {
+            impl ::moku::StateMachine<#state_enum, #event, super::#top_state> for #ident {
                 fn update(&mut self) {
                     self.top_node.update()
                 }
@@ -417,10 +417,11 @@ impl Metadata {
         };
 
         let state_enum = &self.state_enum;
+        let event = &self.event;
         let top_state = &self.top_state.ident;
 
         self.push_to_machine_mod(parse_quote! {
-            impl ::moku::StateMachineBuilder<#state_enum, super::#top_state, #machine_ident> for #ident {
+            impl ::moku::StateMachineBuilder<#state_enum, #event, super::#top_state, #machine_ident> for #ident {
                 fn new(top_state: super::#top_state) -> Self {
                     Self {
                         top_state,
@@ -592,7 +593,7 @@ impl Metadata {
                         fn update(
                             &mut self,
                             state: &mut super::#state_ident,
-                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
                         ) -> Option<#state_enum> {
                             match self {
                                 Self::None => None,
@@ -603,7 +604,7 @@ impl Metadata {
                         fn update_in_need(
                             &mut self,
                             state: &mut super::#state_ident,
-                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
                         ) -> Option<#state_enum> {
                             match self {
                                 Self::None => None,
@@ -614,7 +615,7 @@ impl Metadata {
                         fn top_down_update(
                             &mut self,
                             state: &mut super::#state_ident,
-                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
                         ) -> Option<#state_enum> {
                             match self {
                                 Self::None => None,
@@ -627,7 +628,7 @@ impl Metadata {
                         fn top_down_update_in_need(
                             &mut self,
                             state: &mut super::#state_ident,
-                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
                         ) -> Option<#state_enum> {
                             match self {
                                 Self::None => None,
@@ -647,7 +648,7 @@ impl Metadata {
                         fn exit(
                             &mut self,
                             state: &mut super::#state_ident,
-                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
                             in_update: bool,
                         ) -> Option<#state_enum> {
                             let old_state = core::mem::replace(self, Self::None);
@@ -664,7 +665,7 @@ impl Metadata {
                             &mut self,
                             target: #state_enum,
                             state: &mut super::#state_ident,
-                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
                             in_update: bool,
                         ) -> ::moku::internal::TransitionResult<#state_enum> {
                             match self {
@@ -679,7 +680,7 @@ impl Metadata {
                             &mut self,
                             target: #state_enum,
                             state: &mut super::#state_ident,
-                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum>>::Superstates<'_>,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
                             in_update: bool,
                         ) -> Option<#state_enum> {
                             match target {

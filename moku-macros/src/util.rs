@@ -1,5 +1,6 @@
 use syn::{
-    AngleBracketedGenericArguments, Attribute, GenericArgument, Path, PathArguments, Type, TypePath,
+    AngleBracketedGenericArguments, Attribute, GenericArgument, Ident, Path, PathArguments, Type,
+    TypePath,
 };
 
 /// Check if the first segment of a Path matches `{name}` or `moku::{name}`.
@@ -20,8 +21,9 @@ pub fn path_matches(path: &Path, name: &str) -> bool {
     seg.ident == name
 }
 
-/// Check that the generics of the last segment of a Path match a list of generics.
-pub fn generics_match(path: &Path, generics: &[&str]) -> bool {
+/// Check that the generics of a Path match the expected state enum an event types.
+pub fn generics_match(path: &Path, state_enum: &Ident, event: &Option<Ident>) -> bool {
+    // assume we're checking the last segment
     let seg = match path.segments.last() {
         Some(seg) => seg,
         None => return false,
@@ -29,19 +31,34 @@ pub fn generics_match(path: &Path, generics: &[&str]) -> bool {
 
     match &seg.arguments {
         PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
-            if args.len() != generics.len() {
+            if args.len() == 0 {
                 return false;
             }
 
-            for (arg, generic) in args.iter().zip(generics.iter()) {
-                match arg {
+            match &args[0] {
+                GenericArgument::Type(Type::Path(TypePath { path, .. })) => {
+                    if !path.is_ident(state_enum) {
+                        return false;
+                    }
+                }
+                _ => return false,
+            }
+
+            if let Some(event) = event {
+                if args.len() != 2 {
+                    return false;
+                }
+
+                match &args[1] {
                     GenericArgument::Type(Type::Path(TypePath { path, .. })) => {
-                        if !path.is_ident(generic) {
+                        if !path.is_ident(event) {
                             return false;
                         }
                     }
                     _ => return false,
                 }
+            } else if args.len() != 1 {
+                return false;
             }
 
             true

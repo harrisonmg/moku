@@ -101,7 +101,6 @@ pub use moku_macros::machine_module;
 /// ```
 pub use moku_macros::superstate;
 
-// TODO docs
 pub trait StateMachineEvent {}
 
 impl StateMachineEvent for () {}
@@ -530,8 +529,10 @@ where
     #[cfg(feature = "std")]
     fn set_name(&mut self, name: String);
 
-    // TODO docs
-    fn handle_event(&mut self, event: V);
+    // TODO impl handle_event
+    fn handle_event(&mut self, event: V) -> Option<T> {
+        todo!()
+    }
 }
 
 /// Trait for getting references to active states.
@@ -953,7 +954,6 @@ where
         None
     }
 
-    // TODO docs
     #[allow(unused_variables)]
     fn handle_event(&mut self, event: U) -> Option<T> {
         None
@@ -1077,7 +1077,6 @@ where
         None
     }
 
-    // TODO docs
     #[allow(unused_variables)]
     fn handle_event(&mut self, event: U) -> Option<T> {
         None

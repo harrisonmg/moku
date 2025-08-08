@@ -36,6 +36,7 @@ struct UnpackedState {
 
 struct Unpacker {
     name: Ident,
+    state_enum: Ident,
     main_mod: ItemMod,
     machine_mod: Option<ItemMod>,
     event: Option<Ident>,
@@ -48,6 +49,7 @@ struct Unpacker {
 impl Unpacker {
     fn new(name: Ident, main_mod: ItemMod) -> Self {
         Self {
+            state_enum: format_ident!("{}State", name),
             name,
             main_mod,
             machine_mod: None,
@@ -65,7 +67,7 @@ impl Unpacker {
             event: self.take_event(),
             top_state: self.get_top_state()?.into(),
             machine_mod: self.take_machine_mod()?,
-            state_enum: format_ident!("{}State", self.name),
+            state_enum: self.state_enum,
             name: self.name,
             states: HashMap::new(),
             main_mod: self.main_mod,
@@ -95,7 +97,7 @@ impl Unpacker {
 
                 for item in &items {
                     // first pass to check for StateMachineEvent type
-                    // TODO
+                    // TODO find event type
                 }
 
                 for item in items {
@@ -209,10 +211,11 @@ mod {} {{
     }
 
     /// Take the Ident of the StateMachineEvent if found, else ().
-    fn take_event(&mut self) -> Ident {
-        self.event
-            .take()
-            .unwrap_or_else(|| Ident::new("()", Span::call_site())) // TODO this is not valid
+    fn take_event(&mut self) -> String {
+        match self.event.take() {
+            Some(ident) => ident.to_string(),
+            None => "()".to_string(),
+        }
     }
 
     /// Get the Ident of the TopState if found.
@@ -451,21 +454,18 @@ mod {} {{
             Some(tr) => &tr.1,
         };
 
-        let state_enum = self.name.to_string() + "State";
-        let event = self
-            .event
-            .as_ref()
-            .map_or_else(|| "()".to_string(), |event| event.to_string());
-        let generics = [state_enum.as_str(), event.as_str()];
-
         if path_matches(tr, "TopState") {
-            if !generics_match(tr, &generics) {
-                let msg = if self.event.is_some() {
+            if !generics_match(tr, &self.state_enum, &self.event) {
+                let msg = if let Some(event) = &self.event {
                     format!(
-                        "the impl of moku::TopState must use the generics <{state_enum}, {event}>"
+                        "this impl of moku::TopState must use the generics <{}, {}>",
+                        self.state_enum, event
                     )
                 } else {
-                    format!("the impl of moku::TopState must use the generic <{state_enum}>")
+                    format!(
+                        "this impl of moku::TopState must use the generic <{}>",
+                        self.state_enum
+                    )
                 };
                 self.error = Some(syn::Error::new(tr.span(), msg));
                 None
@@ -474,11 +474,17 @@ mod {} {{
                 Some(Item::Impl(imp))
             }
         } else if path_matches(tr, "State") {
-            if !generics_match(tr, &generics) {
-                let msg = if self.event.is_some() {
-                    format!("impls of moku::State must use the generics <{state_enum}, {event}>")
+            if !generics_match(tr, &self.state_enum, &self.event) {
+                let msg = if let Some(event) = &self.event {
+                    format!(
+                        "impls of moku::State must use the generics <{}, {}>",
+                        self.state_enum, event
+                    )
                 } else {
-                    format!("impls of moku::State must use the generic <{state_enum}>")
+                    format!(
+                        "impls of moku::State must use the generic <{}>",
+                        self.state_enum
+                    )
                 };
                 self.error = Some(syn::Error::new(tr.span(), msg));
             } else {

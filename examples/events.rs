@@ -33,7 +33,7 @@ mod example {
     impl State<ExampleState, Event> for Bar {}
 }
 
-// TODO
+// TODO update example
 fn handle_event(machine: &mut ExampleMachine, event: &Event) {
     let transition = match machine.state() {
         ExampleState::Top => match event {

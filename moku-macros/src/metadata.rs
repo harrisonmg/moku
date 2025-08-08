@@ -150,7 +150,7 @@ impl State {
 pub struct Metadata {
     pub name: Ident,
     pub state_enum: Ident,
-    pub event: Ident, // TODO write into generics
+    pub event: String, // TODO write into generics
     pub top_state: State,
     pub states: HashMap<Ident, State>,
     pub machine_mod: ItemMod,

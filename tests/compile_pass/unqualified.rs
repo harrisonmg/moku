@@ -11,7 +11,7 @@ mod blinky {
 
     struct Event;
 
-    impl StateMachineEvent for MyEvent {}
+    impl StateMachineEvent for Event {}
 
     struct Top;
 

@@ -1,4 +1,4 @@
-error: implementations of `moku::State` in this module must use only `BlinkyState` as the generic
+error: impls of moku::State must use the generic <BlinkyState>
   --> tests/compile_fail/state/wrong_state_enum.rs:18:10
    |
 18 |     impl State<BlonkyState> for Bottom {}

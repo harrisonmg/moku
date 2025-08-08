@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use proc_macro2::{Ident, Span};
-use quote::format_ident;
+use proc_macro2::{Ident, Span, TokenStream};
+use quote::{format_ident, quote, ToTokens};
 use syn::{
     spanned::Spanned, Attribute, ImplItem, Item, ItemImpl, ItemMod, ItemStruct, Meta, MetaList,
     Type, TypePath,
@@ -211,10 +211,10 @@ mod {} {{
     }
 
     /// Take the Ident of the StateMachineEvent if found, else ().
-    fn take_event(&mut self) -> String {
+    fn take_event(&mut self) -> TokenStream {
         match self.event.take() {
-            Some(ident) => ident.to_string(),
-            None => "()".to_string(),
+            Some(ident) => ident.into_token_stream(),
+            None => quote! { () },
         }
     }
 

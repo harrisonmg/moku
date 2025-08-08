@@ -7,7 +7,7 @@ mod blinky {
 
     struct Event;
 
-    impl moku::StateMachineEvent for MyEvent {}
+    impl moku::StateMachineEvent for Event {}
 
     struct Top;
 

@@ -541,8 +541,8 @@ where
 pub trait StateRef<T, U, V>
 where
     T: StateEnum,
-    U: State<T, V>,
-    V: StateMachineEvent,
+    U: StateMachineEvent,
+    V: State<T, U>,
 {
     /// Get a reference to the state, if currently active.
     ///
@@ -577,7 +577,7 @@ where
     ///
     /// let foo: Option<&Foo> = machine.state_ref();
     /// ```
-    fn state_ref(&self) -> Option<&U>;
+    fn state_ref(&self) -> Option<&V>;
 
     /// Get a mutable reference to the state.
     ///
@@ -612,7 +612,7 @@ where
     ///
     /// let foo: Option<&mut Foo> = machine.state_mut();
     /// ```
-    fn state_mut(&mut self) -> Option<&mut U>;
+    fn state_mut(&mut self) -> Option<&mut V>;
 }
 
 /// Builder for a [StateMachine].
@@ -1088,7 +1088,7 @@ where
 /// Not indended for use by users.
 pub struct NoSuperstates<'a>(PhantomData<&'a ()>);
 
-impl<T: StateEnum, U: TopState<T>> State<T> for U {
+impl<T: StateEnum, U: StateMachineEvent, V: TopState<T, U>> State<T, U> for V {
     type Superstates<'a> = NoSuperstates<'a>;
 
     fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T> {
@@ -1109,6 +1109,10 @@ impl<T: StateEnum, U: TopState<T>> State<T> for U {
 
     fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         unreachable!()
+    }
+
+    fn handle_event(&mut self, event: U) -> Option<T> {
+        TopState::handle_event(self, event)
     }
 }
 
@@ -1139,7 +1143,7 @@ pub mod internal {
     /// The substate of a [State].
     ///
     /// Also aggregates some functionality that would be attributed to the [State].
-    pub trait SubstateEnum<T: StateEnum, U: State<T>> {
+    pub trait SubstateEnum<T: StateEnum, U: StateMachineEvent, V: State<T, U>> {
         /// The variant that represents no substate, i.e. being in exactly this state.
         fn none_variant() -> Self;
 
@@ -1162,7 +1166,7 @@ pub mod internal {
 
         /// Update this state and its active descendents.
         #[allow(unused_variables)]
-        fn update(&mut self, state: &mut U, superstates: &mut U::Superstates<'_>) -> Option<T> {
+        fn update(&mut self, state: &mut V, superstates: &mut V::Superstates<'_>) -> Option<T> {
             None
         }
 
@@ -1170,8 +1174,8 @@ pub mod internal {
         #[allow(unused_variables)]
         fn update_in_need(
             &mut self,
-            state: &mut U,
-            superstates: &mut U::Superstates<'_>,
+            state: &mut V,
+            superstates: &mut V::Superstates<'_>,
         ) -> Option<T> {
             None
         }
@@ -1180,8 +1184,8 @@ pub mod internal {
         #[allow(unused_variables)]
         fn top_down_update(
             &mut self,
-            state: &mut U,
-            superstates: &mut U::Superstates<'_>,
+            state: &mut V,
+            superstates: &mut V::Superstates<'_>,
         ) -> Option<T> {
             None
         }
@@ -1191,8 +1195,8 @@ pub mod internal {
         #[allow(unused_variables)]
         fn top_down_update_in_need(
             &mut self,
-            state: &mut U,
-            superstates: &mut U::Superstates<'_>,
+            state: &mut V,
+            superstates: &mut V::Superstates<'_>,
         ) -> Option<T> {
             None
         }
@@ -1204,8 +1208,8 @@ pub mod internal {
         #[allow(unused_variables)]
         fn exit(
             &mut self,
-            state: &mut U,
-            superstates: &mut U::Superstates<'_>,
+            state: &mut V,
+            superstates: &mut V::Superstates<'_>,
             in_update: bool,
         ) -> Option<T> {
             None
@@ -1216,8 +1220,8 @@ pub mod internal {
         fn transition(
             &mut self,
             target: T,
-            state: &mut U,
-            superstates: &mut U::Superstates<'_>,
+            state: &mut V,
+            superstates: &mut V::Superstates<'_>,
             in_update: bool,
         ) -> TransitionResult<T> {
             TransitionResult::MoveUp
@@ -1230,8 +1234,8 @@ pub mod internal {
         fn enter_substate_towards(
             &mut self,
             target: T,
-            state: &mut U,
-            superstates: &mut U::Superstates<'_>,
+            state: &mut V,
+            superstates: &mut V::Superstates<'_>,
             in_update: bool,
         ) -> Option<T> {
             unreachable!()
@@ -1244,67 +1248,76 @@ pub mod internal {
     }
 
     /// The result of trying to enter a [Node].
-    pub enum NodeEntry<T, U, V>
+    pub enum NodeEntry<T, U, V, W>
     where
         T: StateEnum,
-        U: State<T>,
-        V: SubstateEnum<T, U>,
+        U: StateMachineEvent,
+        V: State<T, U>,
+        W: SubstateEnum<T, U, V>,
     {
         /// Entry was successful, here is the new [Node].
-        Node(Node<T, U, V>),
+        Node(Node<T, U, V, W>),
 
         /// Entry resulted in a short circuit transition.
         Transition(T),
     }
 
     /// A node in the state tree.
-    pub struct Node<T, U, V>
+    pub struct Node<T, U, V, W>
     where
         T: StateEnum,
-        U: State<T>,
-        V: SubstateEnum<T, U>,
+        U: StateMachineEvent,
+        V: State<T, U>,
+        W: SubstateEnum<T, U, V>,
     {
-        phantom: PhantomData<T>,
+        phantom_t: PhantomData<T>,
+        phantom_u: PhantomData<U>,
 
         #[allow(missing_docs)]
-        pub state: U,
+        pub state: V,
 
         #[allow(missing_docs)]
-        pub substate: V,
+        pub substate: W,
 
         needs_update: bool,
         top_down_updated: bool,
     }
 
-    impl<T, U, V> Node<T, U, V>
+    impl<T, U, V, W> Node<T, U, V, W>
     where
         T: StateEnum,
-        U: State<T>,
-        V: SubstateEnum<T, U>,
+        U: StateMachineEvent,
+        V: State<T, U>,
+        W: SubstateEnum<T, U, V>,
     {
         /// Make a new [Node] from a [State].
-        pub fn from_state(state: U) -> Self {
+        pub fn from_state(state: V) -> Self {
             Self {
-                phantom: PhantomData,
+                phantom_t: PhantomData,
+                phantom_u: PhantomData,
                 state,
-                substate: V::none_variant(),
+                substate: W::none_variant(),
                 needs_update: false,
                 top_down_updated: false,
             }
         }
 
         /// Enter this node.
-        pub fn enter(superstates: &mut U::Superstates<'_>, in_update: bool) -> NodeEntry<T, U, V> {
+        pub fn enter(
+            superstates: &mut V::Superstates<'_>,
+            in_update: bool,
+        ) -> NodeEntry<T, U, V, W> {
             info!(
                 "{}\u{02502}Entering {:?}",
                 if in_update { "\u{02502}" } else { "" },
-                V::this_state()
+                W::this_state()
             );
-            match U::enter(superstates) {
+            match V::enter(superstates) {
                 StateEntry::State(state) => NodeEntry::Node(Self {
-                    phantom: PhantomData,
+                    phantom_t: PhantomData,
+                    phantom_u: PhantomData,
                     state,
-                    substate: V::none_variant(),
+                    substate: W::none_variant(),
                     needs_update: false,
                     top_down_updated: false,
                 }),
@@ -1319,12 +1332,12 @@ pub mod internal {
         }
 
         /// Update this node and its active descendents.
-        pub fn update(&mut self, superstates: &mut U::Superstates<'_>) -> Option<T> {
+        pub fn update(&mut self, superstates: &mut V::Superstates<'_>) -> Option<T> {
             self.needs_update = true;
             match self.substate.update(&mut self.state, superstates) {
                 Some(target) => Some(target),
                 None => {
-                    info!("\u{02502}Updating {:?}", V::this_state());
+                    info!("\u{02502}Updating {:?}", W::this_state());
                     self.needs_update = false;
                     self.state.update(superstates)
                 }
@@ -1332,12 +1345,12 @@ pub mod internal {
         }
 
         /// Update this node and its active descendents if in need of update after a transition.
-        pub fn update_in_need(&mut self, superstates: &mut U::Superstates<'_>) -> Option<T> {
+        pub fn update_in_need(&mut self, superstates: &mut V::Superstates<'_>) -> Option<T> {
             if self.needs_update {
                 match self.substate.update_in_need(&mut self.state, superstates) {
                     Some(target) => Some(target),
                     None => {
-                        info!("\u{02502}Updating {:?}", V::this_state());
+                        info!("\u{02502}Updating {:?}", W::this_state());
                         self.needs_update = false;
                         self.state.update(superstates)
                     }
@@ -1348,8 +1361,8 @@ pub mod internal {
         }
 
         /// Top-down update this node and its active descendents.
-        pub fn top_down_update(&mut self, superstates: &mut U::Superstates<'_>) -> Option<T> {
-            info!("\u{02502}Top-down updating {:?}", V::this_state());
+        pub fn top_down_update(&mut self, superstates: &mut V::Superstates<'_>) -> Option<T> {
+            info!("\u{02502}Top-down updating {:?}", W::this_state());
             self.top_down_updated = true;
             match self.state.top_down_update(superstates) {
                 Some(target) => Some(target),
@@ -1361,10 +1374,10 @@ pub mod internal {
         /// transition.
         pub fn top_down_update_in_need(
             &mut self,
-            superstates: &mut U::Superstates<'_>,
+            superstates: &mut V::Superstates<'_>,
         ) -> Option<T> {
             if !self.top_down_updated {
-                info!("\u{02502}Top-down updating {:?}", V::this_state());
+                info!("\u{02502}Top-down updating {:?}", W::this_state());
                 self.top_down_updated = true;
                 if let Some(target) = self.state.top_down_update(superstates) {
                     return Some(target);
@@ -1382,11 +1395,11 @@ pub mod internal {
         }
 
         /// Exit this node and its active descendents.
-        pub fn exit(self, superstates: &mut U::Superstates<'_>, in_update: bool) -> Option<T> {
+        pub fn exit(self, superstates: &mut V::Superstates<'_>, in_update: bool) -> Option<T> {
             info!(
                 "{}\u{02502}Exiting {:?}",
                 if in_update { "\u{02502}" } else { "" },
-                V::this_state()
+                W::this_state()
             );
 
             self.state.exit(superstates).inspect(|target| {
@@ -1401,7 +1414,7 @@ pub mod internal {
         pub fn transition(
             &mut self,
             target: T,
-            superstates: &mut U::Superstates<'_>,
+            superstates: &mut V::Superstates<'_>,
             in_update: bool,
         ) -> TransitionResult<T> {
             // try to transition the current substate towards the target state
@@ -1419,7 +1432,7 @@ pub mod internal {
                     {
                         // substate exit resulted in a short circuit transition
                         self.transition(new_target, superstates, in_update)
-                    } else if V::is_ancestor(target) {
+                    } else if W::is_ancestor(target) {
                         if let Some(new_target) = self.substate.enter_substate_towards(
                             target,
                             &mut self.state,
@@ -1438,7 +1451,7 @@ pub mod internal {
                                 in_update,
                             )
                         }
-                    } else if V::is_state(target) {
+                    } else if W::is_state(target) {
                         // this state is the target
                         match self.state.init(superstates) {
                             None => TransitionResult::Done,
@@ -1473,14 +1486,15 @@ pub mod internal {
     }
 
     /// The root node of a state tree.
-    pub struct TopNode<T, U, V>
+    pub struct TopNode<T, U, V, W>
     where
         T: StateEnum,
-        U: TopState<T>,
-        V: SubstateEnum<T, U>,
+        U: StateMachineEvent,
+        V: TopState<T, U>,
+        W: SubstateEnum<T, U, V>,
     {
         #[allow(missing_docs)]
-        pub node: Node<T, U, V>,
+        pub node: Node<T, U, V, W>,
 
         #[cfg(feature = "std")]
         name: String,
@@ -1489,15 +1503,16 @@ pub mod internal {
         name: &'static str,
     }
 
-    impl<T, U, V> TopNode<T, U, V>
+    impl<T, U, V, W> TopNode<T, U, V, W>
     where
         T: StateEnum,
-        U: TopState<T>,
-        V: SubstateEnum<T, U>,
+        U: StateMachineEvent,
+        V: TopState<T, U>,
+        W: SubstateEnum<T, U, V>,
     {
         /// Make a new [TopNode] from a [TopState] and a machine name.
         #[cfg(feature = "std")]
-        pub fn new(top_state: U, name: String) -> Self {
+        pub fn new(top_state: V, name: String) -> Self {
             Self {
                 node: Node::from_state(top_state),
                 name,
@@ -1506,7 +1521,7 @@ pub mod internal {
 
         /// Make a new [TopNode] from a [TopState] and a machine name.
         #[cfg(not(feature = "std"))]
-        pub fn new(top_state: U, name: &'static str) -> Self {
+        pub fn new(top_state: V, name: &'static str) -> Self {
             Self {
                 node: Node::from_state(top_state),
                 name,

@@ -132,11 +132,11 @@ impl StateMachineEvent for () {}
 pub trait StateEnum: core::fmt::Debug + Clone + Copy + PartialEq + Eq {}
 
 /// A state machine.
-pub trait StateMachine<T, U, V = ()>
+pub trait StateMachine<T, U, V>
 where
     T: StateEnum,
-    U: TopState<T>,
-    V: StateMachineEvent,
+    U: StateMachineEvent,
+    V: TopState<T, U>,
 {
     /// Update the state machine.
     ///
@@ -440,7 +440,7 @@ where
     ///
     /// dbg!(machine.top_ref().foo);
     /// ```
-    fn top_ref(&self) -> &U;
+    fn top_ref(&self) -> &V;
 
     /// Get a mutable reference to the top state.
     ///
@@ -470,7 +470,7 @@ where
     ///
     /// machine.top_mut().foo = 8;
     /// ```
-    fn top_mut(&mut self) -> &mut U;
+    fn top_mut(&mut self) -> &mut V;
 
     /// Get the name of this state machine.
     ///
@@ -530,7 +530,7 @@ where
     fn set_name(&mut self, name: String);
 
     // TODO impl handle_event
-    fn handle_event(&mut self, event: V) -> Option<T> {
+    fn handle_event(&mut self, event: U) -> Option<T> {
         todo!()
     }
 }
@@ -616,11 +616,12 @@ where
 }
 
 /// Builder for a [StateMachine].
-pub trait StateMachineBuilder<T, U, V>
+pub trait StateMachineBuilder<T, U, V, W>
 where
     T: StateEnum,
-    U: TopState<T>,
-    V: StateMachine<T, U>,
+    U: StateMachineEvent,
+    V: TopState<T, U>,
+    W: StateMachine<T, U, V>,
 {
     /// Make a new [StateMachineBuilder] from a [TopState].
     ///
@@ -646,7 +647,7 @@ where
     /// let builder = ExampleMachineBuilder::new(Top);
     /// let machine = builder.build();
     /// ```
-    fn new(top_state: U) -> Self;
+    fn new(top_state: V) -> Self;
 
     /// Set the name of the [StateMachine].
     ///
@@ -702,7 +703,7 @@ where
     /// let builder = ExampleMachineBuilder::new(Top);
     /// let machine = builder.build();
     /// ```
-    fn build(self) -> V;
+    fn build(self) -> W;
 }
 
 /// Return type of [State::enter].

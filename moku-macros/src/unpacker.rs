@@ -97,7 +97,15 @@ impl Unpacker {
 
                 for item in &items {
                     // first pass to check for StateMachineEvent type
-                    // TODO find event type
+                    match item {
+                        Item::Impl(imp) => self.find_event(imp),
+                        _ => (),
+                    }
+
+                    // stop if we encounter an issue
+                    if let Some(error) = self.error.take() {
+                        return Err(error);
+                    }
                 }
 
                 for item in items {
@@ -213,7 +221,7 @@ mod {} {{
     /// Take the Ident of the StateMachineEvent if found, else ().
     fn take_event(&mut self) -> TokenStream {
         match self.event.take() {
-            Some(ident) => ident.into_token_stream(),
+            Some(ident) => quote! { super::#ident },
             None => quote! { () },
         }
     }
@@ -282,8 +290,17 @@ mod {} {{
         }
     }
 
-    /// Unpack an implementation of the `StateMachineEvent` trait.
-    fn unpack_event(&mut self, imp: &ItemImpl) {
+    /// Check if an implementation is of the `StateMachineEvent` trait and store the target type if
+    /// applicable.
+    fn find_event(&mut self, imp: &ItemImpl) {
+        if let Some(tr) = &imp.trait_ {
+            if !path_matches(&tr.1, "StateMachineEvent") {
+                return;
+            }
+        } else {
+            return;
+        }
+
         if self.event.is_some() {
             self.error = Some(syn::Error::new(
                 imp.span(),

@@ -1,0 +1,5 @@
+error: multiple `moku::StateMachineEvent`s are defined within this module
+  --> tests/compile_fail/event/multiple_event_types.rs:18:5
+   |
+18 |     impl StateMachineEvent for EventB {}
+   |     ^^^^

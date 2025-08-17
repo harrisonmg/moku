@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 
-use example::*;
+use hunter::*;
 use moku::*;
 
 #[state_machine]
-mod example {
+mod hunter {
     use moku::*;
 
     #[machine_module]
@@ -12,58 +12,62 @@ mod example {
     pub use machine::*;
 
     pub enum Event {
-        A,
-        B,
+        StomachGrumbled,
+        PreyCaught,
+        MeatCooked,
     }
 
     impl StateMachineEvent for Event {}
 
     pub struct Top;
 
-    impl TopState<ExampleState, Event> for Top {}
+    impl TopState<HunterState, Event> for Top {
+        fn handle_event(&mut self, event: &Event) -> Option<HunterState> {
+            match event {
+                Event::StomachGrumbled => Some(HunterState::Hunting),
+                Event::PreyCaught => Some(HunterState::Cooking),
+                _ => None,
+            }
+        }
+    }
 
-    struct Foo;
+    struct Hunting;
 
     #[superstate(Top)]
-    impl State<ExampleState, Event> for Foo {}
+    impl State<HunterState, Event> for Hunting {
+        // by default, states will defer all events
+    }
 
-    struct Bar;
+    struct Cooking;
 
     #[superstate(Top)]
-    impl State<ExampleState, Event> for Bar {}
-}
-
-// TODO update example
-fn handle_event(machine: &mut ExampleMachine, event: &Event) {
-    let transition = match machine.state() {
-        ExampleState::Top => match event {
-            Event::A => Some(ExampleState::Foo),
-            Event::B => Some(ExampleState::Bar),
-        },
-        ExampleState::Foo => match event {
-            Event::A => Some(ExampleState::Bar),
-            _ => None,
-        },
-        ExampleState::Bar => match event {
-            Event::B => Some(ExampleState::Foo),
-            _ => None,
-        },
-    };
-
-    if let Some(state) = transition {
-        machine.transition(state);
+    impl State<HunterState, Event> for Cooking {
+        fn handle_event(
+            &mut self,
+            event: &Event,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> EventResult<HunterState> {
+            match event {
+                Event::MeatCooked => EventResult::Transition(HunterState::Top),
+                // ignore Top state's logic to start hunting when stomach grumbles
+                Event::StomachGrumbled => EventResult::Drop,
+                // defer other events to superstates
+                _ => EventResult::Defer,
+            }
+        }
     }
 }
 
 fn main() {
-    let mut machine = ExampleMachineBuilder::new(Top).build();
+    let mut machine = HunterMachineBuilder::new(Top).build();
     let mut events = VecDeque::new();
 
     // generate events
-    events.push_back(Event::A);
-    events.push_back(Event::B);
+    events.push_back(Event::StomachGrumbled);
+    events.push_back(Event::PreyCaught);
+    events.push_back(Event::MeatCooked);
 
     for event in events {
-        handle_event(&mut machine, &event);
+        machine.handle_event(&event);
     }
 }

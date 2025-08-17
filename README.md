@@ -26,7 +26,7 @@ Though it may be _impure_ to store data inside of states, in practice it is ofte
 ## Shortcomings
 Because moku generates a tree of sum types to represent the state machine, states must be `Sized` and do not support generic parameters (though generics can be used behind type aliases).
 
-## What is a hierarchical state machine?
+## What is an HSM?
 A hierarchical state machine (HSM) is a type of finite state machine where states can be nested inside of other states. Common functionalities between substates, such as state entry and exit actions, can be grouped by implementing them for the superstate. Beyond the convenient programming implications of HSMs, they often provide a more logical way of modeling systems.
 
 A classic HSM example is blinky, a state machine that - when enabled - blinks some LED on and off:

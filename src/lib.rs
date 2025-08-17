@@ -101,7 +101,21 @@ pub use moku_macros::machine_module;
 /// ```
 pub use moku_macros::superstate;
 
+/// A state machine event.
+///
+/// Optionally implement this trait for a single type in a [state_machine] module to mark it as the
+/// event type to be used by the state machine and its states.
 pub trait StateMachineEvent {}
+
+/// The result of a single state handling an event.
+pub enum EventResult<T: StateEnum> {
+    /// Defer the handling of this event to the superstate.
+    Defer,
+    /// Drop this event and stop handling it immediately.
+    Drop,
+    /// The event triggered a transition, here is the target state.
+    Transition(T),
+}
 
 impl StateMachineEvent for () {}
 
@@ -160,31 +174,31 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    pub struct Top;
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     struct Foo;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Foo {}
+    /// #    struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
     /// #
-    /// #     struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// #
-    /// #     struct Fizz;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Fizz {}
+    /// #    struct Fizz;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Fizz {}
     /// #
-    /// #     struct Buzz;
-    /// #     #[superstate(Fizz)]
-    /// #     impl State<ExampleState> for Buzz {}
+    /// #    struct Buzz;
+    /// #    #[superstate(Fizz)]
+    /// #    impl State<ExampleState> for Buzz {}
     /// # }
     /// # use moku::*;
     /// # use example::*;
@@ -238,31 +252,31 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    pub struct Top;
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     struct Foo;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Foo {}
+    /// #    struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
     /// #
-    /// #     struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// #
-    /// #     struct Fizz;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Fizz {}
+    /// #    struct Fizz;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Fizz {}
     /// #
-    /// #     struct Buzz;
-    /// #     #[superstate(Fizz)]
-    /// #     impl State<ExampleState> for Buzz {}
+    /// #    struct Buzz;
+    /// #    #[superstate(Fizz)]
+    /// #    impl State<ExampleState> for Buzz {}
     /// # }
     /// # use moku::*;
     /// # use example::*;
@@ -298,23 +312,23 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    pub struct Top;
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     struct Foo;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Foo {}
+    /// #    struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
     /// #
-    /// #     struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// # }
     /// # use moku::*;
     /// # use example::*;
@@ -338,23 +352,23 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    pub struct Top;
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     struct Foo;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Foo {}
+    /// #    struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
     /// #
-    /// #     struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// # }
     /// # use moku::*;
     /// # use example::*;
@@ -379,27 +393,27 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    pub struct Top;
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     struct Foo;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Foo {}
+    /// #    struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
     /// #
-    /// #     struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// #
-    /// #     struct Fizz;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Fizz {}
+    /// #    struct Fizz;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Fizz {}
     /// # }
     /// # use moku::{StateMachine, StateMachineBuilder};
     /// # use example::ExampleState;
@@ -418,12 +432,12 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
     /// // ...
     ///      pub struct Top {
@@ -448,19 +462,19 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
     /// // ...
-    ///      pub struct Top {
-    ///         pub foo: u8,
-    ///      }
+    ///     pub struct Top {
+    ///        pub foo: u8,
+    ///     }
     ///
-    ///      impl TopState<ExampleState> for Top {}
+    ///     impl TopState<ExampleState> for Top {}
     /// // ...
     /// # }
     /// # use moku::*;
@@ -480,16 +494,16 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// # }
     /// # use moku::*;
     /// # use example::*;
@@ -507,16 +521,16 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// # }
     /// # use moku::*;
     /// # use example::*;
@@ -529,10 +543,47 @@ where
     #[cfg(feature = "std")]
     fn set_name(&mut self, name: String);
 
-    // TODO impl handle_event
-    fn handle_event(&mut self, event: U) -> Option<T> {
-        todo!()
-    }
+    /// Handle an event.
+    ///
+    /// Starting with the deepest state, calls [State::handle_event] (or [TopState::handle_event]).
+    ///
+    /// If a state returns [EventResult::Defer], event handling will continue with its superstate.
+    ///
+    /// If any state returns [EventResult::Drop], event handling stops immediately and no further
+    /// `handle_event` functions are called.
+    ///
+    /// If any state returns [EventResult::Transition], the given transition will be completed and
+    /// no further `handle_event` functions are called.
+    ///
+    /// In the case of the [TopState], returning `None` is synonymous with [EventResult::Drop] /
+    /// [EventResult::Defer], and `Some(state)` is synonymous with [EventResult::Transition].
+    ///
+    /// # Example
+    /// ```
+    /// # #[state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #
+    /// #    pub use machine::ExampleState;
+    /// #
+    /// // ...
+    ///     pub enum Event { A }
+    ///     impl StateMachineEvent for Event {}
+    ///
+    ///     pub struct Top;
+    ///     impl TopState<ExampleState, Event> for Top {}
+    /// // ...
+    /// # }
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
+    /// machine.handle_event(&Event::A);
+    /// ```
+    fn handle_event(&mut self, event: &U);
 }
 
 /// Trait for getting references to active states.
@@ -552,16 +603,16 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
     /// // ...
     ///     pub struct Foo;
@@ -587,16 +638,16 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
     /// // ...
     ///     pub struct Foo;
@@ -657,16 +708,16 @@ where
     /// ```
     /// # #[state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// # }
     /// #
     /// # use moku::*;
@@ -750,16 +801,16 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
     /// // ...
     ///     pub struct Foo {
@@ -798,18 +849,18 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     pub struct Foo;
+    /// #    pub struct Foo;
     /// // ...
     ///     #[superstate(Top)]
     ///     impl State<ExampleState> for Foo {
@@ -821,9 +872,9 @@ where
     ///         }
     ///     }
     /// // ...
-    /// #     pub struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    pub struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// # }
     fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
@@ -839,18 +890,18 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     pub struct Foo;
+    /// #    pub struct Foo;
     /// // ...
     ///     #[superstate(Top)]
     ///     impl State<ExampleState> for Foo {
@@ -862,9 +913,9 @@ where
     ///         }
     ///     }
     /// // ...
-    /// #     pub struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    pub struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// # }
     fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
@@ -880,18 +931,18 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     pub struct Foo;
+    /// #    pub struct Foo;
     /// // ...
     ///     #[superstate(Top)]
     ///     impl State<ExampleState> for Foo {
@@ -903,9 +954,9 @@ where
     ///         }
     ///     }
     /// // ...
-    /// #     pub struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    pub struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// # }
     fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
@@ -924,18 +975,18 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
-    /// #     pub struct Top;
+    /// #    pub struct Top;
     /// #
-    /// #     impl TopState<ExampleState> for Top {}
+    /// #    impl TopState<ExampleState> for Top {}
     /// #
-    /// #     pub struct Foo;
+    /// #    pub struct Foo;
     /// // ...
     ///     #[superstate(Top)]
     ///     impl State<ExampleState> for Foo {
@@ -947,17 +998,73 @@ where
     ///         }
     ///     }
     /// // ...
-    /// #     pub struct Bar;
-    /// #     #[superstate(Foo)]
-    /// #     impl State<ExampleState> for Bar {}
+    /// #    pub struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
     /// # }
     fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
         None
     }
 
+    /// Called when [StateMachine::handle_event] is called.
+    ///
+    /// Return [EventResult::Defer] to continue event handling with the superstate.
+    ///
+    /// Return [EventResult::Drop] to immediately stop event handling.
+    ///
+    /// Return [EventResult::Transition] to transition to the given state, after which event
+    /// handling is stopped.
+    ///
+    /// The [State::Superstates] argument can be used to mutably access all active superstates.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #
+    /// #    pub use machine::ExampleState;
+    /// #
+    /// #    pub enum Event { A, B, C }
+    /// #    impl StateMachineEvent for Event {}
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState<ExampleState, Event> for Top {}
+    /// #
+    /// #    pub struct Bar;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState, Event> for Bar {}
+    /// #
+    /// // ...
+    ///     pub struct Foo;
+    ///
+    ///     #[superstate(Top)]
+    ///     impl State<ExampleState, Event> for Foo {
+    ///         fn handle_event(
+    ///             &mut self,
+    ///             event: &Event,
+    ///             _superstates: &mut Self::Superstates<'_>,
+    ///         ) -> EventResult<ExampleState> {
+    ///             match event {
+    ///                 Event::A => EventResult::Defer,
+    ///                 Event::B => EventResult::Drop,
+    ///                 Event::C => EventResult::Transition(ExampleState::Bar),
+    ///             }
+    ///         }
+    ///     }
+    /// // ...
+    /// # }
+    /// ```
     #[allow(unused_variables)]
-    fn handle_event(&mut self, event: U) -> Option<T> {
-        None
+    fn handle_event(
+        &mut self,
+        event: &U,
+        _superstates: &mut Self::Superstates<'_>,
+    ) -> EventResult<T> {
+        EventResult::Defer
     }
 }
 
@@ -987,12 +1094,12 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
     /// // ...
     ///      pub struct Top;
@@ -1004,9 +1111,9 @@ where
     ///      }
     /// // ...
     /// #
-    /// #     pub struct Foo;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Foo {}
+    /// #    pub struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
     /// # }
     fn init(&mut self) -> Option<T> {
         None
@@ -1020,12 +1127,12 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
     /// // ...
     ///      pub struct Top;
@@ -1037,9 +1144,9 @@ where
     ///      }
     /// // ...
     /// #
-    /// #     pub struct Foo;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Foo {}
+    /// #    pub struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
     /// # }
     fn update(&mut self) -> Option<T> {
         None
@@ -1053,12 +1160,12 @@ where
     /// ```
     /// # #[moku::state_machine]
     /// # mod example {
-    /// #     use moku::*;
+    /// #    use moku::*;
     /// #
-    /// #     #[machine_module]
-    /// #     pub mod machine {}
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
     /// #
-    /// #     pub use machine::ExampleState;
+    /// #    pub use machine::ExampleState;
     /// #
     /// // ...
     ///      pub struct Top;
@@ -1070,16 +1177,54 @@ where
     ///      }
     /// // ...
     /// #
-    /// #     pub struct Foo;
-    /// #     #[superstate(Top)]
-    /// #     impl State<ExampleState> for Foo {}
+    /// #    pub struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
     /// # }
     fn top_down_update(&mut self) -> Option<T> {
         None
     }
 
+    /// Called when [StateMachine::handle_event] is called.
+    ///
+    /// This is the final state called during event handling.
+    ///
+    /// Return `Some(state)` to transition to the given state. Return `None` to make no transition.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #
+    /// #    pub use machine::ExampleState;
+    /// #
+    /// #    pub enum Event { A, B, C }
+    /// #    impl StateMachineEvent for Event {}
+    /// #
+    /// // ...
+    ///     pub struct Top;
+    ///     impl TopState<ExampleState, Event> for Top {
+    ///         fn handle_event(&mut self, event: &Event) -> Option<ExampleState> {
+    ///             match event {
+    ///                 Event::A => Some(ExampleState::Foo),
+    ///                 _ => None,
+    ///             }
+    ///         }
+    ///     }
+    /// // ...
+    /// #
+    /// #    pub struct Foo;
+    /// #
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState, Event> for Foo {}
+    /// # }
+    /// ```
     #[allow(unused_variables)]
-    fn handle_event(&mut self, event: U) -> Option<T> {
+    fn handle_event(&mut self, event: &U) -> Option<T> {
         None
     }
 }
@@ -1089,7 +1234,12 @@ where
 /// Not indended for use by users.
 pub struct NoSuperstates<'a>(PhantomData<&'a ()>);
 
-impl<T: StateEnum, U: StateMachineEvent, V: TopState<T, U>> State<T, U> for V {
+impl<T, U, V> State<T, U> for V
+where
+    T: StateEnum,
+    U: StateMachineEvent,
+    V: TopState<T, U>,
+{
     type Superstates<'a> = NoSuperstates<'a>;
 
     fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T> {
@@ -1112,8 +1262,15 @@ impl<T: StateEnum, U: StateMachineEvent, V: TopState<T, U>> State<T, U> for V {
         unreachable!()
     }
 
-    fn handle_event(&mut self, event: U) -> Option<T> {
-        TopState::handle_event(self, event)
+    fn handle_event(
+        &mut self,
+        event: &U,
+        _superstates: &mut Self::Superstates<'_>,
+    ) -> EventResult<T> {
+        match TopState::handle_event(self, event) {
+            Some(state) => EventResult::Transition(state),
+            None => EventResult::Defer,
+        }
     }
 }
 
@@ -1144,7 +1301,12 @@ pub mod internal {
     /// The substate of a [State].
     ///
     /// Also aggregates some functionality that would be attributed to the [State].
-    pub trait SubstateEnum<T: StateEnum, U: StateMachineEvent, V: State<T, U>> {
+    pub trait SubstateEnum<T, U, V>
+    where
+        T: StateEnum,
+        U: StateMachineEvent,
+        V: State<T, U>,
+    {
         /// The variant that represents no substate, i.e. being in exactly this state.
         fn none_variant() -> Self;
 
@@ -1211,7 +1373,7 @@ pub mod internal {
             &mut self,
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
-            in_update: bool,
+            indent: bool,
         ) -> Option<T> {
             None
         }
@@ -1223,7 +1385,7 @@ pub mod internal {
             target: T,
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
-            in_update: bool,
+            indent: bool,
         ) -> TransitionResult<T> {
             TransitionResult::MoveUp
         }
@@ -1237,7 +1399,7 @@ pub mod internal {
             target: T,
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
-            in_update: bool,
+            indent: bool,
         ) -> Option<T> {
             unreachable!()
         }
@@ -1245,6 +1407,17 @@ pub mod internal {
         /// Does this state or any active descendents match a given state?
         fn state_matches(&self, state: T) -> bool {
             Self::is_state(state)
+        }
+
+        /// Handle an event.
+        #[allow(unused_variables)]
+        fn handle_event(
+            &mut self,
+            event: &U,
+            state: &mut V,
+            superstates: &mut V::Superstates<'_>,
+        ) -> EventResult<T> {
+            EventResult::Defer
         }
     }
 
@@ -1304,13 +1477,10 @@ pub mod internal {
         }
 
         /// Enter this node.
-        pub fn enter(
-            superstates: &mut V::Superstates<'_>,
-            in_update: bool,
-        ) -> NodeEntry<T, U, V, W> {
+        pub fn enter(superstates: &mut V::Superstates<'_>, indent: bool) -> NodeEntry<T, U, V, W> {
             info!(
                 "{}\u{02502}Entering {:?}",
-                if in_update { "\u{02502}" } else { "" },
+                if indent { "\u{02502}" } else { "" },
                 W::this_state()
             );
             match V::enter(superstates) {
@@ -1325,7 +1495,7 @@ pub mod internal {
                 StateEntry::Transition(target) => {
                     info!(
                         "{}\u{02502}Short circuit transition to {target:?}",
-                        if in_update { "\u{02502}" } else { "" },
+                        if indent { "\u{02502}" } else { "" },
                     );
                     NodeEntry::Transition(target)
                 }
@@ -1396,17 +1566,17 @@ pub mod internal {
         }
 
         /// Exit this node and its active descendents.
-        pub fn exit(self, superstates: &mut V::Superstates<'_>, in_update: bool) -> Option<T> {
+        pub fn exit(self, superstates: &mut V::Superstates<'_>, indent: bool) -> Option<T> {
             info!(
                 "{}\u{02502}Exiting {:?}",
-                if in_update { "\u{02502}" } else { "" },
+                if indent { "\u{02502}" } else { "" },
                 W::this_state()
             );
 
             self.state.exit(superstates).inspect(|target| {
                 info!(
                     "{}\u{02502}Short circuit transition to {target:?}",
-                    if in_update { "\u{02502}" } else { "" },
+                    if indent { "\u{02502}" } else { "" },
                 );
             })
         }
@@ -1416,12 +1586,12 @@ pub mod internal {
             &mut self,
             target: T,
             superstates: &mut V::Superstates<'_>,
-            in_update: bool,
+            indent: bool,
         ) -> TransitionResult<T> {
             // try to transition the current substate towards the target state
             match self
                 .substate
-                .transition(target, &mut self.state, superstates, in_update)
+                .transition(target, &mut self.state, superstates, indent)
             {
                 // substate is the target state
                 TransitionResult::Done => TransitionResult::Done,
@@ -1429,28 +1599,24 @@ pub mod internal {
                 // substate is not the target state or an ancestor of it
                 TransitionResult::MoveUp => {
                     if let Some(new_target) =
-                        self.substate.exit(&mut self.state, superstates, in_update)
+                        self.substate.exit(&mut self.state, superstates, indent)
                     {
                         // substate exit resulted in a short circuit transition
-                        self.transition(new_target, superstates, in_update)
+                        self.transition(new_target, superstates, indent)
                     } else if W::is_ancestor(target) {
                         if let Some(new_target) = self.substate.enter_substate_towards(
                             target,
                             &mut self.state,
                             superstates,
-                            in_update,
+                            indent,
                         ) {
                             // substate transition resulted in a short circuit transition
                             TransitionResult::NewTransition(new_target)
                         } else {
                             // substate successfully moved towards target state,
                             // continue transitioning downwards
-                            self.substate.transition(
-                                target,
-                                &mut self.state,
-                                superstates,
-                                in_update,
-                            )
+                            self.substate
+                                .transition(target, &mut self.state, superstates, indent)
                         }
                     } else if W::is_state(target) {
                         // this state is the target
@@ -1483,6 +1649,37 @@ pub mod internal {
         /// Does this node or any active descendents match a given state?
         pub fn state_matches(&self, state: T) -> bool {
             self.substate.state_matches(state)
+        }
+
+        /// Handle an event.
+        pub fn handle_event(
+            &mut self,
+            event: &U,
+            superstates: &mut V::Superstates<'_>,
+        ) -> EventResult<T> {
+            let substate_res = self
+                .substate
+                .handle_event(event, &mut self.state, superstates);
+            match substate_res {
+                EventResult::Defer => {
+                    let res = self.state.handle_event(event, superstates);
+                    match res {
+                        EventResult::Defer => {
+                            info!("\u{02502}{:?} deferring event", W::this_state())
+                        }
+                        EventResult::Drop => info!("\u{02502}{:?} dropping event", W::this_state()),
+                        EventResult::Transition(state) => {
+                            info!(
+                                "\u{02502}{:?} triggered transition to {:?}",
+                                W::this_state(),
+                                state
+                            )
+                        }
+                    }
+                    res
+                }
+                _ => substate_res,
+            }
         }
     }
 
@@ -1575,22 +1772,22 @@ pub mod internal {
 
         /// Transition this node and its active descendents without logging the start and end of
         /// the transition.
-        pub fn transition_quiet(&mut self, target: T, in_update: bool) {
+        pub fn transition_quiet(&mut self, target: T, indent: bool) {
             match self
                 .node
-                .transition(target, &mut NoSuperstates(PhantomData), in_update)
+                .transition(target, &mut NoSuperstates(PhantomData), indent)
             {
                 TransitionResult::Done => (),
                 TransitionResult::MoveUp => unreachable!(),
                 TransitionResult::NewTransition(new_target) => {
-                    self.transition_quiet(new_target, in_update)
+                    self.transition_quiet(new_target, indent)
                 }
             }
         }
 
         /// Transition this node and its active descendents.
-        pub fn transition(&mut self, target: T, in_update: bool) {
-            if in_update {
+        pub fn transition(&mut self, target: T, indent: bool) {
+            if indent {
                 info!(
                     "\u{02502}Transitioning from {:?} to {target:?}",
                     self.state(),
@@ -1603,11 +1800,11 @@ pub mod internal {
                 );
             }
 
-            self.transition_quiet(target, in_update);
+            self.transition_quiet(target, indent);
 
             info!(
                 "{}\u{02514}Transition complete",
-                if in_update { "\u{02502}" } else { "" },
+                if indent { "\u{02502}" } else { "" },
             );
         }
 
@@ -1634,6 +1831,18 @@ pub mod internal {
         /// Does this node or any active descendents match a given state?
         pub fn state_matches(&self, state: T) -> bool {
             self.node.state_matches(state)
+        }
+
+        /// Handle an event.
+        pub fn handle_event(&mut self, event: &U) {
+            info!("{}: Handling event", self.name());
+            if let EventResult::Transition(state) = self
+                .node
+                .handle_event(event, &mut NoSuperstates(PhantomData))
+            {
+                self.transition(state, true);
+            }
+            info!("\u{02514}Event handled");
         }
     }
 }

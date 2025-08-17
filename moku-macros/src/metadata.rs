@@ -343,6 +343,10 @@ impl Metadata {
                 fn top_mut(&mut self) -> &mut super::#top_state {
                     &mut self.top_node.node.state
                 }
+
+                fn handle_event(&mut self, event: &#event) {
+                    self.top_node.handle_event(event)
+                }
             }
         });
 
@@ -708,6 +712,21 @@ impl Metadata {
                                     Self::None => false,
                                     #(Self::#children(node) => node.state_matches(state),)*
                                 }
+                        }
+
+                        fn handle_event(
+                            &mut self,
+                            event: &#event,
+                            state: &mut super::#state_ident,
+                            superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
+                        ) -> ::moku::EventResult<#state_enum> {
+                            match self {
+                                Self::None => ::moku::EventResult::Defer,
+                                #(Self::#children(node) => node.handle_event(
+                                        event,
+                                        &mut #superstates::new(state, superstates),
+                                ),)*
+                            }
                         }
                     }
                 });

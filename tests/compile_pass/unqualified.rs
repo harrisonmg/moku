@@ -9,19 +9,23 @@ mod blinky {
 
     use machine::BlinkyState;
 
+    struct Event;
+
+    impl StateMachineEvent for Event {}
+
     struct Top;
 
-    impl TopState<BlinkyState> for Top {}
+    impl TopState<BlinkyState, Event> for Top {}
 
     struct Disabled;
 
     #[superstate(Top)]
-    impl State<BlinkyState> for Disabled {}
+    impl State<BlinkyState, Event> for Disabled {}
 
     struct Enabled;
 
     #[superstate(Top)]
-    impl State<BlinkyState> for Enabled {}
+    impl State<BlinkyState, Event> for Enabled {}
 }
 
 fn main() {}

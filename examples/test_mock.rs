@@ -44,6 +44,7 @@ mod example {
     }
 
     impl Top {
+        #[allow(clippy::new_without_default)]
         pub fn new() -> Self {
             #[cfg(not(test))]
             let gpio = Gpio;

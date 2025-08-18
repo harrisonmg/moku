@@ -26,7 +26,7 @@ Though it may be _impure_ to store data inside of states, in practice it is ofte
 ## Shortcomings
 Because moku generates a tree of sum types to represent the state machine, states must be `Sized` and do not support generic parameters (though generics can be used behind type aliases).
 
-## What is a hierarchical state machine?
+## What is an HSM?
 A hierarchical state machine (HSM) is a type of finite state machine where states can be nested inside of other states. Common functionalities between substates, such as state entry and exit actions, can be grouped by implementing them for the superstate. Beyond the convenient programming implications of HSMs, they often provide a more logical way of modeling systems.
 
 A classic HSM example is blinky, a state machine that - when enabled - blinks some LED on and off:
@@ -72,12 +72,12 @@ mod blinky {
 ```
 
 Moku will generate the following public items inside of the `machine` module:
-- The enum `BlinkyState` that implements [StateEnum]
-- The struct `BlinkyMachine` that implements [StateMachine] and [StateRef] for every state
-- The struct `BlinkyMachineBuilder` that implements [StateMachineBuilder]
+- The enum `BlinkyState` that implements [`StateEnum`]
+- The struct `BlinkyMachine` that implements [`StateMachine`] and [`StateRef`] for every state
+- The struct `BlinkyMachineBuilder` that implements [`StateMachineBuilder`]
 - The `const` `&str` `BLINKY_STATE_CHART`
 
-The `Blinky` name that prepends each of these items defaults to the name of the parent module in `UpperCamel` case, but can be manually specified as an argument to the [state_machine] attribute.
+The `Blinky` name that prepends each of these items defaults to the name of the parent module in `UpperCamel` case, but can be manually specified as an argument to the [`state_machine`] attribute.
 
 Let's add some more states inside of the `blinky` module:
 ```rust
@@ -420,24 +420,84 @@ machine.transition(BlinkyState::Disabled);
 // └Transition complete
 
 ```
-If a transition occurs during an update or top-down update, the update will continue from the nearest common ancestor between the previous state and the new state. See [StateMachine::update] and [StateMachine::top_down_update] for more details.
+If a transition occurs during an update or top-down update, the update will continue from the nearest common ancestor between the previous state and the new state. See [`StateMachine::update`] and [`StateMachine::top_down_update`] for more details.
 
 An interactive example of blinky can be found in the [`examples/`](https://github.com/harrisonmg/moku/tree/main/examples) directory. Try it out with:
 ```text
 cargo run --example blinky
 ```
 
-## Examples
-Along with an interactive example of the blinky machine described above, the following examples are included in the [`examples/`](https://github.com/harrisonmg/moku/tree/main/examples) directory.
+## Events
+Moku state machines can optionally handle events of a user-specified type. Events are handled by each active state, starting from the deepest state.
+```rust
+#[moku::state_machine]
+mod example {
+    use moku::*;
 
-### Event handling
-It's common to implement state machines alongside an event type, where each active state handles events as they are generated. Often state machine transitions are defined via a centralized table of states and events. Moku focuses on the autogeneration of state machine boilerplate, leaving event queues and handling for users to implement at their discretion.
+    #[machine_module]
+    mod machine {}
+    use machine::*;
 
-### Test Mocks
-Sometimes it's necessary to mock away interfaces for testing purposes. Moku does not support states with generic parameters, but conditional compilation (among other approaches) can be used to substitute in test mocks when needed.
+    enum Event {
+        A,
+        B,
+        C,
+    }
+
+    // `StateMachineEvent` must be implemented on the event type.
+    impl StateMachineEvent for Event {}
+
+    struct Top;
+
+    // When implementing `TopState` and `State`, use your event type as the second generic.
+    impl TopState<ExampleState, Event> for Top {
+        fn handle_event(&mut self, event: &Event) -> Option<ExampleState> {
+            match event {
+                Event::A => Some(ExampleState::Foo), // Transition to the Foo state.
+                Event::B => Some(ExampleState::Bar), // Transition to the Bar state.
+                Event::C => None, // Do nothing.
+            }
+        }
+    }
+
+    struct Foo;
+
+    #[superstate(Top)]
+    impl State<ExampleState, Event> for Foo {
+        // The default implementation of `handle_event` simply defers all
+        // events to the next highest state.
+    }
+
+    struct Bar;
+
+    #[superstate(Top)]
+    impl State<ExampleState, Event> for Bar {
+        fn handle_event(
+            &mut self,
+            event: &Event,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> EventResponse<ExampleState> {
+            match event {
+                Event::A => {
+                    // Do nothing with this event and pass handling to the next highest state.
+                    EventResponse::Defer
+                }
+                Event::B => {
+                    // Do nothing and stop event handling immediately.
+                    EventResponse::Drop
+                }
+                Event::C => {
+                    // Transitition to the Foo state and stop event handling.
+                    EventResponse::Transition(ExampleState::Foo)
+                }
+            }
+        }
+    }
+}
+```
 
 ## Warning
-Moku exposes the [internal] module, the contents of which are intended to be used only by the code that is generated by moku. This, in addition to the methods defined in the [TopState] and [State] traits, are not intended to be called by users.
+Moku exposes the [`internal`] module, the contents of which are intended to be used only by the code that is generated by moku. This, in addition to the methods defined in the [`TopState`] and [`State`] traits, are not intended to be called by users.
 
 ## Macro expansion
-Should you wish to view the fully expanded code generated by moku, the [cargo-expand](https://crates.io/crates/cargo-expand) crate may prove useful.
+Should you wish to view the fully expanded code generated by moku, the [`cargo-expand`](https://crates.io/crates/cargo-expand) crate may prove useful.

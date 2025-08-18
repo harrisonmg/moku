@@ -1,18 +1,10 @@
 use syn::{
-    AngleBracketedGenericArguments, Attribute, GenericArgument, Path, PathArguments, Type, TypePath,
+    AngleBracketedGenericArguments, Attribute, GenericArgument, Ident, Path, PathArguments, Type,
+    TypePath,
 };
 
-/// Check if a Path matches `{name}` or `moku::{name}`.
+/// Check if the first segment of a Path matches `{name}` or `moku::{name}`.
 pub fn path_matches(path: &Path, name: &str) -> bool {
-    path.is_ident(name)
-    //let qualified_name = format!("moku::{name}");
-    //path.is_ident(name) || path.is_ident(&qualified_name)
-}
-
-/// Check that a Path matches `{name}<{generic}>` or `moku::{name}<{generic}>`.
-///
-/// If generic is None, just check that there is any single generic.
-pub fn path_matches_generic(path: &Path, name: &str, generic: Option<&str>) -> bool {
     let seg = match path.segments.len() {
         1 => path.segments.first().unwrap(),
         2 => {
@@ -26,25 +18,50 @@ pub fn path_matches_generic(path: &Path, name: &str, generic: Option<&str>) -> b
         _ => return false,
     };
 
-    if seg.ident != name {
-        return false;
-    }
+    seg.ident == name
+}
+
+/// Check that the generics of a Path match the expected state enum an event types.
+pub fn generics_match(path: &Path, state_enum: &Ident, event: &Option<Ident>) -> bool {
+    // assume we're checking the last segment
+    let seg = match path.segments.last() {
+        Some(seg) => seg,
+        None => return false,
+    };
 
     match &seg.arguments {
         PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
-            if args.len() != 1 {
+            if args.is_empty() {
                 return false;
             }
 
-            let gen = match generic {
-                None => return true,
-                Some(gen) => gen,
-            };
-
-            match args.first().unwrap() {
-                GenericArgument::Type(Type::Path(TypePath { path, .. })) => path.is_ident(gen),
-                _ => false,
+            match &args[0] {
+                GenericArgument::Type(Type::Path(TypePath { path, .. })) => {
+                    if !path.is_ident(state_enum) {
+                        return false;
+                    }
+                }
+                _ => return false,
             }
+
+            if let Some(event) = event {
+                if args.len() != 2 {
+                    return false;
+                }
+
+                match &args[1] {
+                    GenericArgument::Type(Type::Path(TypePath { path, .. })) => {
+                        if !path.is_ident(event) {
+                            return false;
+                        }
+                    }
+                    _ => return false,
+                }
+            } else if args.len() != 1 {
+                return false;
+            }
+
+            true
         }
         _ => false,
     }

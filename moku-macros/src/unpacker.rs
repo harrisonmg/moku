@@ -282,7 +282,8 @@ mod {} {{
                 None => {
                     self.error = Some(syn::Error::new(
                         imp.self_ty.span(),
-                        "`moku::TopState` must be implemented on a plain struct",
+                        "`moku::TopState` must be implemented on a plain struct \
+                        \nYou may also use a type alias: `type MyTopState = Option<bool>;`",
                     ));
                 }
             }
@@ -318,7 +319,8 @@ mod {} {{
                 None => {
                     self.error = Some(syn::Error::new(
                         imp.self_ty.span(),
-                        "`moku::StateMachineEvent` must be implemented on a plain enum or struct",
+                        "`moku::StateMachineEvent` must be implemented on a plain enum or struct. \
+                        \nYou may also use a type alias: `type Event = Option<bool>;`",
                     ));
                 }
             }
@@ -345,7 +347,8 @@ mod {} {{
             None => {
                 self.error = Some(syn::Error::new(
                     imp.self_ty.span(),
-                    "`moku::State` must be implemented on a plain struct",
+                    "`moku::State` must be implemented on a plain struct \
+                    \nYou may also use a type alias: `type MyState = Option<bool>;`",
                 ));
                 return;
             }

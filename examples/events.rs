@@ -46,13 +46,13 @@ mod hunter {
             &mut self,
             event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> EventResult<HunterState> {
+        ) -> EventResponse<HunterState> {
             match event {
-                Event::MeatCooked => EventResult::Transition(HunterState::Top),
+                Event::MeatCooked => EventResponse::Transition(HunterState::Top),
                 // ignore Top state's logic to start hunting when stomach grumbles
-                Event::StomachGrumbled => EventResult::Drop,
+                Event::StomachGrumbled => EventResponse::Drop,
                 // defer other events to superstates
-                _ => EventResult::Defer,
+                _ => EventResponse::Defer,
             }
         }
     }

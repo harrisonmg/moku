@@ -45,10 +45,10 @@ mod event {
     impl State<EventState, Event> for Dropper {
         fn handle_event(
             &mut self,
-            event: &Event,
+            _event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> EventResult<EventState> {
-            EventResult::Drop
+        ) -> EventResponse<EventState> {
+            EventResponse::Drop
         }
     }
 
@@ -60,10 +60,10 @@ mod event {
             &mut self,
             event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> EventResult<EventState> {
+        ) -> EventResponse<EventState> {
             match event {
-                Event::C => EventResult::Transition(EventState::Foo),
-                _ => EventResult::Defer,
+                Event::C => EventResponse::Transition(EventState::Foo),
+                _ => EventResponse::Defer,
             }
         }
     }
@@ -76,10 +76,10 @@ mod event {
             &mut self,
             event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> EventResult<EventState> {
+        ) -> EventResponse<EventState> {
             match event {
-                Event::A => EventResult::Transition(EventState::Bar),
-                _ => EventResult::Defer,
+                Event::A => EventResponse::Transition(EventState::Bar),
+                _ => EventResponse::Defer,
             }
         }
     }

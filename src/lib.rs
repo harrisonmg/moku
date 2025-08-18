@@ -107,6 +107,8 @@ pub use moku_macros::superstate;
 /// event type to be used by the state machine and its states.
 pub trait StateMachineEvent {}
 
+impl StateMachineEvent for () {}
+
 /// The result of a single state handling an event.
 pub enum EventResponse<T: StateEnum> {
     /// Defer the handling of this event to the superstate.
@@ -116,8 +118,6 @@ pub enum EventResponse<T: StateEnum> {
     /// The event triggered a transition, here is the target state.
     Transition(T),
 }
-
-impl StateMachineEvent for () {}
 
 /// A flat list of all states in a state machine.
 ///

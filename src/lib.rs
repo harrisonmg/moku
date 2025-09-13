@@ -307,7 +307,8 @@ where
     /// Attempt to transition the [`StateMachine`] to the target state.
     ///
     /// If the target state is already in the currently active state hierarchy, no
-    /// transition is made.
+    /// transition is made. To force re-entry of an active state, use
+    /// [`StateMachine::transition_exact`].
     ///
     /// Subject to short circuit transtions (from [`State::enter`] or [`State::exit`]) and initial
     /// transitions (from [`State::init`] or [`TopState::init`]).
@@ -345,6 +346,49 @@ where
     /// assert!(matches!(machine.state(), ExampleState::Bar));
     /// ```
     fn transition(&mut self, target: T);
+
+    /// Attempt to transition the [`StateMachine`] to the target state regardless of currently
+    /// active states.
+    ///
+    /// Makes the transition even if the target state is in the current active state hierarchy.
+    /// The state will re-initialized; [`State::enter`] and [`State::init`] will be called.
+    ///
+    /// Subject to short circuit transtions (from [`State::enter`] or [`State::exit`]) and initial
+    /// transitions (from [`State::init`] or [`TopState::init`]).
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #
+    /// #    pub use machine::ExampleState;
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState<ExampleState> for Top {}
+    /// #
+    /// #    struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
+    /// #
+    /// #    struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
+    /// // where Bar is a substate of Top:
+    /// machine.transition(ExampleState::Bar);
+    /// assert!(matches!(machine.state(), ExampleState::Bar));
+    ///
+    /// machine.transition(ExampleState::Top);
+    /// assert!(matches!(machine.state(), ExampleState::Top));
+    /// ```
+    fn transition_exact(&mut self, target: T);
 
     /// Get the current state of the [`StateMachine`].
     ///
@@ -765,6 +809,22 @@ where
     fn build(self) -> W;
 }
 
+/// Return type of multiple [`State`] methods.
+///
+/// Represents either no action or some type of transition to new state.
+pub enum Next<U: StateEnum> {
+    /// No transition should be taken, stay in the current active state.
+    None,
+
+    /// A transition should be taken to the target state.
+    /// See [`StateMachine::transition`] for transition semantics.
+    Target(U),
+
+    /// A transition should be taken to exactly the target state.
+    /// See [`StateMachine::transition_exact`] for exact transition semantics.
+    ExactTarget(U),
+}
+
 /// Return type of [`State::enter`].
 ///
 /// Represents either a successful state entry or a short circuit transition.
@@ -773,7 +833,7 @@ pub enum StateEntry<T, U: StateEnum> {
     State(T),
 
     /// State entry resulted in a transition, here is the target state.
-    Transition(U),
+    Target(Next<U>),
 }
 
 /// A [`StateMachine`] state.
@@ -875,8 +935,8 @@ where
     ///         fn init(
     ///             &mut self,
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> Option<ExampleState> {
-    ///             Some(ExampleState::Bar)
+    ///         ) -> Next<ExampleState> {
+    ///             Next::Target(ExampleState::Bar)
     ///         }
     ///     }
     /// // ...
@@ -884,7 +944,7 @@ where
     /// #    #[superstate(Foo)]
     /// #    impl State<ExampleState> for Bar {}
     /// # }
-    fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Next<T> {
         None
     }
 
@@ -916,8 +976,8 @@ where
     ///         fn update(
     ///             &mut self,
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> Option<ExampleState> {
-    ///             Some(ExampleState::Bar)
+    ///         ) -> Next<ExampleState> {
+    ///             Next::Target(ExampleState::Bar)
     ///         }
     ///     }
     /// // ...
@@ -925,7 +985,7 @@ where
     /// #    #[superstate(Foo)]
     /// #    impl State<ExampleState> for Bar {}
     /// # }
-    fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Next<T> {
         None
     }
 
@@ -957,8 +1017,8 @@ where
     ///         fn top_down_update(
     ///             &mut self,
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> Option<ExampleState> {
-    ///             Some(ExampleState::Bar)
+    ///         ) -> Next<ExampleState> {
+    ///             Next::target(ExampleState::Bar)
     ///         }
     ///     }
     /// // ...
@@ -966,7 +1026,7 @@ where
     /// #    #[superstate(Foo)]
     /// #    impl State<ExampleState> for Bar {}
     /// # }
-    fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Next<T> {
         None
     }
 
@@ -1001,8 +1061,8 @@ where
     ///         fn exit(
     ///             self,
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> Option<ExampleState> {
-    ///             Some(ExampleState::Bar)
+    ///         ) -> Next<ExampleState> {
+    ///             Next::Target(ExampleState::Bar)
     ///         }
     ///     }
     /// // ...
@@ -1010,7 +1070,7 @@ where
     /// #    #[superstate(Foo)]
     /// #    impl State<ExampleState> for Bar {}
     /// # }
-    fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Next<T> {
         None
     }
 
@@ -1113,8 +1173,8 @@ where
     ///      pub struct Top;
     ///
     ///      impl TopState<ExampleState> for Top {
-    ///         fn init(&mut self) -> Option<ExampleState> {
-    ///             Some(ExampleState::Foo)
+    ///         fn init(&mut self) -> Next<ExampleState> {
+    ///             Next::Target(ExampleState::Foo)
     ///         }
     ///      }
     /// // ...
@@ -1123,7 +1183,7 @@ where
     /// #    #[superstate(Top)]
     /// #    impl State<ExampleState> for Foo {}
     /// # }
-    fn init(&mut self) -> Option<T> {
+    fn init(&mut self) -> Next<T> {
         None
     }
 
@@ -1146,8 +1206,8 @@ where
     ///      pub struct Top;
     ///
     ///      impl TopState<ExampleState> for Top {
-    ///         fn update(&mut self) -> Option<ExampleState> {
-    ///             Some(ExampleState::Foo)
+    ///         fn update(&mut self) -> Next<ExampleState> {
+    ///             Next::Target(ExampleState::Foo)
     ///         }
     ///      }
     /// // ...
@@ -1156,7 +1216,7 @@ where
     /// #    #[superstate(Top)]
     /// #    impl State<ExampleState> for Foo {}
     /// # }
-    fn update(&mut self) -> Option<T> {
+    fn update(&mut self) -> Next<T> {
         None
     }
 
@@ -1179,8 +1239,8 @@ where
     ///      pub struct Top;
     ///
     ///      impl TopState<ExampleState> for Top {
-    ///         fn top_down_update(&mut self) -> Option<ExampleState> {
-    ///             Some(ExampleState::Foo)
+    ///         fn top_down_update(&mut self) -> Next<ExampleState> {
+    ///             Next::Target(ExampleState::Foo)
     ///         }
     ///      }
     /// // ...
@@ -1189,7 +1249,7 @@ where
     /// #    #[superstate(Top)]
     /// #    impl State<ExampleState> for Foo {}
     /// # }
-    fn top_down_update(&mut self) -> Option<T> {
+    fn top_down_update(&mut self) -> Next<T> {
         None
     }
 
@@ -1216,10 +1276,10 @@ where
     /// // ...
     ///     pub struct Top;
     ///     impl TopState<ExampleState, Event> for Top {
-    ///         fn handle_event(&mut self, event: &Event) -> Option<ExampleState> {
+    ///         fn handle_event(&mut self, event: &Event) -> Next<ExampleState> {
     ///             match event {
-    ///                 Event::A => Some(ExampleState::Foo),
-    ///                 _ => None,
+    ///                 Event::A => Next::Target(ExampleState::Foo),
+    ///                 _ => Next::None,
     ///             }
     ///         }
     ///     }
@@ -1232,7 +1292,7 @@ where
     /// # }
     /// ```
     #[allow(unused_variables)]
-    fn handle_event(&mut self, event: &U) -> Option<T> {
+    fn handle_event(&mut self, event: &U) -> Next<T> {
         None
     }
 }

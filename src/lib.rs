@@ -306,6 +306,9 @@ where
 
     /// Attempt to transition the [`StateMachine`] to the target state.
     ///
+    /// If the target state is already in the currently active state hierarchy, no
+    /// transition is made.
+    ///
     /// Subject to short circuit transtions (from [`State::enter`] or [`State::exit`]) and initial
     /// transitions (from [`State::init`] or [`TopState::init`]).
     /// # Example
@@ -334,7 +337,11 @@ where
     /// # use example::*;
     /// # use example::machine::*;
     /// # let mut machine = ExampleMachineBuilder::new(Top).build();
+    /// // where Bar is a substate of Top:
     /// machine.transition(ExampleState::Bar);
+    /// assert!(matches!(machine.state(), ExampleState::Bar));
+    ///
+    /// machine.transition(ExampleState::Top);
     /// assert!(matches!(machine.state(), ExampleState::Bar));
     /// ```
     fn transition(&mut self, target: T);
@@ -1803,7 +1810,14 @@ pub mod internal {
                 );
             }
 
-            self.transition_quiet(target, indent);
+            if self.state_matches(target) {
+                info!(
+                    "{}\u{02502}Already in {target:?}",
+                    if indent { "\u{02502}" } else { "" },
+                );
+            } else {
+                self.transition_quiet(target, indent);
+            }
 
             info!(
                 "{}\u{02514}Transition complete",

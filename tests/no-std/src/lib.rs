@@ -12,7 +12,6 @@ use moku::*;
 
 #[state_machine]
 mod basic {
-
     use moku::*;
 
     #[machine_module]
@@ -52,7 +51,7 @@ mod basic {
     }
 
     #[derive(Default)]
-    pub struct Foo {
+    pub struct A {
         pub access: u8,
         pub enter: u8,
         pub init: u8,
@@ -62,7 +61,7 @@ mod basic {
     }
 
     #[superstate(Top)]
-    impl State<BasicState> for Foo {
+    impl State<BasicState> for A {
         fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BasicState> {
             StateEntry::State(Self {
                 enter: 1,
@@ -93,8 +92,28 @@ mod basic {
         }
     }
 
+    struct AA;
+
+    #[superstate(A)]
+    impl State<BasicState> for AA {}
+
+    struct AAA;
+
+    #[superstate(AA)]
+    impl State<BasicState> for AAA {}
+
+    struct AB;
+
+    #[superstate(A)]
+    impl State<BasicState> for AB {}
+
+    struct ABA;
+
+    #[superstate(AB)]
+    impl State<BasicState> for ABA {}
+
     #[derive(Default)]
-    pub struct Bar {
+    pub struct B {
         pub access: u8,
         pub enter: u8,
         pub init: u8,
@@ -104,7 +123,7 @@ mod basic {
     }
 
     #[superstate(Top)]
-    impl State<BasicState> for Bar {
+    impl State<BasicState> for B {
         fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BasicState> {
             StateEntry::State(Self {
                 enter: 1,
@@ -136,7 +155,7 @@ mod basic {
     }
 
     #[derive(Default)]
-    pub struct Iron {
+    pub struct BA {
         pub access: u8,
         pub enter: u8,
         pub init: u8,
@@ -145,8 +164,8 @@ mod basic {
         pub update_order: u8,
     }
 
-    #[superstate(Bar)]
-    impl State<BasicState> for Iron {
+    #[superstate(B)]
+    impl State<BasicState> for BA {
         fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BasicState> {
             StateEntry::State(Self {
                 enter: 1,
@@ -178,7 +197,7 @@ mod basic {
     }
 
     #[derive(Default)]
-    pub struct Wet {
+    pub struct BB {
         pub access: u8,
         pub enter: u8,
         pub init: u8,
@@ -187,8 +206,8 @@ mod basic {
         pub update_order: u8,
     }
 
-    #[superstate(Bar)]
-    impl State<BasicState> for Wet {
+    #[superstate(B)]
+    impl State<BasicState> for BB {
         fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BasicState> {
             StateEntry::State(Self {
                 enter: 1,
@@ -226,7 +245,7 @@ mod tests {
 
     use super::basic::{
         machine::{BasicMachineBuilder, BasicState, BASIC_STATE_CHART},
-        Bar, Foo, Iron, Top, Wet,
+        Top, A, B, BA, BB,
     };
 
     #[test]
@@ -234,10 +253,14 @@ mod tests {
         assert_eq!(
             BASIC_STATE_CHART,
             "Top
-├─ Foo
-└─ Bar
-   ├─ Iron
-   └─ Wet"
+├─ A
+│  ├─ AA
+│  │  └─ AAA
+│  └─ AB
+│     └─ ABA
+└─ B
+   ├─ BA
+   └─ BB"
         );
     }
 
@@ -254,46 +277,46 @@ mod tests {
         assert!(matches!(machine.state(), BasicState::Top));
 
         assert!(machine.state_matches(BasicState::Top));
-        assert!(!machine.state_matches(BasicState::Foo));
-        assert!(!machine.state_matches(BasicState::Bar));
-        assert!(!machine.state_matches(BasicState::Iron));
-        assert!(!machine.state_matches(BasicState::Wet));
+        assert!(!machine.state_matches(BasicState::A));
+        assert!(!machine.state_matches(BasicState::B));
+        assert!(!machine.state_matches(BasicState::BA));
+        assert!(!machine.state_matches(BasicState::BB));
 
-        machine.transition(BasicState::Foo);
-        assert!(matches!(machine.state(), BasicState::Foo));
-
-        assert!(machine.state_matches(BasicState::Top));
-        assert!(machine.state_matches(BasicState::Foo));
-        assert!(!machine.state_matches(BasicState::Bar));
-        assert!(!machine.state_matches(BasicState::Iron));
-        assert!(!machine.state_matches(BasicState::Wet));
-
-        machine.transition(BasicState::Bar);
-        assert!(matches!(machine.state(), BasicState::Bar));
+        machine.transition(BasicState::A);
+        assert!(matches!(machine.state(), BasicState::A));
 
         assert!(machine.state_matches(BasicState::Top));
-        assert!(!machine.state_matches(BasicState::Foo));
-        assert!(machine.state_matches(BasicState::Bar));
-        assert!(!machine.state_matches(BasicState::Iron));
-        assert!(!machine.state_matches(BasicState::Wet));
+        assert!(machine.state_matches(BasicState::A));
+        assert!(!machine.state_matches(BasicState::B));
+        assert!(!machine.state_matches(BasicState::BA));
+        assert!(!machine.state_matches(BasicState::BB));
 
-        machine.transition(BasicState::Iron);
-        assert!(matches!(machine.state(), BasicState::Iron));
-
-        assert!(machine.state_matches(BasicState::Top));
-        assert!(!machine.state_matches(BasicState::Foo));
-        assert!(machine.state_matches(BasicState::Bar));
-        assert!(machine.state_matches(BasicState::Iron));
-        assert!(!machine.state_matches(BasicState::Wet));
-
-        machine.transition(BasicState::Wet);
-        assert!(matches!(machine.state(), BasicState::Wet));
+        machine.transition(BasicState::B);
+        assert!(matches!(machine.state(), BasicState::B));
 
         assert!(machine.state_matches(BasicState::Top));
-        assert!(!machine.state_matches(BasicState::Foo));
-        assert!(machine.state_matches(BasicState::Bar));
-        assert!(!machine.state_matches(BasicState::Iron));
-        assert!(machine.state_matches(BasicState::Wet));
+        assert!(!machine.state_matches(BasicState::A));
+        assert!(machine.state_matches(BasicState::B));
+        assert!(!machine.state_matches(BasicState::BA));
+        assert!(!machine.state_matches(BasicState::BB));
+
+        machine.transition(BasicState::BA);
+        assert!(matches!(machine.state(), BasicState::BA));
+
+        assert!(machine.state_matches(BasicState::Top));
+        assert!(!machine.state_matches(BasicState::A));
+        assert!(machine.state_matches(BasicState::B));
+        assert!(machine.state_matches(BasicState::BA));
+        assert!(!machine.state_matches(BasicState::BB));
+
+        machine.transition(BasicState::BB);
+        assert!(matches!(machine.state(), BasicState::BB));
+
+        assert!(machine.state_matches(BasicState::Top));
+        assert!(!machine.state_matches(BasicState::A));
+        assert!(machine.state_matches(BasicState::B));
+        assert!(!machine.state_matches(BasicState::BA));
+        assert!(machine.state_matches(BasicState::BB));
     }
 
     #[test]
@@ -310,89 +333,76 @@ mod tests {
         let state: &Top = machine.state_ref().unwrap();
         assert_eq!(state.access, 2);
 
-        let state: Option<&Foo> = machine.state_ref();
+        let state: Option<&A> = machine.state_ref();
         assert!(state.is_none());
-        let state: Option<&Bar> = machine.state_ref();
+        let state: Option<&B> = machine.state_ref();
         assert!(state.is_none());
-        let state: Option<&Iron> = machine.state_ref();
+        let state: Option<&BA> = machine.state_ref();
         assert!(state.is_none());
-        let state: Option<&Wet> = machine.state_ref();
-        assert!(state.is_none());
-
-        machine.transition(BasicState::Foo);
-
-        let state: Option<&Top> = machine.state_ref();
-        assert!(state.is_some());
-        let state: Option<&Foo> = machine.state_ref();
-        assert!(state.is_some());
-        let state: Option<&Bar> = machine.state_ref();
-        assert!(state.is_none());
-        let state: Option<&Iron> = machine.state_ref();
-        assert!(state.is_none());
-        let state: Option<&Wet> = machine.state_ref();
+        let state: Option<&BB> = machine.state_ref();
         assert!(state.is_none());
 
-        machine.transition(BasicState::Foo);
+        machine.transition(BasicState::A);
 
         let state: Option<&Top> = machine.state_ref();
         assert!(state.is_some());
-        let state: Option<&Foo> = machine.state_ref();
+        let state: Option<&A> = machine.state_ref();
         assert!(state.is_some());
-        let state: Option<&Bar> = machine.state_ref();
+        let state: Option<&B> = machine.state_ref();
         assert!(state.is_none());
-        let state: Option<&Iron> = machine.state_ref();
+        let state: Option<&BA> = machine.state_ref();
         assert!(state.is_none());
-        let state: Option<&Wet> = machine.state_ref();
+        let state: Option<&BB> = machine.state_ref();
         assert!(state.is_none());
 
-        machine.transition(BasicState::Iron);
-
-        let state: Option<&Top> = machine.state_ref();
-        assert!(state.is_some());
-        let state: Option<&Foo> = machine.state_ref();
-        assert!(state.is_none());
-        let state: Option<&Bar> = machine.state_ref();
-        assert!(state.is_some());
-        let state: Option<&Iron> = machine.state_ref();
-        assert!(state.is_some());
-        let state: Option<&Wet> = machine.state_ref();
-        assert!(state.is_none());
-
-        machine.transition(BasicState::Wet);
+        machine.transition(BasicState::A);
 
         let state: Option<&Top> = machine.state_ref();
         assert!(state.is_some());
-        let state: Option<&Foo> = machine.state_ref();
-        assert!(state.is_none());
-        let state: Option<&Bar> = machine.state_ref();
+        let state: Option<&A> = machine.state_ref();
         assert!(state.is_some());
-        let state: Option<&Iron> = machine.state_ref();
+        let state: Option<&B> = machine.state_ref();
         assert!(state.is_none());
-        let state: Option<&Wet> = machine.state_ref();
-        assert!(state.is_some());
+        let state: Option<&BA> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&BB> = machine.state_ref();
+        assert!(state.is_none());
 
-        machine.transition(BasicState::Bar);
+        machine.transition(BasicState::BA);
 
         let state: Option<&Top> = machine.state_ref();
         assert!(state.is_some());
-        let state: Option<&Foo> = machine.state_ref();
+        let state: Option<&A> = machine.state_ref();
         assert!(state.is_none());
-        let state: Option<&Bar> = machine.state_ref();
+        let state: Option<&B> = machine.state_ref();
         assert!(state.is_some());
-        let state: Option<&Iron> = machine.state_ref();
+        let state: Option<&BA> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&BB> = machine.state_ref();
         assert!(state.is_none());
-        let state: Option<&Wet> = machine.state_ref();
+
+        machine.transition(BasicState::BB);
+
+        let state: Option<&Top> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&A> = machine.state_ref();
         assert!(state.is_none());
+        let state: Option<&B> = machine.state_ref();
+        assert!(state.is_some());
+        let state: Option<&BA> = machine.state_ref();
+        assert!(state.is_none());
+        let state: Option<&BB> = machine.state_ref();
+        assert!(state.is_some());
     }
 
     #[test]
     fn update_order() {
         let mut machine = BasicMachineBuilder::new(Top::default()).build();
-        machine.transition(BasicState::Iron);
+        machine.transition(BasicState::BA);
 
         let top: &Top = machine.state_ref().unwrap();
-        let bar: &Bar = machine.state_ref().unwrap();
-        let iron: &Iron = machine.state_ref().unwrap();
+        let bar: &B = machine.state_ref().unwrap();
+        let iron: &BA = machine.state_ref().unwrap();
 
         assert_eq!(top.update, 0);
         assert_eq!(bar.update, 0);
@@ -408,8 +418,8 @@ mod tests {
         machine.update();
 
         let top: &Top = machine.state_ref().unwrap();
-        let bar: &Bar = machine.state_ref().unwrap();
-        let iron: &Iron = machine.state_ref().unwrap();
+        let bar: &B = machine.state_ref().unwrap();
+        let iron: &BA = machine.state_ref().unwrap();
 
         assert_eq!(top.update, 1);
         assert_eq!(bar.update, 1);
@@ -426,8 +436,8 @@ mod tests {
         machine.top_down_update();
 
         let top: &Top = machine.state_ref().unwrap();
-        let bar: &Bar = machine.state_ref().unwrap();
-        let iron: &Iron = machine.state_ref().unwrap();
+        let bar: &B = machine.state_ref().unwrap();
+        let iron: &BA = machine.state_ref().unwrap();
 
         assert_eq!(top.update, 1);
         assert_eq!(bar.update, 1);
@@ -442,63 +452,47 @@ mod tests {
     }
 
     #[test]
-    fn enter_init() {
+    fn enter_init_exit() {
         let mut machine = BasicMachineBuilder::new(Top::default()).build();
         assert!(matches!(machine.state(), BasicState::Top));
 
         assert_eq!(machine.top_ref().init, 1);
 
-        machine.transition(BasicState::Iron);
-        assert!(matches!(machine.state(), BasicState::Iron));
+        machine.transition(BasicState::BA);
+        assert!(matches!(machine.state(), BasicState::BA));
 
         assert_eq!(machine.top_ref().init, 1);
 
-        let state: &Bar = machine.state_ref().unwrap();
+        let state: &B = machine.state_ref().unwrap();
         assert_eq!(state.enter, 1);
         assert_eq!(state.init, 0);
 
-        let state: &Iron = machine.state_ref().unwrap();
+        let state: &BA = machine.state_ref().unwrap();
         assert_eq!(state.enter, 1);
         assert_eq!(state.init, 1);
 
-        machine.transition(BasicState::Wet);
-        assert!(matches!(machine.state(), BasicState::Wet));
+        machine.transition(BasicState::BB);
+        assert!(matches!(machine.state(), BasicState::BB));
 
         assert_eq!(machine.top_ref().init, 1);
 
-        let state: &Bar = machine.state_ref().unwrap();
+        let state: &B = machine.state_ref().unwrap();
         assert_eq!(state.enter, 1);
         assert_eq!(state.init, 0);
 
-        let state: &Wet = machine.state_ref().unwrap();
+        let state: &BB = machine.state_ref().unwrap();
         assert_eq!(state.enter, 1);
         assert_eq!(state.init, 1);
 
-        machine.transition(BasicState::Bar);
-        assert!(matches!(machine.state(), BasicState::Bar));
+        machine.transition(BasicState::B);
+        assert!(matches!(machine.state(), BasicState::BB));
 
-        let state: &Bar = machine.state_ref().unwrap();
+        let state: &B = machine.state_ref().unwrap();
+        assert_eq!(state.enter, 1);
+        assert_eq!(state.init, 0);
+
+        let state: &BB = machine.state_ref().unwrap();
         assert_eq!(state.enter, 1);
         assert_eq!(state.init, 1);
-
-        machine.transition(BasicState::Bar);
-        assert!(matches!(machine.state(), BasicState::Bar));
-
-        let state: &Bar = machine.state_ref().unwrap();
-        assert_eq!(state.enter, 1);
-        assert_eq!(state.init, 2);
-
-        machine.transition(BasicState::Top);
-        assert!(matches!(machine.state(), BasicState::Top));
-
-        assert_eq!(machine.top_ref().init, 2);
-
-        machine.transition(BasicState::Iron);
-        assert!(matches!(machine.state(), BasicState::Iron));
-
-        assert_eq!(machine.top_ref().init, 2);
-
-        machine.transition(BasicState::Foo);
-        assert!(matches!(machine.state(), BasicState::Foo));
     }
 }

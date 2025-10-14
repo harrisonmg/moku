@@ -113,7 +113,7 @@ fn top_down_update() {
 fn exit() {
     let mut machine = StateTransMachineBuilder::new(Top).build();
     machine.transition(StateTransState::D);
-    machine.transition(StateTransState::Top);
+    machine.transition(StateTransState::A);
     assert!(matches!(machine.state(), StateTransState::E));
 }
 

@@ -2,6 +2,19 @@ use event::{machine::*, *};
 use moku::*;
 use test_log::test;
 
+#[test]
+fn state_chart() {
+    assert_eq!(
+        EVENT_STATE_CHART,
+        "Top
+├─ Foo
+├─ Bar
+├─ Dropper
+└─ FooPasser
+   └─ BarPasser"
+    );
+}
+
 #[state_machine]
 mod event {
     use moku::*;
@@ -86,28 +99,12 @@ mod event {
 }
 
 #[test]
-fn state_chart() {
-    assert_eq!(
-        EVENT_STATE_CHART,
-        "Top
-├─ Foo
-├─ Bar
-├─ Dropper
-└─ FooPasser
-   └─ BarPasser"
-    );
-}
-
-#[test]
 fn basic() {
     let mut machine = EventMachineBuilder::new(Top).build();
     assert!(matches!(machine.state(), EventState::Top));
 
     machine.handle_event(&Event::A);
     assert!(matches!(machine.state(), EventState::Foo));
-
-    machine.transition(EventState::Top);
-    assert!(matches!(machine.state(), EventState::Top));
 
     machine.handle_event(&Event::B);
     assert!(matches!(machine.state(), EventState::Bar));

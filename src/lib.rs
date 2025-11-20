@@ -1307,7 +1307,7 @@ where
     /// # }
     /// ```
     #[allow(unused_variables)]
-    fn handle_event(&mut self, event: &U) -> impl Into<Next<T>> {
+    fn handle_event(&mut self, event: &U) -> Option<T> {
         None
     }
 }
@@ -1329,19 +1329,19 @@ where
         unreachable!()
     }
 
-    fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<T>> {
         TopState::init(self)
     }
 
-    fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<T>> {
         TopState::update(self)
     }
 
-    fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<T>> {
         TopState::top_down_update(self)
     }
 
-    fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<T> {
+    fn exit(self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<T>> {
         unreachable!()
     }
 
@@ -1412,7 +1412,11 @@ pub mod internal {
 
         /// Update this state and its active descendents.
         #[allow(unused_variables)]
-        fn update(&mut self, state: &mut V, superstates: &mut V::Superstates<'_>) -> Option<T> {
+        fn update(
+            &mut self,
+            state: &mut V,
+            superstates: &mut V::Superstates<'_>,
+        ) -> impl Into<Next<T>> {
             None
         }
 
@@ -1422,7 +1426,7 @@ pub mod internal {
             &mut self,
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
-        ) -> Option<T> {
+        ) -> impl Into<Next<T>> {
             None
         }
 
@@ -1432,7 +1436,7 @@ pub mod internal {
             &mut self,
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
-        ) -> Option<T> {
+        ) -> impl Into<Next<T>> {
             None
         }
 
@@ -1443,7 +1447,7 @@ pub mod internal {
             &mut self,
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
-        ) -> Option<T> {
+        ) -> impl Into<Next<T>> {
             None
         }
 
@@ -1457,7 +1461,7 @@ pub mod internal {
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
             indent: bool,
-        ) -> Option<T> {
+        ) -> impl Into<Next<T>> {
             None
         }
 
@@ -1483,7 +1487,7 @@ pub mod internal {
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
             indent: bool,
-        ) -> Option<T> {
+        ) -> impl Into<Next<T>> {
             unreachable!()
         }
 
@@ -1586,41 +1590,54 @@ pub mod internal {
         }
 
         /// Update this node and its active descendents.
-        pub fn update(&mut self, superstates: &mut V::Superstates<'_>) -> Option<T> {
+        pub fn update(&mut self, superstates: &mut V::Superstates<'_>) -> impl Into<Next<T>> {
             self.needs_update = true;
-            match self.substate.update(&mut self.state, superstates) {
-                Some(target) => Some(target),
-                None => {
+            match self.substate.update(&mut self.state, superstates).into() {
+                Next::None => {
                     info!("\u{02502}Updating {:?}", W::this_state());
                     self.needs_update = false;
-                    self.state.update(superstates)
+                    self.state.update(superstates).into()
                 }
+                n @ _ => n,
             }
         }
 
         /// Update this node and its active descendents if in need of update after a transition.
-        pub fn update_in_need(&mut self, superstates: &mut V::Superstates<'_>) -> Option<T> {
+        pub fn update_in_need(
+            &mut self,
+            superstates: &mut V::Superstates<'_>,
+        ) -> impl Into<Next<T>> {
             if self.needs_update {
-                match self.substate.update_in_need(&mut self.state, superstates) {
-                    Some(target) => Some(target),
-                    None => {
+                match self
+                    .substate
+                    .update_in_need(&mut self.state, superstates)
+                    .into()
+                {
+                    Next::None => {
                         info!("\u{02502}Updating {:?}", W::this_state());
                         self.needs_update = false;
-                        self.state.update(superstates)
+                        self.state.update(superstates).into()
                     }
+                    n @ _ => n,
                 }
             } else {
-                None
+                Next::None
             }
         }
 
         /// Top-down update this node and its active descendents.
-        pub fn top_down_update(&mut self, superstates: &mut V::Superstates<'_>) -> Option<T> {
+        pub fn top_down_update(
+            &mut self,
+            superstates: &mut V::Superstates<'_>,
+        ) -> impl Into<Next<T>> {
             info!("\u{02502}Top-down updating {:?}", W::this_state());
             self.top_down_updated = true;
-            match self.state.top_down_update(superstates) {
-                Some(target) => Some(target),
-                None => self.substate.top_down_update(&mut self.state, superstates),
+            match self.state.top_down_update(superstates).into() {
+                Next::None => self
+                    .substate
+                    .top_down_update(&mut self.state, superstates)
+                    .into(),
+                n @ _ => n,
             }
         }
 
@@ -1629,17 +1646,19 @@ pub mod internal {
         pub fn top_down_update_in_need(
             &mut self,
             superstates: &mut V::Superstates<'_>,
-        ) -> Option<T> {
+        ) -> impl Into<Next<T>> {
             if !self.top_down_updated {
                 info!("\u{02502}Top-down updating {:?}", W::this_state());
                 self.top_down_updated = true;
-                if let Some(target) = self.state.top_down_update(superstates) {
-                    return Some(target);
+                match self.state.top_down_update(superstates).into() {
+                    Next::None => (),
+                    n @ _ => return n,
                 }
             }
 
             self.substate
                 .top_down_update_in_need(&mut self.state, superstates)
+                .into()
         }
 
         /// Clear the top-down update flag from this node and its active descendents.
@@ -1649,19 +1668,32 @@ pub mod internal {
         }
 
         /// Exit this node and its active descendents.
-        pub fn exit(self, superstates: &mut V::Superstates<'_>, indent: bool) -> Option<T> {
+        pub fn exit(
+            self,
+            superstates: &mut V::Superstates<'_>,
+            indent: bool,
+        ) -> impl Into<Next<T>> {
             info!(
                 "{}\u{02502}Exiting {:?}",
                 if indent { "\u{02502}" } else { "" },
                 W::this_state()
             );
 
-            self.state.exit(superstates).inspect(|target| {
-                info!(
+            let res = self.state.exit(superstates).into();
+
+            match &res {
+                Next::None => (),
+                Next::Target(target) => info!(
                     "{}\u{02502}Short circuit transition to {target:?}",
-                    if indent { "\u{02502}" } else { "" },
-                );
-            })
+                    if indent { "\u{02502}" } else { "" }
+                ),
+                Next::ExactTarget(target) => info!(
+                    "{}\u{02502}Short circuit transition to {target:?}",
+                    if indent { "\u{02502}" } else { "" }
+                ),
+            }
+
+            res
         }
 
         /// Transition this node and its active descendents.

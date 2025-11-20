@@ -116,7 +116,7 @@ pub enum EventResponse<T: StateEnum> {
     /// Drop this event and stop handling it immediately.
     Drop,
     /// The event triggered a transition, here is the target state.
-    Transition(T),
+    Target(T),
 }
 
 /// A flat list of all states in a state machine.
@@ -310,8 +310,8 @@ where
     /// transition is made. To force re-entry of an active state, use
     /// [`StateMachine::transition_exact`].
     ///
-    /// Subject to short circuit transtions (from [`State::enter`] or [`State::exit`]) and initial
-    /// transitions (from [`State::init`] or [`TopState::init`]).
+    /// Subject to interruption by short circuit transtions (from [`State::enter`] or [`State::exit`])
+    /// and initial transitions (from [`State::init`] or [`TopState::init`]).
     /// # Example
     /// ```
     /// # #[moku::state_machine]
@@ -353,8 +353,8 @@ where
     /// Makes the transition even if the target state is in the current active state hierarchy.
     /// The state will re-initialized; [`State::enter`] and [`State::init`] will be called.
     ///
-    /// Subject to short circuit transtions (from [`State::enter`] or [`State::exit`]) and initial
-    /// transitions (from [`State::init`] or [`TopState::init`]).
+    /// Subject to interruption by short circuit transtions (from [`State::enter`] or [`State::exit`])
+    /// and initial transitions (from [`State::init`] or [`TopState::init`]).
     /// # Example
     /// ```
     /// # #[moku::state_machine]
@@ -604,11 +604,11 @@ where
     /// If any state returns [`EventResponse::Drop`], event handling stops immediately and no further
     /// `handle_event` functions are called.
     ///
-    /// If any state returns [`EventResponse::Transition`], the given transition will be completed and
+    /// If any state returns [`EventResponse::Target`], the given transition will be completed and
     /// no further `handle_event` functions are called.
     ///
     /// In the case of the [`TopState`], returning `None` is synonymous with [`EventResponse::Drop`] /
-    /// [`EventResponse::Defer`], and `Some(state)` is synonymous with [`EventResponse::Transition`].
+    /// [`EventResponse::Defer`], and `Some(state)` is synonymous with [`EventResponse::Target`].
     ///
     /// # Example
     /// ```
@@ -812,28 +812,43 @@ where
 /// Return type of multiple [`State`] methods.
 ///
 /// Represents either no action or some type of transition to new state.
-pub enum Next<U: StateEnum> {
+pub enum Next<T: StateEnum> {
     /// No transition should be taken, stay in the current active state.
     None,
 
     /// A transition should be taken to the target state.
     /// See [`StateMachine::transition`] for transition semantics.
-    Target(U),
+    Target(T),
 
     /// A transition should be taken to exactly the target state.
     /// See [`StateMachine::transition_exact`] for exact transition semantics.
-    ExactTarget(U),
+    ExactTarget(T),
+}
+
+impl<T: StateEnum> From<T> for Next<T> {
+    fn from(value: T) -> Self {
+        Next::Target(value)
+    }
+}
+
+impl<T: StateEnum> From<Option<T>> for Next<T> {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            None => Next::None,
+            Some(target) => Next::Target(target),
+        }
+    }
 }
 
 /// Return type of [`State::enter`].
 ///
 /// Represents either a successful state entry or a short circuit transition.
-pub enum StateEntry<T, U: StateEnum> {
+pub enum StateEntry<T: StateEnum, U> {
     /// State entry was successful, here is the newly constructed state.
-    State(T),
+    State(U),
 
     /// State entry resulted in a transition, here is the target state.
-    Target(Next<U>),
+    Target(T),
 }
 
 /// A [`StateMachine`] state.
@@ -860,7 +875,7 @@ where
     /// This method is only called when the state becomes active, and is not called upon re-entrant
     /// transitions (if this state is already active).
     ///
-    /// Returning a value of `StateEntry::Transition(T)` will result in a "short circuit"
+    /// Returning a value of `StateEntry::Target(T)` will result in a "short circuit"
     /// transition that will be completed by the [`StateMachine`].
     ///
     /// The [`State::Superstates`] argument can be used to mutably access all active superstates.
@@ -889,7 +904,7 @@ where
     ///     impl State<ExampleState> for Foo {
     ///         fn enter(
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> StateEntry<Self, ExampleState> {
+    ///         ) -> StateEntry<ExampleState, Self> {
     ///             StateEntry::State(Self {
     ///                 bar: 8,
     ///             })
@@ -897,7 +912,7 @@ where
     ///     }
     /// // ...
     /// # }
-    fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T>;
+    fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<T, Self>;
 
     /// Called when a [`StateMachine`] transitions directly to this state.
     ///
@@ -944,7 +959,7 @@ where
     /// #    #[superstate(Foo)]
     /// #    impl State<ExampleState> for Bar {}
     /// # }
-    fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Next<T> {
+    fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<T>> {
         None
     }
 
@@ -985,7 +1000,7 @@ where
     /// #    #[superstate(Foo)]
     /// #    impl State<ExampleState> for Bar {}
     /// # }
-    fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Next<T> {
+    fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<T>> {
         None
     }
 
@@ -1026,7 +1041,7 @@ where
     /// #    #[superstate(Foo)]
     /// #    impl State<ExampleState> for Bar {}
     /// # }
-    fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Next<T> {
+    fn top_down_update(&mut self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<T>> {
         None
     }
 
@@ -1070,7 +1085,7 @@ where
     /// #    #[superstate(Foo)]
     /// #    impl State<ExampleState> for Bar {}
     /// # }
-    fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Next<T> {
+    fn exit(self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<T>> {
         None
     }
 
@@ -1080,7 +1095,7 @@ where
     ///
     /// Return [`EventResponse::Drop`] to immediately stop event handling.
     ///
-    /// Return [`EventResponse::Transition`] to transition to the given state, after which event
+    /// Return [`EventResponse::Target`] to transition to the given state, after which event
     /// handling is stopped.
     ///
     /// The [`State::Superstates`] argument can be used to mutably access all active superstates.
@@ -1119,7 +1134,7 @@ where
     ///             match event {
     ///                 Event::A => EventResponse::Defer,
     ///                 Event::B => EventResponse::Drop,
-    ///                 Event::C => EventResponse::Transition(ExampleState::Bar),
+    ///                 Event::C => EventResponse::Target(ExampleState::Bar),
     ///             }
     ///         }
     ///     }
@@ -1183,7 +1198,7 @@ where
     /// #    #[superstate(Top)]
     /// #    impl State<ExampleState> for Foo {}
     /// # }
-    fn init(&mut self) -> Next<T> {
+    fn init(&mut self) -> impl Into<Next<T>> {
         None
     }
 
@@ -1216,7 +1231,7 @@ where
     /// #    #[superstate(Top)]
     /// #    impl State<ExampleState> for Foo {}
     /// # }
-    fn update(&mut self) -> Next<T> {
+    fn update(&mut self) -> impl Into<Next<T>> {
         None
     }
 
@@ -1249,7 +1264,7 @@ where
     /// #    #[superstate(Top)]
     /// #    impl State<ExampleState> for Foo {}
     /// # }
-    fn top_down_update(&mut self) -> Next<T> {
+    fn top_down_update(&mut self) -> impl Into<Next<T>> {
         None
     }
 
@@ -1292,7 +1307,7 @@ where
     /// # }
     /// ```
     #[allow(unused_variables)]
-    fn handle_event(&mut self, event: &U) -> Next<T> {
+    fn handle_event(&mut self, event: &U) -> impl Into<Next<T>> {
         None
     }
 }
@@ -1310,7 +1325,7 @@ where
 {
     type Superstates<'a> = NoSuperstates<'a>;
 
-    fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, T> {
+    fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<T, Self> {
         unreachable!()
     }
 
@@ -1336,7 +1351,7 @@ where
         _superstates: &mut Self::Superstates<'_>,
     ) -> EventResponse<T> {
         match TopState::handle_event(self, event) {
-            Some(state) => EventResponse::Transition(state),
+            Some(state) => EventResponse::Target(state),
             None => EventResponse::Defer,
         }
     }
@@ -1501,7 +1516,7 @@ pub mod internal {
         Node(Node<T, U, V, W>),
 
         /// Entry resulted in a short circuit transition.
-        Transition(T),
+        Target(T),
     }
 
     /// A node in the state tree.
@@ -1560,12 +1575,12 @@ pub mod internal {
                     needs_update: false,
                     top_down_updated: false,
                 }),
-                StateEntry::Transition(target) => {
+                StateEntry::Target(target) => {
                     info!(
                         "{}\u{02502}Short circuit transition to {target:?}",
                         if indent { "\u{02502}" } else { "" },
                     );
-                    NodeEntry::Transition(target)
+                    NodeEntry::Target(target)
                 }
             }
         }
@@ -1738,7 +1753,7 @@ pub mod internal {
                         EventResponse::Drop => {
                             info!("\u{02502}{:?} dropping event", W::this_state())
                         }
-                        EventResponse::Transition(state) => {
+                        EventResponse::Target(state) => {
                             info!(
                                 "\u{02502}{:?} triggered transition to {:?}",
                                 W::this_state(),
@@ -1913,7 +1928,7 @@ pub mod internal {
         /// Handle an event.
         pub fn handle_event(&mut self, event: &U) {
             info!("{}: Handling event", self.name());
-            if let EventResponse::Transition(state) = self
+            if let EventResponse::Target(state) = self
                 .node
                 .handle_event(event, &mut NoSuperstates(PhantomData))
             {

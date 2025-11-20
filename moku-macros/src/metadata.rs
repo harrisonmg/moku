@@ -702,7 +702,7 @@ impl Metadata {
                                                 *self = Self::#children(node);
                                                 None
                                             }
-                                            ::moku::internal::NodeEntry::Transition(new_target) => Some(new_target),
+                                            ::moku::internal::NodeEntry::Target(new_target) => Some(new_target),
                                         }
                                     }
                                 )*

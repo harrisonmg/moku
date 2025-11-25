@@ -725,7 +725,7 @@ impl Metadata {
                             superstates: &mut <super::#state_ident as ::moku::State<#state_enum, #event>>::Superstates<'_>,
                         ) -> ::moku::EventResponse<#state_enum> {
                             match self {
-                                Self::None => ::moku::EventResponse::Defer,
+                                Self::None => ::moku::EventResponse::Next(::moku::Next::None),
                                 #(Self::#children(node) => node.handle_event(
                                         event,
                                         &mut #superstates::new(state, superstates),

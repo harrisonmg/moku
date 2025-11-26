@@ -319,11 +319,11 @@ impl Metadata {
                 }
 
                 fn transition(&mut self, target: #state_enum) {
-                    self.top_node.transition(target, false);
+                    self.top_node.transition(target, false, false);
                 }
 
                 fn transition_exact(&mut self, target: #state_enum) {
-                    self.top_node.transition_exact(target, false);
+                    self.top_node.transition(target, false, true);
                 }
 
                 fn state(&self) -> #state_enum {

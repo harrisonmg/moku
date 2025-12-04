@@ -17,15 +17,15 @@ mod top_trans {
     pub struct Top;
 
     impl TopState<TopTransState> for Top {
-        fn init(&mut self) -> Option<TopTransState> {
+        fn init(&mut self) -> impl Into<Next<TopTransState>> {
             Some(TopTransState::A)
         }
 
-        fn update(&mut self) -> Option<TopTransState> {
+        fn update(&mut self) -> impl Into<Next<TopTransState>> {
             Some(TopTransState::B)
         }
 
-        fn top_down_update(&mut self) -> Option<TopTransState> {
+        fn top_down_update(&mut self) -> impl Into<Next<TopTransState>> {
             Some(TopTransState::C)
         }
     }

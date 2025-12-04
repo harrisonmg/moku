@@ -23,7 +23,7 @@ mod blinky {
 
     #[superstate(Top)]
     impl State<BlinkyState, EventTy> for BottomTy {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BlinkyState, Self> {
             StateEntry::State(Self {})
         }
     }
@@ -32,7 +32,7 @@ mod blinky {
 
     #[superstate(BottomTy)]
     impl State<BlinkyState, EventTy> for Under {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BlinkyState, Self> {
             StateEntry::State(Self {})
         }
     }

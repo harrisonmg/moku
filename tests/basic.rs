@@ -29,19 +29,19 @@ mod basic {
     }
 
     impl TopState<BasicState> for Top {
-        fn init(&mut self) -> Option<BasicState> {
+        fn init(&mut self) -> impl Into<Next<BasicState>> {
             self.init += 1;
             None
         }
 
-        fn update(&mut self) -> Option<BasicState> {
+        fn update(&mut self) -> impl Into<Next<BasicState>> {
             self.update += 1;
             self.update_order = self.update_order_acc;
             self.update_order_acc += 1;
             None
         }
 
-        fn top_down_update(&mut self) -> Option<BasicState> {
+        fn top_down_update(&mut self) -> impl Into<Next<BasicState>> {
             self.top_down_update += 1;
             self.update_order = self.update_order_acc;
             self.update_order_acc += 1;
@@ -68,19 +68,25 @@ mod basic {
 
     #[superstate(Top)]
     impl State<BasicState> for A {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BasicState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BasicState, Self> {
             StateEntry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn init(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BasicState>> {
             self.init += 1;
             None
         }
 
-        fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn update(
+            &mut self,
+            superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BasicState>> {
             self.update += 1;
             self.update_order = superstates.top.update_order_acc;
             superstates.top.update_order_acc += 1;
@@ -90,14 +96,14 @@ mod basic {
         fn top_down_update(
             &mut self,
             superstates: &mut Self::Superstates<'_>,
-        ) -> Option<BasicState> {
+        ) -> impl Into<Next<BasicState>> {
             self.top_down_update += 1;
             self.update_order = superstates.top.update_order_acc;
             superstates.top.update_order_acc += 1;
             None
         }
 
-        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<BasicState>> {
             self.exit.set(self.exit.get() + 1);
             None
         }
@@ -142,19 +148,25 @@ mod basic {
 
     #[superstate(Top)]
     impl State<BasicState> for B {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BasicState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BasicState, Self> {
             StateEntry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn init(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BasicState>> {
             self.init += 1;
             None
         }
 
-        fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn update(
+            &mut self,
+            superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BasicState>> {
             self.update += 1;
             self.update_order = superstates.top.update_order_acc;
             superstates.top.update_order_acc += 1;
@@ -164,14 +176,14 @@ mod basic {
         fn top_down_update(
             &mut self,
             superstates: &mut Self::Superstates<'_>,
-        ) -> Option<BasicState> {
+        ) -> impl Into<Next<BasicState>> {
             self.top_down_update += 1;
             self.update_order = superstates.top.update_order_acc;
             superstates.top.update_order_acc += 1;
             None
         }
 
-        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<BasicState>> {
             self.exit.set(self.exit.get() + 1);
             None
         }
@@ -196,19 +208,25 @@ mod basic {
 
     #[superstate(B)]
     impl State<BasicState> for BA {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BasicState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BasicState, Self> {
             StateEntry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn init(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BasicState>> {
             self.init += 1;
             None
         }
 
-        fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn update(
+            &mut self,
+            superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BasicState>> {
             self.update += 1;
             self.update_order = superstates.top.update_order_acc;
             superstates.top.update_order_acc += 1;
@@ -218,14 +236,14 @@ mod basic {
         fn top_down_update(
             &mut self,
             superstates: &mut Self::Superstates<'_>,
-        ) -> Option<BasicState> {
+        ) -> impl Into<Next<BasicState>> {
             self.top_down_update += 1;
             self.update_order = superstates.top.update_order_acc;
             superstates.top.update_order_acc += 1;
             None
         }
 
-        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<BasicState>> {
             self.exit.set(self.exit.get() + 1);
             None
         }
@@ -250,19 +268,25 @@ mod basic {
 
     #[superstate(B)]
     impl State<BasicState> for BB {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BasicState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BasicState, Self> {
             StateEntry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn init(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BasicState>> {
             self.init += 1;
             None
         }
 
-        fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn update(
+            &mut self,
+            superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BasicState>> {
             self.update += 1;
             self.update_order = superstates.top.update_order_acc;
             superstates.top.update_order_acc += 1;
@@ -272,14 +296,14 @@ mod basic {
         fn top_down_update(
             &mut self,
             superstates: &mut Self::Superstates<'_>,
-        ) -> Option<BasicState> {
+        ) -> impl Into<Next<BasicState>> {
             self.top_down_update += 1;
             self.update_order = superstates.top.update_order_acc;
             superstates.top.update_order_acc += 1;
             None
         }
 
-        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<BasicState> {
+        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<BasicState>> {
             self.exit.set(self.exit.get() + 1);
             None
         }

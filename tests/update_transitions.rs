@@ -20,12 +20,12 @@ mod update_trans {
     }
 
     impl TopState<UpdateTransState> for Top {
-        fn update(&mut self) -> Option<UpdateTransState> {
+        fn update(&mut self) -> impl Into<Next<UpdateTransState>> {
             self.update += 1;
             None
         }
 
-        fn top_down_update(&mut self) -> Option<UpdateTransState> {
+        fn top_down_update(&mut self) -> impl Into<Next<UpdateTransState>> {
             self.top_down_update += 1;
             None
         }
@@ -38,14 +38,17 @@ mod update_trans {
 
     #[superstate(Top)]
     impl State<UpdateTransState> for A {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, UpdateTransState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<UpdateTransState, Self> {
             StateEntry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<UpdateTransState> {
+        fn update(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<UpdateTransState>> {
             self.update += 1;
             Some(UpdateTransState::BA)
         }
@@ -53,7 +56,7 @@ mod update_trans {
         fn top_down_update(
             &mut self,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> Option<UpdateTransState> {
+        ) -> impl Into<Next<UpdateTransState>> {
             self.top_down_update += 1;
             Some(UpdateTransState::BA)
         }
@@ -66,14 +69,17 @@ mod update_trans {
 
     #[superstate(A)]
     impl State<UpdateTransState> for AA {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, UpdateTransState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<UpdateTransState, Self> {
             StateEntry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<UpdateTransState> {
+        fn update(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<UpdateTransState>> {
             self.update += 1;
             None
         }
@@ -81,7 +87,7 @@ mod update_trans {
         fn top_down_update(
             &mut self,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> Option<UpdateTransState> {
+        ) -> impl Into<Next<UpdateTransState>> {
             self.top_down_update += 1;
             None
         }
@@ -94,14 +100,17 @@ mod update_trans {
 
     #[superstate(Top)]
     impl State<UpdateTransState> for B {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, UpdateTransState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<UpdateTransState, Self> {
             StateEntry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<UpdateTransState> {
+        fn update(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<UpdateTransState>> {
             self.update += 1;
             Some(UpdateTransState::BA)
         }
@@ -109,7 +118,7 @@ mod update_trans {
         fn top_down_update(
             &mut self,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> Option<UpdateTransState> {
+        ) -> impl Into<Next<UpdateTransState>> {
             self.top_down_update += 1;
             Some(UpdateTransState::BA)
         }
@@ -122,14 +131,17 @@ mod update_trans {
 
     #[superstate(B)]
     impl State<UpdateTransState> for BA {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, UpdateTransState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<UpdateTransState, Self> {
             StateEntry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<UpdateTransState> {
+        fn update(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<UpdateTransState>> {
             self.update += 1;
             None
         }
@@ -137,7 +149,7 @@ mod update_trans {
         fn top_down_update(
             &mut self,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> Option<UpdateTransState> {
+        ) -> impl Into<Next<UpdateTransState>> {
             self.top_down_update += 1;
             None
         }
@@ -150,14 +162,17 @@ mod update_trans {
 
     #[superstate(B)]
     impl State<UpdateTransState> for BB {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, UpdateTransState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<UpdateTransState, Self> {
             StateEntry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<UpdateTransState> {
+        fn update(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<UpdateTransState>> {
             self.update += 1;
             None
         }
@@ -165,7 +180,7 @@ mod update_trans {
         fn top_down_update(
             &mut self,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> Option<UpdateTransState> {
+        ) -> impl Into<Next<UpdateTransState>> {
             self.top_down_update += 1;
             None
         }
@@ -178,14 +193,17 @@ mod update_trans {
 
     #[superstate(BB)]
     impl State<UpdateTransState> for BBA {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, UpdateTransState> {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<UpdateTransState, Self> {
             StateEntry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<UpdateTransState> {
+        fn update(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<UpdateTransState>> {
             self.update += 1;
             Some(UpdateTransState::BA)
         }
@@ -193,7 +211,7 @@ mod update_trans {
         fn top_down_update(
             &mut self,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> Option<UpdateTransState> {
+        ) -> impl Into<Next<UpdateTransState>> {
             self.top_down_update += 1;
             Some(UpdateTransState::BA)
         }

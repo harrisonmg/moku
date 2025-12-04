@@ -35,7 +35,7 @@ mod event {
     pub struct Top;
 
     impl TopState<EventState, Event> for Top {
-        fn handle_event(&mut self, event: &Event) -> Option<EventState> {
+        fn handle_event(&mut self, event: &Event) -> impl Into<Next<EventState>> {
             match event {
                 Event::A => Some(EventState::Foo),
                 Event::B => Some(EventState::Bar),
@@ -60,7 +60,7 @@ mod event {
             &mut self,
             _event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> EventResponse<EventState> {
+        ) -> impl Into<EventResponse<EventState>> {
             EventResponse::Drop
         }
     }
@@ -73,10 +73,10 @@ mod event {
             &mut self,
             event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> EventResponse<EventState> {
+        ) -> impl Into<EventResponse<EventState>> {
             match event {
-                Event::C => EventResponse::Transition(EventState::Foo),
-                _ => EventResponse::Defer,
+                Event::C => Some(EventState::Foo),
+                _ => None,
             }
         }
     }
@@ -89,10 +89,10 @@ mod event {
             &mut self,
             event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> EventResponse<EventState> {
+        ) -> impl Into<EventResponse<EventState>> {
             match event {
-                Event::A => EventResponse::Transition(EventState::Bar),
-                _ => EventResponse::Defer,
+                Event::A => Some(EventState::Bar),
+                _ => None,
             }
         }
     }

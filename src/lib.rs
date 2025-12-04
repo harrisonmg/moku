@@ -642,16 +642,13 @@ where
     /// Starting with the deepest state, calls [`State::handle_event`] (or [`TopState::handle_event`])
     /// for each active state.
     ///
-    /// If a state returns [`EventResponse::Defer`], event handling will continue with its superstate.
+    /// If a state returns [`EventResponse::Next`] with [`Next::None`], event handling will continue with its superstate.
+    ///
+    /// If any state returns [`EventResponse::Next`] with something other than [`Next::None`],
+    /// the given transition will be completed and no further `handle_event` functions are called.
     ///
     /// If any state returns [`EventResponse::Drop`], event handling stops immediately and no further
     /// `handle_event` functions are called.
-    ///
-    /// If any state returns [`EventResponse::Target`], the given transition will be completed and
-    /// no further `handle_event` functions are called.
-    ///
-    /// In the case of the [`TopState`], returning `None` is synonymous with [`EventResponse::Drop`] /
-    /// [`EventResponse::Defer`], and `Some(state)` is synonymous with [`EventResponse::Target`].
     ///
     /// # Example
     /// ```
@@ -859,8 +856,25 @@ pub enum StateEntry<T: StateEnum, U> {
     /// State entry was successful, here is the newly constructed state.
     State(U),
 
-    /// State entry resulted in a transition, here is the target state.
+    /// A transition should be taken to the target state.
+    /// See [`StateMachine::transition`] for transition semantics.
     Target(T),
+
+    /// A transition should be taken to exactly the target state.
+    /// See [`StateMachine::transition_exact`] for exact transition semantics.
+    ExactTarget(T),
+}
+
+//impl<T: StateEnum, U: State<T>> From<T> for StateEntry<T, U> {
+//    fn from(value: T) -> Self {
+//        StateEntry::Target(value)
+//    }
+//}
+
+impl<T: StateEnum, U: State<T>> From<U> for StateEntry<T, U> {
+    fn from(value: U) -> Self {
+        StateEntry::State(value)
+    }
 }
 
 /// A [`StateMachine`] state.
@@ -962,7 +976,7 @@ where
     ///         fn init(
     ///             &mut self,
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> Next<ExampleState> {
+    ///         ) -> impl Into<Next<ExampleState>> {
     ///             Next::Target(ExampleState::Bar)
     ///         }
     ///     }
@@ -1003,7 +1017,7 @@ where
     ///         fn update(
     ///             &mut self,
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> Next<ExampleState> {
+    ///         ) -> impl Into<Next<ExampleState>> {
     ///             Next::Target(ExampleState::Bar)
     ///         }
     ///     }
@@ -1044,8 +1058,8 @@ where
     ///         fn top_down_update(
     ///             &mut self,
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> Next<ExampleState> {
-    ///             Next::target(ExampleState::Bar)
+    ///         ) -> impl Into<Next<ExampleState>> {
+    ///             Next::Target(ExampleState::Bar)
     ///         }
     ///     }
     /// // ...
@@ -1088,7 +1102,7 @@ where
     ///         fn exit(
     ///             self,
     ///             superstates: &mut Self::Superstates<'_>,
-    ///         ) -> Next<ExampleState> {
+    ///         ) -> impl Into<Next<ExampleState>> {
     ///             Next::Target(ExampleState::Bar)
     ///         }
     ///     }
@@ -1103,12 +1117,13 @@ where
 
     /// Called when [`StateMachine::handle_event`] is called.
     ///
-    /// Return [`EventResponse::Defer`] to continue event handling with the superstate.
+    /// Return [`EventResponse::Next`] with [`Next::None`] to continue event handling with the superstate.
+    ///
+    /// Return [`EventResponse::Next`] with something other than [`Next::None`]
+    /// to transition to the given state, after which event handling is stopped.
+    /// the given transition will be completed and no further `handle_event` functions are called.
     ///
     /// Return [`EventResponse::Drop`] to immediately stop event handling.
-    ///
-    /// Return [`EventResponse::Target`] to transition to the given state, after which event
-    /// handling is stopped.
     ///
     /// The [`State::Superstates`] argument can be used to mutably access all active superstates.
     ///
@@ -1200,7 +1215,7 @@ where
     ///      pub struct Top;
     ///
     ///      impl TopState<ExampleState> for Top {
-    ///         fn init(&mut self) -> Next<ExampleState> {
+    ///         fn init(&mut self) -> impl Into<Next<ExampleState>> {
     ///             Next::Target(ExampleState::Foo)
     ///         }
     ///      }
@@ -1233,7 +1248,7 @@ where
     ///      pub struct Top;
     ///
     ///      impl TopState<ExampleState> for Top {
-    ///         fn update(&mut self) -> Next<ExampleState> {
+    ///         fn update(&mut self) -> impl Into<Next<ExampleState>> {
     ///             Next::Target(ExampleState::Foo)
     ///         }
     ///      }
@@ -1266,7 +1281,7 @@ where
     ///      pub struct Top;
     ///
     ///      impl TopState<ExampleState> for Top {
-    ///         fn top_down_update(&mut self) -> Next<ExampleState> {
+    ///         fn top_down_update(&mut self) -> impl Into<Next<ExampleState>> {
     ///             Next::Target(ExampleState::Foo)
     ///         }
     ///      }
@@ -1388,7 +1403,7 @@ pub mod internal {
 
         /// Either the target state has been reached and the transition is done, or a short circuit
         /// transition occurred during the transition, and a new target should replace the previous
-        /// target state.
+        /// target state. [`Next::None`] represents a completed transition.
         Next(Next<T>),
     }
 
@@ -1480,6 +1495,7 @@ pub mod internal {
             state: &mut V,
             superstates: &mut V::Superstates<'_>,
             indent: bool,
+            exact: bool,
         ) -> TransitionResult<T> {
             TransitionResult::MoveUp
         }
@@ -1528,6 +1544,9 @@ pub mod internal {
 
         /// Entry resulted in a short circuit transition.
         Target(T),
+
+        /// Entry resulted in a short circuit exact transition.
+        ExactTarget(T),
     }
 
     /// A node in the state tree.
@@ -1592,6 +1611,13 @@ pub mod internal {
                         if indent { "\u{02502}" } else { "" },
                     );
                     NodeEntry::Target(target)
+                }
+                StateEntry::ExactTarget(target) => {
+                    info!(
+                        "{}\u{02502}Short circuit exact transition to {target:?}",
+                        if indent { "\u{02502}" } else { "" },
+                    );
+                    NodeEntry::ExactTarget(target)
                 }
             }
         }
@@ -1693,7 +1719,7 @@ pub mod internal {
             // try to transition the current substate towards the target state
             match self
                 .substate
-                .transition(target, &mut self.state, superstates, indent)
+                .transition(target, &mut self.state, superstates, indent, exact)
             {
                 // substate is not the target state or an ancestor of it
                 TransitionResult::MoveUp => {
@@ -1720,6 +1746,7 @@ pub mod internal {
                                         &mut self.state,
                                         superstates,
                                         indent,
+                                        exact,
                                     ),
                                     // substate transition resulted in a short circuit transition
                                     res @ _ => TransitionResult::Next(res),
@@ -1995,7 +2022,7 @@ pub mod internal {
                 .node
                 .handle_event(event, &mut NoSuperstates(PhantomData))
             {
-                EventResponse::Drop => unreachable!(),
+                EventResponse::Drop => (),
                 EventResponse::Next(next) => match next {
                     Next::None => (),
                     Next::Target(target) => self.transition(target, true, false),

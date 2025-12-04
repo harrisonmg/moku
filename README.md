@@ -167,10 +167,12 @@ Let's add some functionality to our states:
         //
         // Like most other methods in the `TopState` and `State` traits, the return value
         // indicates a state to transition to, where `None` indicates no transition.
-        fn init(&mut self) -> Option<BlinkyState> {
+        fn init(&mut self) -> impl Into<Next<BlinkyState>> {
             // When we transition into the `Top` state (or initialize the state machine),
             // transition into the `Enabled` state.
-            Some(BlinkyState::Enabled)
+            // `Next` implements `From` for `StateEnum` and `Option<StateEnum>`,
+            // so there are a few convenient ways to write our return value.
+            BlinkyState::Enabled
         }
     }
 
@@ -185,9 +187,9 @@ Let's add some functionality to our states:
         fn init(
             &mut self,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> Option<BlinkyState> {
+        ) -> impl Into<Next<BlinkyState>> {
             // When we transition into the `Enabled` state, transition into the `LedOn` state.
-            Some(BlinkyState::LedOn)
+            BlinkyState::LedOn
         }
     }
 
@@ -207,13 +209,13 @@ Let's add some functionality to our states:
         // state construction fails.
         fn enter(
             _superstates: &mut Self::Superstates<'_>,
-        ) -> StateEntry<Self, BlinkyState> {
+        ) -> StateEntry<BlinkyState, Self> {
             // dummy code to turn the LED on
             // led_gpio.set_high()
 
-            StateEntry::State(Self {
+            Self {
                 entry_time: std::time::Instant::now(),
-            })
+            }.into()
         }
 
         // Moku automatically defines the `Superstates` associated type for each state.
@@ -221,7 +223,7 @@ Let's add some functionality to our states:
         fn update(
             &mut self,
             superstates: &mut Self::Superstates<'_>,
-        ) -> Option<BlinkyState> {
+        ) -> impl Into<Next<BlinkyState>> {
             // We can use `superstates` to access the `blink_time` field of the `Top` state.
             if self.entry_time.elapsed() >= superstates.top.blink_time {
                 // If we've met or exceeded the blink time, transition to the `LedOff` state.
@@ -241,19 +243,19 @@ Let's add some functionality to our states:
     impl State<BlinkyState> for LedOff {
         fn enter(
             _superstates: &mut Self::Superstates<'_>,
-        ) -> StateEntry<Self, BlinkyState> {
+        ) -> StateEntry<BlinkyState, Self> {
             // dummy code to turn the LED off
             // led_gpio.set_low()
 
-            StateEntry::State(Self {
+            Self {
                 entry_time: std::time::Instant::now(),
-            })
+            }.into()
         }
 
         fn update(
             &mut self,
             superstates: &mut Self::Superstates<'_>,
-        ) -> Option<BlinkyState> {
+        ) -> impl Into<Next<BlinkyState>> {
             if self.entry_time.elapsed() >= superstates.top.blink_time {
                 // If we've met or exceeded the blink time, transition to the `LedOn` state.
                 Some(BlinkyState::LedOn)
@@ -280,7 +282,7 @@ Finally, let's use our state machine!
 #     use machine::BlinkyState;
 #    pub struct Top { pub blink_time: std::time::Duration }
 #    impl TopState<BlinkyState> for Top {
-#        fn init(&mut self) -> Option<BlinkyState> {
+#        fn init(&mut self) -> impl Into<Next<BlinkyState>> {
 #            Some(BlinkyState::Enabled)
 #        }
 #    }
@@ -293,7 +295,7 @@ Finally, let's use our state machine!
 #         fn init(
 #             &mut self,
 #             _superstates: &mut Self::Superstates<'_>,
-#         ) -> Option<BlinkyState> {
+#         ) -> impl Into<Next<BlinkyState>> {
 #             Some(BlinkyState::LedOn)
 #         }
 #     }
@@ -302,15 +304,15 @@ Finally, let's use our state machine!
 #     impl State<BlinkyState> for LedOn {
 #         fn enter(
 #             _superstates: &mut Self::Superstates<'_>,
-#         ) -> StateEntry<Self, BlinkyState> {
-#             StateEntry::State(Self {
+#         ) -> StateEntry<BlinkyState, Self> {
+#             Self {
 #                 entry_time: std::time::Instant::now(),
-#             })
+#             }.into()
 #         }
 #         fn update(
 #             &mut self,
 #             superstates: &mut Self::Superstates<'_>,
-#         ) -> Option<BlinkyState> {
+#         ) -> impl Into<Next<BlinkyState>> {
 #             if self.entry_time.elapsed() >= superstates.top.blink_time {
 #                 Some(BlinkyState::LedOff)
 #             } else {
@@ -323,15 +325,15 @@ Finally, let's use our state machine!
 #     impl State<BlinkyState> for LedOff {
 #         fn enter(
 #             _superstates: &mut Self::Superstates<'_>,
-#         ) -> StateEntry<Self, BlinkyState> {
-#             StateEntry::State(Self {
+#         ) -> StateEntry<BlinkyState, Self> {
+#             Self {
 #                 entry_time: std::time::Instant::now(),
-#             })
+#             }.into()
 #         }
 #         fn update(
 #             &mut self,
 #             superstates: &mut Self::Superstates<'_>,
-#         ) -> Option<BlinkyState> {
+#         ) -> impl Into<Next<BlinkyState>> {
 #             if self.entry_time.elapsed() >= superstates.top.blink_time {
 #                 Some(BlinkyState::LedOn)
 #             } else {
@@ -451,7 +453,7 @@ mod example {
 
     // When implementing `TopState` and `State`, use your event type as the second generic.
     impl TopState<ExampleState, Event> for Top {
-        fn handle_event(&mut self, event: &Event) -> Option<ExampleState> {
+        fn handle_event(&mut self, event: &Event) -> impl Into<Next<ExampleState>> {
             match event {
                 Event::A => Some(ExampleState::Foo), // Transition to the Foo state.
                 Event::B => Some(ExampleState::Bar), // Transition to the Bar state.

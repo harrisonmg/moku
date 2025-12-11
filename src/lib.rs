@@ -113,7 +113,7 @@ pub enum Next<T: StateEnum> {
     Target(T),
 
     /// A transition should be taken to exactly the target state.
-    /// See [`StateMachine::transition_exact`] for exact transition semantics.
+    /// See [`StateMachine::exact_transition`] for exact transition semantics.
     ExactTarget(T),
 }
 
@@ -141,6 +141,8 @@ pub trait StateMachineEvent {}
 impl StateMachineEvent for () {}
 
 /// The result of a single state handling an event.
+///
+/// Implements [`From`] for implementors of `StateEnum` and `Option<StateEnum>`
 pub enum EventResponse<T: StateEnum> {
     /// The transition triggered by the event.
     /// A value of Next::None defers the handling of the event to the superstate.
@@ -159,6 +161,12 @@ impl<T: StateEnum> From<T> for EventResponse<T> {
 impl<T: StateEnum> From<Option<T>> for EventResponse<T> {
     fn from(value: Option<T>) -> Self {
         EventResponse::Next(value.into())
+    }
+}
+
+impl<T: StateEnum> From<Next<T>> for EventResponse<T> {
+    fn from(value: Next<T>) -> Self {
+        EventResponse::Next(value)
     }
 }
 
@@ -351,7 +359,7 @@ where
     ///
     /// If the target state is already in the currently active state hierarchy, no
     /// transition is made. To force re-entry of an active state, use
-    /// [`StateMachine::transition_exact`].
+    /// [`StateMachine::exact_transition`].
     ///
     /// Subject to interruption by short circuit transtions (from [`State::enter`] or [`State::exit`])
     /// and initial transitions (from [`State::init`] or [`TopState::init`]).
@@ -429,9 +437,12 @@ where
     /// assert!(matches!(machine.state(), ExampleState::Bar));
     ///
     /// machine.transition(ExampleState::Top);
+    /// assert!(matches!(machine.state(), ExampleState::Bar));
+    ///
+    /// machine.exact_transition(ExampleState::Top);
     /// assert!(matches!(machine.state(), ExampleState::Top));
     /// ```
-    fn transition_exact(&mut self, target: T);
+    fn exact_transition(&mut self, target: T);
 
     /// Get the current state of the [`StateMachine`].
     ///
@@ -861,15 +872,9 @@ pub enum StateEntry<T: StateEnum, U> {
     Target(T),
 
     /// A transition should be taken to exactly the target state.
-    /// See [`StateMachine::transition_exact`] for exact transition semantics.
+    /// See [`StateMachine::exact_transition`] for exact transition semantics.
     ExactTarget(T),
 }
-
-//impl<T: StateEnum, U: State<T>> From<T> for StateEntry<T, U> {
-//    fn from(value: T) -> Self {
-//        StateEntry::Target(value)
-//    }
-//}
 
 impl<T: StateEnum, U: State<T>> From<U> for StateEntry<T, U> {
     fn from(value: U) -> Self {
@@ -1157,11 +1162,11 @@ where
     ///             &mut self,
     ///             event: &Event,
     ///             _superstates: &mut Self::Superstates<'_>,
-    ///         ) -> EventResponse<ExampleState> {
+    ///         ) -> impl Into<EventResponse<ExampleState>> {
     ///             match event {
-    ///                 Event::A => EventResponse::Defer,
+    ///                 Event::A => None.into(),
     ///                 Event::B => EventResponse::Drop,
-    ///                 Event::C => EventResponse::Target(ExampleState::Bar),
+    ///                 Event::C => ExampleState::Bar.into(),
     ///             }
     ///         }
     ///     }
@@ -1631,7 +1636,7 @@ pub mod internal {
                     self.needs_update = false;
                     self.state.update(superstates).into()
                 }
-                target @ _ => target,
+                target => target,
             }
         }
 
@@ -1644,7 +1649,7 @@ pub mod internal {
                         self.needs_update = false;
                         self.state.update(superstates).into()
                     }
-                    target @ _ => target,
+                    target => target,
                 }
             } else {
                 Next::None
@@ -1657,7 +1662,7 @@ pub mod internal {
             self.top_down_updated = true;
             match self.state.top_down_update(superstates).into() {
                 Next::None => self.substate.top_down_update(&mut self.state, superstates),
-                target @ _ => target,
+                target => target,
             }
         }
 
@@ -1669,7 +1674,7 @@ pub mod internal {
                 self.top_down_updated = true;
                 match self.state.top_down_update(superstates).into() {
                     Next::None => (),
-                    target @ _ => return target,
+                    target => return target,
                 }
             }
 
@@ -1749,7 +1754,7 @@ pub mod internal {
                                         exact,
                                     ),
                                     // substate transition resulted in a short circuit transition
-                                    res @ _ => TransitionResult::Next(res),
+                                    res => TransitionResult::Next(res),
                                 }
                             } else if W::is_state(target) {
                                 // this state is the target
@@ -1771,7 +1776,7 @@ pub mod internal {
                         }
                     }
                 }
-                res @ _ => res,
+                res => res,
             }
         }
 
@@ -1819,7 +1824,7 @@ pub mod internal {
                     }
                     res
                 }
-                substate_res @ _ => substate_res,
+                substate_res => substate_res,
             }
         }
     }
@@ -1888,9 +1893,9 @@ pub mod internal {
         pub fn update(&mut self) {
             info!("{}: Updating", self.name());
 
-            match self.node.update(&mut NoSuperstates(PhantomData)).into() {
+            match self.node.update(&mut NoSuperstates(PhantomData)) {
                 Next::None => (),
-                next @ _ => {
+                next => {
                     match next {
                         Next::None => unreachable!(),
                         Next::Target(target) => self.transition(target, true, false),
@@ -1913,13 +1918,9 @@ pub mod internal {
         pub fn top_down_update(&mut self) {
             info!("{}: Top-down updating", self.name());
 
-            match self
-                .node
-                .top_down_update(&mut NoSuperstates(PhantomData))
-                .into()
-            {
+            match self.node.top_down_update(&mut NoSuperstates(PhantomData)) {
                 Next::None => (),
-                next @ _ => {
+                next => {
                     match next {
                         Next::None => unreachable!(),
                         Next::Target(target) => self.transition(target, true, false),
@@ -1945,6 +1946,10 @@ pub mod internal {
         /// Transition this node and its active descendents without logging the start and end of
         /// the transition.
         pub fn transition_quiet(&mut self, target: T, indent: bool, exact: bool) {
+            if !exact && self.state_matches(target) {
+                return;
+            }
+
             match self
                 .node
                 .transition(target, &mut NoSuperstates(PhantomData), indent, exact)
@@ -1975,7 +1980,7 @@ pub mod internal {
                 );
             }
 
-            if self.state_matches(target) {
+            if !exact && self.state_matches(target) {
                 info!(
                     "{}\u{02502}Already in {target:?}",
                     if indent { "\u{02502}" } else { "" },

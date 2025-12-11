@@ -322,7 +322,7 @@ impl Metadata {
                     self.top_node.transition(target, false, false);
                 }
 
-                fn transition_exact(&mut self, target: #state_enum) {
+                fn exact_transition(&mut self, target: #state_enum) {
                     self.top_node.transition(target, false, true);
                 }
 

@@ -478,11 +478,11 @@ mod example {
             &mut self,
             event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> EventResponse<ExampleState> {
+        ) -> impl Into<EventResponse<ExampleState>> {
             match event {
                 Event::A => {
                     // Do nothing with this event and pass handling to the next highest state.
-                    EventResponse::Defer
+                    EventResponse::Next(Next::None)
                 }
                 Event::B => {
                     // Do nothing and stop event handling immediately.
@@ -490,7 +490,9 @@ mod example {
                 }
                 Event::C => {
                     // Transitition to the Foo state and stop event handling.
-                    EventResponse::Transition(ExampleState::Foo)
+                    // EventResponse implements `From` for `StateEnum`, `Option<StateEnum>`,
+                    // and `Next<StateEnum>` for convenience.
+                    ExampleState::Foo.into()
                 }
             }
         }

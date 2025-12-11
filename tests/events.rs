@@ -1,11 +1,11 @@
-use event::{machine::*, *};
 use moku::*;
 use test_log::test;
+use tester::{machine::*, *};
 
 #[test]
 fn state_chart() {
     assert_eq!(
-        EVENT_STATE_CHART,
+        TESTER_STATE_CHART,
         "Top
 ├─ Foo
 ├─ Bar
@@ -16,13 +16,13 @@ fn state_chart() {
 }
 
 #[state_machine]
-mod event {
+mod tester {
     use moku::*;
 
     #[machine_module]
     pub mod machine {}
 
-    use machine::EventState;
+    use machine::TesterState;
 
     pub enum Event {
         A,
@@ -34,11 +34,11 @@ mod event {
 
     pub struct Top;
 
-    impl TopState<EventState, Event> for Top {
-        fn handle_event(&mut self, event: &Event) -> impl Into<Next<EventState>> {
+    impl TopState<TesterState, Event> for Top {
+        fn handle_event(&mut self, event: &Event) -> impl Into<Next<TesterState>> {
             match event {
-                Event::A => Some(EventState::Foo),
-                Event::B => Some(EventState::Bar),
+                Event::A => Some(TesterState::Foo),
+                Event::B => Some(TesterState::Bar),
                 Event::C => None,
             }
         }
@@ -46,21 +46,21 @@ mod event {
 
     struct Foo;
     #[superstate(Top)]
-    impl State<EventState, Event> for Foo {}
+    impl State<TesterState, Event> for Foo {}
 
     struct Bar;
     #[superstate(Top)]
-    impl State<EventState, Event> for Bar {}
+    impl State<TesterState, Event> for Bar {}
 
     struct Dropper;
 
     #[superstate(Top)]
-    impl State<EventState, Event> for Dropper {
+    impl State<TesterState, Event> for Dropper {
         fn handle_event(
             &mut self,
             _event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<EventResponse<EventState>> {
+        ) -> impl Into<EventResponse<TesterState>> {
             EventResponse::Drop
         }
     }
@@ -68,14 +68,14 @@ mod event {
     struct FooPasser;
 
     #[superstate(Top)]
-    impl State<EventState, Event> for FooPasser {
+    impl State<TesterState, Event> for FooPasser {
         fn handle_event(
             &mut self,
             event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<EventResponse<EventState>> {
+        ) -> impl Into<EventResponse<TesterState>> {
             match event {
-                Event::C => Some(EventState::Foo),
+                Event::C => Some(TesterState::Foo),
                 _ => None,
             }
         }
@@ -84,14 +84,14 @@ mod event {
     struct BarPasser;
 
     #[superstate(FooPasser)]
-    impl State<EventState, Event> for BarPasser {
+    impl State<TesterState, Event> for BarPasser {
         fn handle_event(
             &mut self,
             event: &Event,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<EventResponse<EventState>> {
+        ) -> impl Into<EventResponse<TesterState>> {
             match event {
-                Event::A => Some(EventState::Bar),
+                Event::A => Some(TesterState::Bar),
                 _ => None,
             }
         }
@@ -100,69 +100,69 @@ mod event {
 
 #[test]
 fn basic() {
-    let mut machine = EventMachineBuilder::new(Top).build();
-    assert!(matches!(machine.state(), EventState::Top));
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    assert!(matches!(machine.state(), TesterState::Top));
 
     machine.handle_event(&Event::A);
-    assert!(matches!(machine.state(), EventState::Foo));
+    assert!(matches!(machine.state(), TesterState::Foo));
 
     machine.handle_event(&Event::B);
-    assert!(matches!(machine.state(), EventState::Bar));
+    assert!(matches!(machine.state(), TesterState::Bar));
 }
 
 #[test]
 fn drop() {
-    let mut machine = EventMachineBuilder::new(Top).build();
-    machine.transition(EventState::Dropper);
-    assert!(matches!(machine.state(), EventState::Dropper));
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    machine.transition(TesterState::Dropper);
+    assert!(matches!(machine.state(), TesterState::Dropper));
 
     machine.handle_event(&Event::A);
-    assert!(matches!(machine.state(), EventState::Dropper));
+    assert!(matches!(machine.state(), TesterState::Dropper));
 
     machine.handle_event(&Event::B);
-    assert!(matches!(machine.state(), EventState::Dropper));
+    assert!(matches!(machine.state(), TesterState::Dropper));
 }
 
 #[test]
 fn foo_pass() {
-    let mut machine = EventMachineBuilder::new(Top).build();
-    machine.transition(EventState::FooPasser);
-    assert!(matches!(machine.state(), EventState::FooPasser));
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    machine.transition(TesterState::FooPasser);
+    assert!(matches!(machine.state(), TesterState::FooPasser));
 
     machine.handle_event(&Event::A);
-    assert!(matches!(machine.state(), EventState::Foo));
+    assert!(matches!(machine.state(), TesterState::Foo));
 
-    machine.transition(EventState::FooPasser);
-    assert!(matches!(machine.state(), EventState::FooPasser));
+    machine.transition(TesterState::FooPasser);
+    assert!(matches!(machine.state(), TesterState::FooPasser));
 
     machine.handle_event(&Event::B);
-    assert!(matches!(machine.state(), EventState::Bar));
+    assert!(matches!(machine.state(), TesterState::Bar));
 
-    machine.transition(EventState::FooPasser);
-    assert!(matches!(machine.state(), EventState::FooPasser));
+    machine.transition(TesterState::FooPasser);
+    assert!(matches!(machine.state(), TesterState::FooPasser));
 
     machine.handle_event(&Event::C);
-    assert!(matches!(machine.state(), EventState::Foo));
+    assert!(matches!(machine.state(), TesterState::Foo));
 }
 
 #[test]
 fn bar_pass() {
-    let mut machine = EventMachineBuilder::new(Top).build();
-    machine.transition(EventState::BarPasser);
-    assert!(matches!(machine.state(), EventState::BarPasser));
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    machine.transition(TesterState::BarPasser);
+    assert!(matches!(machine.state(), TesterState::BarPasser));
 
     machine.handle_event(&Event::A);
-    assert!(matches!(machine.state(), EventState::Bar));
+    assert!(matches!(machine.state(), TesterState::Bar));
 
-    machine.transition(EventState::BarPasser);
-    assert!(matches!(machine.state(), EventState::BarPasser));
+    machine.transition(TesterState::BarPasser);
+    assert!(matches!(machine.state(), TesterState::BarPasser));
 
     machine.handle_event(&Event::B);
-    assert!(matches!(machine.state(), EventState::Bar));
+    assert!(matches!(machine.state(), TesterState::Bar));
 
-    machine.transition(EventState::BarPasser);
-    assert!(matches!(machine.state(), EventState::BarPasser));
+    machine.transition(TesterState::BarPasser);
+    assert!(matches!(machine.state(), TesterState::BarPasser));
 
     machine.handle_event(&Event::C);
-    assert!(matches!(machine.state(), EventState::Foo));
+    assert!(matches!(machine.state(), TesterState::Foo));
 }

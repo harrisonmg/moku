@@ -1,46 +1,43 @@
-use dft::{
-    machine::{DftMachineBuilder, DftState},
-    Top,
-};
 use moku::*;
 use test_log::test;
+use tester::{machine::*, *};
 
 #[state_machine]
-mod dft {
+mod tester {
     use moku::*;
 
     #[machine_module]
     pub mod machine {}
 
-    use machine::DftState;
+    use machine::TesterState;
 
     pub struct Top;
 
-    impl TopState<DftState> for Top {}
+    impl TopState<TesterState> for Top {}
 
     struct Foo;
 
     #[superstate(Top)]
-    impl State<DftState> for Foo {}
+    impl State<TesterState> for Foo {}
 }
 
 #[test]
 fn default_actions() {
-    let mut machine = DftMachineBuilder::new(Top).build();
-    assert!(matches!(machine.state(), DftState::Top));
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    assert!(matches!(machine.state(), TesterState::Top));
 
     machine.update();
-    assert!(matches!(machine.state(), DftState::Top));
+    assert!(matches!(machine.state(), TesterState::Top));
 
     machine.top_down_update();
-    assert!(matches!(machine.state(), DftState::Top));
+    assert!(matches!(machine.state(), TesterState::Top));
 
-    machine.transition(DftState::Foo);
-    assert!(matches!(machine.state(), DftState::Foo));
+    machine.transition(TesterState::Foo);
+    assert!(matches!(machine.state(), TesterState::Foo));
 
     machine.update();
-    assert!(matches!(machine.state(), DftState::Foo));
+    assert!(matches!(machine.state(), TesterState::Foo));
 
     machine.top_down_update();
-    assert!(matches!(machine.state(), DftState::Foo));
+    assert!(matches!(machine.state(), TesterState::Foo));
 }

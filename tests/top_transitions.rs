@@ -1,55 +1,52 @@
 use moku::*;
 use test_log::test;
-use top_trans::{
-    machine::{TopTransMachineBuilder, TopTransState, TOP_TRANS_STATE_CHART},
-    Top,
-};
+use tester::{machine::*, *};
 
 #[state_machine]
-mod top_trans {
+mod tester {
     use moku::*;
 
     #[machine_module]
     pub mod machine {}
 
-    use machine::TopTransState;
+    use machine::TesterState;
 
     pub struct Top;
 
-    impl TopState<TopTransState> for Top {
-        fn init(&mut self) -> impl Into<Next<TopTransState>> {
-            Some(TopTransState::A)
+    impl TopState<TesterState> for Top {
+        fn init(&mut self) -> impl Into<Next<TesterState>> {
+            Some(TesterState::A)
         }
 
-        fn update(&mut self) -> impl Into<Next<TopTransState>> {
-            Some(TopTransState::B)
+        fn update(&mut self) -> impl Into<Next<TesterState>> {
+            Some(TesterState::B)
         }
 
-        fn top_down_update(&mut self) -> impl Into<Next<TopTransState>> {
-            Some(TopTransState::C)
+        fn top_down_update(&mut self) -> impl Into<Next<TesterState>> {
+            Some(TesterState::C)
         }
     }
 
     struct A;
 
     #[superstate(Top)]
-    impl State<TopTransState> for A {}
+    impl State<TesterState> for A {}
 
     struct B;
 
     #[superstate(Top)]
-    impl State<TopTransState> for B {}
+    impl State<TesterState> for B {}
 
     struct C;
 
     #[superstate(Top)]
-    impl State<TopTransState> for C {}
+    impl State<TesterState> for C {}
 }
 
 #[test]
 fn state_chart() {
     assert_eq!(
-        TOP_TRANS_STATE_CHART,
+        TESTER_STATE_CHART,
         "Top
 ├─ A
 ├─ B
@@ -59,20 +56,20 @@ fn state_chart() {
 
 #[test]
 fn init() {
-    let machine = TopTransMachineBuilder::new(Top).build();
-    assert!(matches!(machine.state(), TopTransState::A));
+    let machine = TesterMachineBuilder::new(Top).build();
+    assert!(matches!(machine.state(), TesterState::A));
 }
 
 #[test]
 fn update() {
-    let mut machine = TopTransMachineBuilder::new(Top).build();
+    let mut machine = TesterMachineBuilder::new(Top).build();
     machine.update();
-    assert!(matches!(machine.state(), TopTransState::B));
+    assert!(matches!(machine.state(), TesterState::B));
 }
 
 #[test]
 fn top_down_update() {
-    let mut machine = TopTransMachineBuilder::new(Top).build();
+    let mut machine = TesterMachineBuilder::new(Top).build();
     machine.top_down_update();
-    assert!(matches!(machine.state(), TopTransState::C));
+    assert!(matches!(machine.state(), TesterState::C));
 }

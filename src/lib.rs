@@ -1776,7 +1776,7 @@ pub mod internal {
                                 TransitionResult::MoveUp
                             }
                         }
-                        next @ _ => TransitionResult::Next(next),
+                        next => TransitionResult::Next(next),
                     }
                 }
                 res => res,

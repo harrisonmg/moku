@@ -26,7 +26,7 @@ mod blinky {
     }
 
     impl TopState<BlinkyState> for Top {
-        fn init(&mut self) -> Option<BlinkyState> {
+        fn init(&mut self) -> impl Into<Next<BlinkyState>> {
             Some(BlinkyState::Enabled)
         }
     }
@@ -40,7 +40,10 @@ mod blinky {
 
     #[superstate(Top)]
     impl State<BlinkyState> for Enabled {
-        fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
+        fn init(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BlinkyState>> {
             Some(BlinkyState::LedOn)
         }
     }
@@ -51,13 +54,17 @@ mod blinky {
 
     #[superstate(Enabled)]
     impl State<BlinkyState> for LedOn {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
-            StateEntry::State(Self {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BlinkyState, Self> {
+            Self {
                 entry_time: Instant::now(),
-            })
+            }
+            .into()
         }
 
-        fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
+        fn update(
+            &mut self,
+            superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BlinkyState>> {
             if self.entry_time.elapsed() >= superstates.top.blink_period {
                 Some(BlinkyState::LedOff)
             } else {
@@ -72,13 +79,17 @@ mod blinky {
 
     #[superstate(Enabled)]
     impl State<BlinkyState> for LedOff {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, BlinkyState> {
-            StateEntry::State(Self {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BlinkyState, Self> {
+            Self {
                 entry_time: Instant::now(),
-            })
+            }
+            .into()
         }
 
-        fn update(&mut self, superstates: &mut Self::Superstates<'_>) -> Option<BlinkyState> {
+        fn update(
+            &mut self,
+            superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<BlinkyState>> {
             if self.entry_time.elapsed() >= superstates.top.blink_period {
                 Some(BlinkyState::LedOn)
             } else {

@@ -1,73 +1,76 @@
 use moku::*;
-use state_trans::{
-    machine::{StateTransMachineBuilder, StateTransState, STATE_TRANS_STATE_CHART},
-    Top,
-};
 use test_log::test;
+use tester::{machine::*, *};
 
 #[state_machine]
-mod state_trans {
+mod tester {
     use moku::*;
 
     #[machine_module]
     pub mod machine {}
 
-    use machine::StateTransState;
+    use machine::TesterState;
 
     pub struct Top;
 
-    impl TopState<StateTransState> for Top {}
+    impl TopState<TesterState> for Top {}
 
     struct A;
 
     #[superstate(Top)]
-    impl State<StateTransState> for A {
-        fn init(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<StateTransState> {
-            Some(StateTransState::B)
+    impl State<TesterState> for A {
+        fn init(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<TesterState>> {
+            Some(TesterState::B)
         }
     }
 
     struct B;
 
     #[superstate(Top)]
-    impl State<StateTransState> for B {
-        fn update(&mut self, _superstates: &mut Self::Superstates<'_>) -> Option<StateTransState> {
-            Some(StateTransState::C)
+    impl State<TesterState> for B {
+        fn update(
+            &mut self,
+            _superstates: &mut Self::Superstates<'_>,
+        ) -> impl Into<Next<TesterState>> {
+            Some(TesterState::C)
         }
     }
 
     struct C;
 
     #[superstate(Top)]
-    impl State<StateTransState> for C {
+    impl State<TesterState> for C {
         fn top_down_update(
             &mut self,
             _superstates: &mut Self::Superstates<'_>,
-        ) -> Option<StateTransState> {
-            Some(StateTransState::D)
+        ) -> impl Into<Next<TesterState>> {
+            Some(TesterState::D)
         }
     }
 
     struct D;
 
     #[superstate(Top)]
-    impl State<StateTransState> for D {
-        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> Option<StateTransState> {
-            Some(StateTransState::E)
+    impl State<TesterState> for D {
+        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<TesterState>> {
+            Some(TesterState::E)
         }
     }
 
     struct E;
 
     #[superstate(Top)]
-    impl State<StateTransState> for E {}
+    impl State<TesterState> for E {}
 
     struct F;
 
     #[superstate(Top)]
-    impl State<StateTransState> for F {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, StateTransState> {
-            StateEntry::Transition(StateTransState::Top)
+    impl State<TesterState> for F {
+        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<TesterState, Self> {
+            StateEntry::Target(TesterState::Top)
         }
     }
 }
@@ -75,7 +78,7 @@ mod state_trans {
 #[test]
 fn state_chart() {
     assert_eq!(
-        STATE_TRANS_STATE_CHART,
+        TESTER_STATE_CHART,
         "Top
 ├─ A
 ├─ B
@@ -88,38 +91,38 @@ fn state_chart() {
 
 #[test]
 fn init() {
-    let mut machine = StateTransMachineBuilder::new(Top).build();
-    machine.transition(StateTransState::A);
-    assert!(matches!(machine.state(), StateTransState::B));
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    machine.transition(TesterState::A);
+    assert!(matches!(machine.state(), TesterState::B));
 }
 
 #[test]
 fn update() {
-    let mut machine = StateTransMachineBuilder::new(Top).build();
-    machine.transition(StateTransState::B);
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    machine.transition(TesterState::B);
     machine.update();
-    assert!(matches!(machine.state(), StateTransState::C));
+    assert!(matches!(machine.state(), TesterState::C));
 }
 
 #[test]
 fn top_down_update() {
-    let mut machine = StateTransMachineBuilder::new(Top).build();
-    machine.transition(StateTransState::C);
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    machine.transition(TesterState::C);
     machine.top_down_update();
-    assert!(matches!(machine.state(), StateTransState::D));
+    assert!(matches!(machine.state(), TesterState::D));
 }
 
 #[test]
 fn exit() {
-    let mut machine = StateTransMachineBuilder::new(Top).build();
-    machine.transition(StateTransState::D);
-    machine.transition(StateTransState::A);
-    assert!(matches!(machine.state(), StateTransState::E));
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    machine.transition(TesterState::D);
+    machine.transition(TesterState::A);
+    assert!(matches!(machine.state(), TesterState::E));
 }
 
 #[test]
 fn enter() {
-    let mut machine = StateTransMachineBuilder::new(Top).build();
-    machine.transition(StateTransState::F);
-    assert!(matches!(machine.state(), StateTransState::Top));
+    let mut machine = TesterMachineBuilder::new(Top).build();
+    machine.transition(TesterState::F);
+    assert!(matches!(machine.state(), TesterState::Top));
 }

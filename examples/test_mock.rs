@@ -62,9 +62,9 @@ mod example {
 
     #[superstate(Top)]
     impl State<ExampleState> for Foo {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, ExampleState> {
+        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ExampleState, Self> {
             superstates.top.gpio.set_high();
-            StateEntry::State(Self)
+            Self.into()
         }
     }
 
@@ -72,9 +72,9 @@ mod example {
 
     #[superstate(Top)]
     impl State<ExampleState> for Bar {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<Self, ExampleState> {
+        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ExampleState, Self> {
             superstates.top.gpio.set_low();
-            StateEntry::State(Self)
+            Self.into()
         }
     }
 }

@@ -361,7 +361,7 @@ where
     /// transition is made. To force re-entry of an active state, use
     /// [`StateMachine::exact_transition`].
     ///
-    /// Subject to interruption by short circuit transtions (from [`State::enter`] or [`State::exit`])
+    /// Subject to interruption by short circuit transitions (from [`State::enter`] or [`State::exit`])
     /// and initial transitions (from [`State::init`] or [`TopState::init`]).
     /// # Example
     /// ```
@@ -402,7 +402,7 @@ where
     /// active states.
     ///
     /// Makes the transition even if the target state is in the current active state hierarchy.
-    /// The state will re-initialized; [`State::enter`] and [`State::init`] will be called.
+    /// The state will be re-initialized; [`State::enter`] and [`State::init`] will be called.
     ///
     /// Subject to interruption by short circuit transtions (from [`State::enter`] or [`State::exit`])
     /// and initial transitions (from [`State::init`] or [`TopState::init`]).

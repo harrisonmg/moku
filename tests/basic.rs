@@ -569,3 +569,38 @@ fn enter_init_exit() {
     assert_eq!(state.enter, 1);
     assert_eq!(state.init, 1);
 }
+
+#[test]
+fn self_transition() {
+    let mut machine = TesterMachineBuilder::new(Top::default()).build();
+    assert!(matches!(machine.state(), TesterState::Top));
+
+    assert_eq!(machine.top_ref().init, 1);
+
+    machine.transition(TesterState::Top);
+    assert_eq!(machine.top_ref().init, 1);
+
+    machine.exact_transition(TesterState::Top);
+    assert_eq!(machine.top_ref().init, 2);
+
+    machine.transition(TesterState::A);
+    assert!(matches!(machine.state(), TesterState::A));
+    let state: &A = machine.state_ref().unwrap();
+    assert_eq!(state.init, 1);
+    assert_eq!(state.enter, 1);
+    assert_eq!(state.exit_counter().get(), 0);
+
+    machine.transition(TesterState::A);
+    assert!(matches!(machine.state(), TesterState::A));
+    let state: &A = machine.state_ref().unwrap();
+    assert_eq!(state.init, 1);
+    assert_eq!(state.enter, 1);
+    assert_eq!(state.exit_counter().get(), 0);
+
+    machine.exact_transition(TesterState::A);
+    assert!(matches!(machine.state(), TesterState::A));
+    let state: &A = machine.state_ref().unwrap();
+    assert_eq!(state.init, 2);
+    assert_eq!(state.enter, 2);
+    assert_eq!(state.exit_counter().get(), 1);
+}

@@ -597,10 +597,12 @@ fn self_transition() {
     assert_eq!(state.enter, 1);
     assert_eq!(state.exit_counter().get(), 0);
 
+    let a_exit = state.exit_counter();
+
     machine.exact_transition(TesterState::A);
     assert!(matches!(machine.state(), TesterState::A));
     let state: &A = machine.state_ref().unwrap();
-    assert_eq!(state.init, 2);
-    assert_eq!(state.enter, 2);
-    assert_eq!(state.exit_counter().get(), 1);
+    assert_eq!(state.init, 1);
+    assert_eq!(state.enter, 1);
+    assert_eq!(a_exit.get(), 1);
 }

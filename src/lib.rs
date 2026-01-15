@@ -1378,7 +1378,7 @@ where
 
         // need a return statement to appease the compiler
         #[allow(unreachable_code)]
-        return None;
+        return Next::None;
     }
 
     fn handle_event(
@@ -1705,7 +1705,7 @@ pub mod internal {
                     if indent { "\u{02502}" } else { "" }
                 ),
                 Next::ExactTarget(target) => info!(
-                    "{}\u{02502}Short circuit transition to {target:?}",
+                    "{}\u{02502}Short circuit exact transition to {target:?}",
                     if indent { "\u{02502}" } else { "" }
                 ),
             }
@@ -1730,12 +1730,6 @@ pub mod internal {
                 TransitionResult::MoveUp => {
                     // check if substate exit resulted in a short circuit transition
                     match self.substate.exit(&mut self.state, superstates, indent) {
-                        Next::Target(new_target) => {
-                            self.transition(new_target, superstates, indent, false)
-                        }
-                        Next::ExactTarget(new_target) => {
-                            self.transition(new_target, superstates, indent, true)
-                        }
                         Next::None => {
                             if W::is_ancestor(target) {
                                 match self.substate.enter_substate_towards(
@@ -1746,34 +1740,43 @@ pub mod internal {
                                 ) {
                                     // substate successfully moved towards target state,
                                     // continue transitioning downwards
+                                    //
+                                    // now that we're moving downwards, we don't need the exact flag;
+                                    // setting it false will cause us to stop at the target state
                                     Next::None => self.substate.transition(
                                         target,
                                         &mut self.state,
                                         superstates,
                                         indent,
-                                        exact,
+                                        false,
                                     ),
                                     // substate transition resulted in a short circuit transition
                                     res => TransitionResult::Next(res),
                                 }
                             } else if W::is_state(target) {
                                 // this state is the target
-                                let res = self.state.init(superstates).into();
-                                match &res {
-                                    Next::Target(new_target) => {
-                                        info!("\u{02502}Initial transition to {new_target:?}")
+                                if exact {
+                                    // we need to leave and come back
+                                    TransitionResult::MoveUp
+                                } else {
+                                    let res = self.state.init(superstates).into();
+                                    match &res {
+                                        Next::Target(new_target) => {
+                                            info!("\u{02502}Initial transition to {new_target:?}")
+                                        }
+                                        Next::ExactTarget(new_target) => {
+                                            info!("\u{02502}Initial exact transition to {new_target:?}")
+                                        }
+                                        Next::None => (),
                                     }
-                                    Next::ExactTarget(new_target) => {
-                                        info!("\u{02502}Initial exact transition to {new_target:?}")
-                                    }
-                                    Next::None => (),
+                                    TransitionResult::Next(res)
                                 }
-                                TransitionResult::Next(res)
                             } else {
                                 // this state is not the target state or an ancestor of it
                                 TransitionResult::MoveUp
                             }
                         }
+                        next @ _ => TransitionResult::Next(next),
                     }
                 }
                 res => res,
@@ -1954,7 +1957,14 @@ pub mod internal {
                 .node
                 .transition(target, &mut NoSuperstates(PhantomData), indent, exact)
             {
-                TransitionResult::MoveUp => unreachable!(),
+                TransitionResult::MoveUp => {
+                    assert!(exact);
+                    if W::is_state(target) {
+                        self.init();
+                    } else {
+                        self.transition_quiet(target, indent, false);
+                    }
+                }
                 TransitionResult::Next(next) => match next {
                     Next::None => (),
                     Next::Target(new_target) => self.transition_quiet(new_target, indent, false),

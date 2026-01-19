@@ -308,6 +308,16 @@ impl Metadata {
             TokenStream::new()
         };
 
+        let state_list = if cfg!(feature = "std") {
+            quote! {
+                fn state_list(&self) -> Vec<#state_enum> {
+                    self.top_node.node.state_list(Vec::new())
+                }
+            }
+        } else {
+            TokenStream::new()
+        };
+
         self.push_to_machine_mod(parse_quote! {
             impl ::moku::StateMachine<#state_enum, #event, super::#top_state> for #ident {
                 fn update(&mut self) {
@@ -352,9 +362,7 @@ impl Metadata {
                     self.top_node.handle_event(event)
                 }
 
-                fn state_list(&self) -> Vec<#state_enum> {
-                    self.top_node.node.state_list(Vec::new())
-                }
+                #state_list
             }
         });
 
@@ -540,13 +548,17 @@ impl Metadata {
               }
             });
 
-            let state_list = quote! {
-                fn state_list(&self, list: Vec<#state_enum>) -> Vec<#state_enum> {
-                    match self {
-                        Self::None => list,
-                        #(Self::#children(node) => node.state_list(list),)*
+            let state_list = if cfg!(feature = "std") {
+                quote! {
+                    fn state_list(&self, list: Vec<#state_enum>) -> Vec<#state_enum> {
+                        match self {
+                            Self::None => list,
+                            #(Self::#children(node) => node.state_list(list),)*
+                        }
                     }
                 }
+            } else {
+                TokenStream::new()
             };
 
             let is_leaf_state = children.is_empty();

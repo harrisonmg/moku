@@ -739,6 +739,8 @@ where
     ///     vec![ExampleState::Top, ExampleState::Foo, ExampleState::Bar]
     /// );
     /// ```
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+    #[cfg(feature = "std")]
     fn state_list(&self) -> Vec<T>;
 }
 
@@ -1589,6 +1591,7 @@ pub mod internal {
         }
 
         /// Build a list of the currently active states.
+        #[cfg(feature = "std")]
         fn state_list(&self, list: Vec<T>) -> Vec<T>;
     }
 
@@ -1889,6 +1892,7 @@ pub mod internal {
 
         /// Build a list of the currently active states.
         #[allow(unused)]
+        #[cfg(feature = "std")]
         pub fn state_list(&self, mut list: Vec<T>) -> Vec<T> {
             list.push(W::this_state());
             self.substate.state_list(list)

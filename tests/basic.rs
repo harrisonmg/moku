@@ -606,3 +606,29 @@ fn self_transition() {
     assert_eq!(state.enter, 1);
     assert_eq!(a_exit.get(), 1);
 }
+
+#[test]
+fn state_list() {
+    let mut machine = TesterMachineBuilder::new(Top::default()).build();
+
+    assert!(matches!(machine.state(), TesterState::Top));
+    assert_eq!(machine.state_list(), vec![TesterState::Top]);
+
+    machine.transition(TesterState::A);
+    assert!(matches!(machine.state(), TesterState::A));
+    assert_eq!(machine.state_list(), vec![TesterState::Top, TesterState::A]);
+
+    machine.transition(TesterState::AA);
+    assert!(matches!(machine.state(), TesterState::AA));
+    assert_eq!(
+        machine.state_list(),
+        vec![TesterState::Top, TesterState::A, TesterState::AA]
+    );
+
+    machine.transition(TesterState::BB);
+    assert!(matches!(machine.state(), TesterState::BB));
+    assert_eq!(
+        machine.state_list(),
+        vec![TesterState::Top, TesterState::B, TesterState::BB]
+    );
+}

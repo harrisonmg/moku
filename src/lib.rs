@@ -687,6 +687,59 @@ where
     /// machine.handle_event(&Event::A);
     /// ```
     fn handle_event(&mut self, event: &U);
+
+    /// Get a list of currently active states, starting from the [TopState].
+    ///
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// ├─ Foo
+    /// │  └─ Bar
+    /// └─ Fizz
+    ///    └─ Buzz
+    /// ```
+    /// ```
+    /// # #[state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #
+    /// #    pub use machine::ExampleState;
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState<ExampleState> for Top {}
+    /// #
+    /// #    struct Foo;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Foo {}
+    /// #
+    /// #    struct Bar;
+    /// #    #[superstate(Foo)]
+    /// #    impl State<ExampleState> for Bar {}
+    /// #
+    /// #    struct Fizz;
+    /// #    #[superstate(Top)]
+    /// #    impl State<ExampleState> for Fizz {}
+    /// #
+    /// #    struct Buzz;
+    /// #    #[superstate(Fizz)]
+    /// #    impl State<ExampleState> for Buzz {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::*;
+    /// # use example::machine::*;
+    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
+    /// # machine.transition(ExampleState::Bar);
+    /// assert!(matches!(machine.state(), ExampleState::Bar));
+    /// assert_eq!(
+    ///     machine.state_list(),
+    ///     vec![ExampleState::Top, ExampleState::Foo, ExampleState::Bar]
+    /// );
+    /// ```
+    fn state_list(&self) -> Vec<T>;
 }
 
 /// Trait for getting references to active states.
@@ -1534,6 +1587,9 @@ pub mod internal {
         ) -> EventResponse<T> {
             EventResponse::Next(Next::None)
         }
+
+        /// Build a list of the currently active states.
+        fn state_list(&self, list: Vec<T>) -> Vec<T>;
     }
 
     /// The result of trying to enter a [`Node`].
@@ -1829,6 +1885,13 @@ pub mod internal {
                 }
                 substate_res => substate_res,
             }
+        }
+
+        /// Build a list of the currently active states.
+        #[allow(unused)]
+        pub fn state_list(&self, mut list: Vec<T>) -> Vec<T> {
+            list.push(W::this_state());
+            self.substate.state_list(list)
         }
     }
 

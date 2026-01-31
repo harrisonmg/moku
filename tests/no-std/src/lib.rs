@@ -6,6 +6,7 @@
 // Run these tests with `cargo test` in the directory of this particular crate.
 
 #![no_std]
+#![allow(clippy::upper_case_acronyms)]
 
 extern crate moku;
 use moku::*;
@@ -90,17 +91,17 @@ mod tester {
 
     impl Substate<A> for AA {}
 
-    struct Aaa;
+    struct AAA;
 
-    impl Substate<AA> for Aaa {}
+    impl Substate<AA> for AAA {}
 
     struct AB;
 
     impl Substate<A> for AB {}
 
-    struct Aba;
+    struct ABA;
 
-    impl Substate<AB> for Aba {}
+    impl Substate<AB> for ABA {}
 
     #[derive(Default)]
     pub struct B {
@@ -229,9 +230,9 @@ mod tests {
             "Top
 ├─ A
 │  ├─ AA
-│  │  └─ Aaa
+│  │  └─ AAA
 │  └─ AB
-│     └─ Aba
+│     └─ ABA
 └─ B
    ├─ BA
    └─ BB"

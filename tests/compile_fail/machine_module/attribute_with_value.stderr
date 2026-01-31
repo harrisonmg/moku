@@ -1,4 +1,4 @@
-error: `moku::machine_module` accepts no arguments, try `#[machine_module]`
+error: `moku::machine_module` accepts no arguments, try `#[moku::machine_module]`
  --> tests/compile_fail/machine_module/attribute_with_value.rs:7:5
   |
 7 |     #[machine_module = something]

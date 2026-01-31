@@ -1,6 +1,6 @@
 error: `moku::TopState` must be implemented on a plain struct
        You may also use a type alias: `type MyTopState = Option<bool>;`
-  --> tests/compile_fail/state/top_state_impl_on_ref.rs:11:36
+  --> tests/compile_fail/state/top_state_impl_on_ref.rs:11:23
    |
-11 |     impl TopState<BlinkyState> for &Top {}
-   |                                    ^
+11 |     impl TopState for &Top {}
+   |                       ^

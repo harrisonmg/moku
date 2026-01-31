@@ -21,11 +21,11 @@ mod hunter {
 
     pub struct Top;
 
-    impl TopState<HunterState, Event> for Top {
-        fn handle_event(&mut self, event: &Event) -> impl Into<Next<HunterState>> {
+    impl TopState for Top {
+        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
             match event {
-                Event::StomachGrumbled => Some(HunterState::Hunting),
-                Event::PreyCaught => Some(HunterState::Cooking),
+                Event::StomachGrumbled => Some(State::Hunting),
+                Event::PreyCaught => Some(State::Cooking),
                 _ => None,
             }
         }
@@ -33,22 +33,20 @@ mod hunter {
 
     struct Hunting;
 
-    #[superstate(Top)]
-    impl State<HunterState, Event> for Hunting {
+    impl Substate<Top> for Hunting {
         // by default, states will defer all events
     }
 
     struct Cooking;
 
-    #[superstate(Top)]
-    impl State<HunterState, Event> for Cooking {
+    impl Substate<Top> for Cooking {
         fn handle_event(
             &mut self,
-            event: &Event,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<EventResponse<HunterState>> {
+            event: &Self::Event,
+            _ctx: &mut Self::Context<'_>,
+        ) -> impl Into<EventResponse<Self::State>> {
             match event {
-                Event::MeatCooked => HunterState::Top.into(),
+                Event::MeatCooked => State::Top.into(),
                 // ignore Top state's logic to start hunting when stomach grumbles
                 Event::StomachGrumbled => EventResponse::Drop,
                 // defer other events to superstates
@@ -59,7 +57,7 @@ mod hunter {
 }
 
 fn main() {
-    let mut machine = HunterMachineBuilder::new(Top).build();
+    let mut machine = Builder::new(Top).build();
     let mut events = VecDeque::new();
 
     // generate events

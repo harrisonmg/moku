@@ -1,5 +1,0 @@
-error: this impl of moku::TopState must use the generic <BlinkyState>
-  --> tests/compile_fail/state/wrong_top_state_enum.rs:15:10
-   |
-15 |     impl TopState<BlonkyState> for Top {}
-   |          ^^^^^^^^

@@ -1,7 +1,5 @@
 use moku::*;
 
-struct Bottom;
-
 #[state_machine]
 mod blinky {
     use moku::*;
@@ -9,14 +7,15 @@ mod blinky {
     #[machine_module]
     mod machine {}
 
-    use machine::State;
-
     struct Top;
     impl TopState for Top {}
 
-    use super::Bottom;
+    struct Middle;
+    impl Substate<Top> for Middle {}
 
+    struct Bottom;
     impl Substate<Top> for Bottom {}
+    impl Substate<Middle> for Bottom {}
 }
 
 fn main() {}

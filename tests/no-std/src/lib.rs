@@ -17,8 +17,6 @@ mod tester {
     #[machine_module]
     pub mod machine {}
 
-    use machine::State;
-
     #[derive(Default)]
     pub struct Top {
         pub access: u8,
@@ -92,17 +90,17 @@ mod tester {
 
     impl Substate<A> for AA {}
 
-    struct AAA;
+    struct Aaa;
 
-    impl Substate<AA> for AAA {}
+    impl Substate<AA> for Aaa {}
 
     struct AB;
 
     impl Substate<A> for AB {}
 
-    struct ABA;
+    struct Aba;
 
-    impl Substate<AB> for ABA {}
+    impl Substate<AB> for Aba {}
 
     #[derive(Default)]
     pub struct B {
@@ -231,9 +229,9 @@ mod tests {
             "Top
 ├─ A
 │  ├─ AA
-│  │  └─ AAA
+│  │  └─ Aaa
 │  └─ AB
-│     └─ ABA
+│     └─ Aba
 └─ B
    ├─ BA
    └─ BB"

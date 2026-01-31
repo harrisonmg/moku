@@ -9,8 +9,6 @@ mod tester {
     #[machine_module]
     pub mod machine {}
 
-    use machine::State;
-
     pub struct Top;
 
     impl TopState for Top {}

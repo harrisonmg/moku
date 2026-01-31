@@ -3,8 +3,6 @@ mod blinky {
     #[::moku::machine_module]
     mod machine {}
 
-    use machine::State;
-
     struct Event;
 
     impl ::moku::StateMachineEvent for Event {}

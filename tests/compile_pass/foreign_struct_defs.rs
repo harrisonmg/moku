@@ -9,8 +9,6 @@ mod blinky {
     #[machine_module]
     mod machine {}
 
-    use machine::State;
-
     struct Event;
     type EventTy = Event;
     impl StateMachineEvent for EventTy {}

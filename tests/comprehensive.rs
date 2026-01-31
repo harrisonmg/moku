@@ -17,7 +17,6 @@ mod deep {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top {
         pub depth_visited: Vec<u8>,
@@ -197,7 +196,6 @@ mod complex {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top {
         pub transition_log: Vec<String>,
@@ -398,7 +396,6 @@ mod data {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top {
         pub counter: u32,
@@ -839,7 +836,6 @@ mod traits {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top;
     impl TopState for Top {}
@@ -976,7 +972,6 @@ mod wide {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top {
         pub visit_count: u32,
@@ -1141,7 +1136,6 @@ mod exact {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top {
         pub init_count: u32,
@@ -1325,7 +1319,6 @@ mod machine_a {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top {
         pub value: u32,
@@ -1342,7 +1335,6 @@ mod machine_b {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top {
         pub value: String,
@@ -1391,7 +1383,6 @@ mod unit {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top {
         pub event_count: u32,
@@ -1411,7 +1402,7 @@ mod unit {
 
 mod unit_events_tests {
     use super::*;
-    use unit::machine::{Builder as UnitMachineBuilder, State as UnitState};
+    use unit::machine::Builder as UnitMachineBuilder;
     use unit::*;
 
     #[test]
@@ -1438,7 +1429,6 @@ mod same {
 
     #[machine_module]
     pub mod machine {}
-    use machine::State;
 
     pub struct Top;
     impl TopState for Top {}

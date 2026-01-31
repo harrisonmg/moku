@@ -13,8 +13,6 @@ mod tester {
     #[machine_module]
     pub mod machine {}
 
-    use machine::State;
-
     #[derive(Default)]
     pub struct Top {
         pub access: u8,

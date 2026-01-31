@@ -8,12 +8,13 @@ mod blinky {
     mod machine {}
 
     struct Top;
-    impl TopState<BlinkyState> for Top {}
+    impl TopState for Top {}
 
     struct Bottom;
 
-    #[superstate(Top)]
-    impl State<BlinkyState> for &Bottom {}
+    impl Substate<Top> for Bottom {
+        type Context<'a> = std::marker::PhantomData<&'a ()>;
+    }
 }
 
 fn main() {}

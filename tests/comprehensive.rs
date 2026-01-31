@@ -17,14 +17,14 @@ mod deep {
 
     #[machine_module]
     pub mod machine {}
-    use machine::DeepState;
+    use machine::State;
 
     pub struct Top {
         pub depth_visited: Vec<u8>,
     }
 
-    impl TopState<DeepState> for Top {
-        fn update(&mut self) -> impl Into<Next<DeepState>> {
+    impl TopState for Top {
+        fn update(&mut self) -> impl Into<Next<Self::State>> {
             self.depth_visited.push(0);
             None
         }
@@ -34,90 +34,70 @@ mod deep {
         pub entered: bool,
     }
 
-    #[superstate(Top)]
-    impl State<DeepState> for L1 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<DeepState, Self> {
-            superstates.top.depth_visited.push(1);
+    impl Substate<Top> for L1 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.depth_visited.push(1);
             Self { entered: true }.into()
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<DeepState>> {
-            superstates.top.depth_visited.push(1);
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.depth_visited.push(1);
             None
         }
     }
 
     pub struct L2;
 
-    #[superstate(L1)]
-    impl State<DeepState> for L2 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<DeepState, Self> {
-            superstates.top.depth_visited.push(2);
+    impl Substate<L1> for L2 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.depth_visited.push(2);
             Self.into()
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<DeepState>> {
-            superstates.top.depth_visited.push(2);
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.depth_visited.push(2);
             None
         }
     }
 
     pub struct L3;
 
-    #[superstate(L2)]
-    impl State<DeepState> for L3 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<DeepState, Self> {
-            superstates.top.depth_visited.push(3);
+    impl Substate<L2> for L3 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.depth_visited.push(3);
             Self.into()
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<DeepState>> {
-            superstates.top.depth_visited.push(3);
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.depth_visited.push(3);
             None
         }
     }
 
     pub struct L4;
 
-    #[superstate(L3)]
-    impl State<DeepState> for L4 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<DeepState, Self> {
-            superstates.top.depth_visited.push(4);
+    impl Substate<L3> for L4 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.depth_visited.push(4);
             Self.into()
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<DeepState>> {
-            superstates.top.depth_visited.push(4);
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.depth_visited.push(4);
             None
         }
     }
 
     pub struct L5;
 
-    #[superstate(L4)]
-    impl State<DeepState> for L5 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<DeepState, Self> {
-            superstates.top.depth_visited.push(5);
+    impl Substate<L4> for L5 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.depth_visited.push(5);
             Self.into()
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<DeepState>> {
-            superstates.top.depth_visited.push(5);
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.depth_visited.push(5);
             None
         }
     }
@@ -125,7 +105,8 @@ mod deep {
 
 mod deep_nesting_tests {
     use super::*;
-    use deep::{machine::*, *};
+    use deep::machine::{Builder as DeepMachineBuilder, State as DeepState, STATE_CHART as DEEP_STATE_CHART};
+    use deep::*;
 
     #[test]
     fn state_chart() {
@@ -216,56 +197,53 @@ mod complex {
 
     #[machine_module]
     pub mod machine {}
-    use machine::ComplexState;
+    use machine::State;
 
     pub struct Top {
         pub transition_log: Vec<String>,
     }
 
-    impl TopState<ComplexState> for Top {}
+    impl TopState for Top {}
 
     // Branch A
     pub struct A;
 
-    #[superstate(Top)]
-    impl State<ComplexState> for A {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ComplexState, Self> {
-            superstates.top.transition_log.push("enter A".to_string());
+    impl Substate<Top> for A {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.transition_log.push("enter A".to_string());
             Self.into()
         }
 
-        fn exit(self, superstates: &mut Self::Superstates<'_>) -> impl Into<Next<ComplexState>> {
-            superstates.top.transition_log.push("exit A".to_string());
+        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.transition_log.push("exit A".to_string());
             None
         }
     }
 
     pub struct A1;
 
-    #[superstate(A)]
-    impl State<ComplexState> for A1 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ComplexState, Self> {
-            superstates.top.transition_log.push("enter A1".to_string());
+    impl Substate<A> for A1 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.transition_log.push("enter A1".to_string());
             Self.into()
         }
 
-        fn exit(self, superstates: &mut Self::Superstates<'_>) -> impl Into<Next<ComplexState>> {
-            superstates.top.transition_log.push("exit A1".to_string());
+        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.transition_log.push("exit A1".to_string());
             None
         }
     }
 
     pub struct A2;
 
-    #[superstate(A)]
-    impl State<ComplexState> for A2 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ComplexState, Self> {
-            superstates.top.transition_log.push("enter A2".to_string());
+    impl Substate<A> for A2 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.transition_log.push("enter A2".to_string());
             Self.into()
         }
 
-        fn exit(self, superstates: &mut Self::Superstates<'_>) -> impl Into<Next<ComplexState>> {
-            superstates.top.transition_log.push("exit A2".to_string());
+        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.transition_log.push("exit A2".to_string());
             None
         }
     }
@@ -273,45 +251,42 @@ mod complex {
     // Branch B
     pub struct B;
 
-    #[superstate(Top)]
-    impl State<ComplexState> for B {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ComplexState, Self> {
-            superstates.top.transition_log.push("enter B".to_string());
+    impl Substate<Top> for B {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.transition_log.push("enter B".to_string());
             Self.into()
         }
 
-        fn exit(self, superstates: &mut Self::Superstates<'_>) -> impl Into<Next<ComplexState>> {
-            superstates.top.transition_log.push("exit B".to_string());
+        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.transition_log.push("exit B".to_string());
             None
         }
     }
 
     pub struct B1;
 
-    #[superstate(B)]
-    impl State<ComplexState> for B1 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ComplexState, Self> {
-            superstates.top.transition_log.push("enter B1".to_string());
+    impl Substate<B> for B1 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.transition_log.push("enter B1".to_string());
             Self.into()
         }
 
-        fn exit(self, superstates: &mut Self::Superstates<'_>) -> impl Into<Next<ComplexState>> {
-            superstates.top.transition_log.push("exit B1".to_string());
+        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.transition_log.push("exit B1".to_string());
             None
         }
     }
 
     pub struct B2;
 
-    #[superstate(B)]
-    impl State<ComplexState> for B2 {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ComplexState, Self> {
-            superstates.top.transition_log.push("enter B2".to_string());
+    impl Substate<B> for B2 {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.transition_log.push("enter B2".to_string());
             Self.into()
         }
 
-        fn exit(self, superstates: &mut Self::Superstates<'_>) -> impl Into<Next<ComplexState>> {
-            superstates.top.transition_log.push("exit B2".to_string());
+        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.transition_log.push("exit B2".to_string());
             None
         }
     }
@@ -319,7 +294,8 @@ mod complex {
 
 mod complex_transitions_tests {
     use super::*;
-    use complex::{machine::*, *};
+    use complex::machine::{Builder as ComplexMachineBuilder, State as ComplexState, STATE_CHART as COMPLEX_STATE_CHART};
+    use complex::*;
 
     #[test]
     fn state_chart() {
@@ -422,23 +398,22 @@ mod data {
 
     #[machine_module]
     pub mod machine {}
-    use machine::DataState;
+    use machine::State;
 
     pub struct Top {
         pub counter: u32,
     }
 
-    impl TopState<DataState> for Top {}
+    impl TopState for Top {}
 
     pub struct Parent {
         pub multiplier: u32,
     }
 
-    #[superstate(Top)]
-    impl State<DataState> for Parent {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<DataState, Self> {
+    impl Substate<Top> for Parent {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
             // Access Top's counter during enter
-            let val = superstates.top.counter;
+            let val = ctx.top.counter;
             Self {
                 multiplier: val * 2,
             }
@@ -448,30 +423,22 @@ mod data {
 
     pub struct Child;
 
-    #[superstate(Parent)]
-    impl State<DataState> for Child {
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<DataState>> {
+    impl Substate<Parent> for Child {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             // Modify both parent and top state
-            superstates.top.counter += 1;
-            superstates.parent.multiplier *= 2;
+            ctx.top.counter += 1;
+            ctx.parent.multiplier *= 2;
             None
         }
     }
 
     pub struct Sibling;
 
-    #[superstate(Parent)]
-    impl State<DataState> for Sibling {
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<DataState>> {
+    impl Substate<Parent> for Sibling {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             // Different modification
-            superstates.top.counter += 10;
-            superstates.parent.multiplier += 1;
+            ctx.top.counter += 10;
+            ctx.parent.multiplier += 1;
             None
         }
     }
@@ -479,7 +446,8 @@ mod data {
 
 mod superstate_data_tests {
     use super::*;
-    use data::{machine::*, *};
+    use data::machine::{Builder as DataMachineBuilder, State as DataState};
+    use data::*;
 
     #[test]
     fn superstate_access_in_enter() {
@@ -538,62 +506,50 @@ mod chains {
 
     #[machine_module]
     pub mod machine {}
-    use machine::ChainsState;
+    use machine::State;
 
     pub struct Top;
 
-    impl TopState<ChainsState> for Top {
-        fn init(&mut self) -> impl Into<Next<ChainsState>> {
-            Some(ChainsState::A)
+    impl TopState for Top {
+        fn init(&mut self) -> impl Into<Next<Self::State>> {
+            Some(State::A)
         }
     }
 
     struct A;
 
-    #[superstate(Top)]
-    impl State<ChainsState> for A {
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<ChainsState>> {
-            Some(ChainsState::AA)
+    impl Substate<Top> for A {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            Some(State::AA)
         }
     }
 
     struct AA;
 
-    #[superstate(A)]
-    impl State<ChainsState> for AA {
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<ChainsState>> {
-            Some(ChainsState::AAA)
+    impl Substate<A> for AA {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            Some(State::AAA)
         }
     }
 
     struct AAA;
 
-    #[superstate(AA)]
-    impl State<ChainsState> for AAA {}
+    impl Substate<AA> for AAA {}
 
     struct B;
 
-    #[superstate(Top)]
-    impl State<ChainsState> for B {
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<ChainsState>> {
+    impl Substate<Top> for B {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             // Init transitions to a different branch!
-            Some(ChainsState::A)
+            Some(State::A)
         }
     }
 }
 
 mod init_chains_tests {
     use super::*;
-    use chains::{machine::*, *};
+    use chains::machine::{Builder as ChainsMachineBuilder, State as ChainsState};
+    use chains::*;
 
     #[test]
     fn chained_init_transitions() {
@@ -624,59 +580,46 @@ mod circuit {
 
     #[machine_module]
     pub mod machine {}
-    use machine::CircuitState;
+    use machine::State;
 
     pub struct Top {
         pub log: Vec<String>,
     }
 
-    impl TopState<CircuitState> for Top {}
+    impl TopState for Top {}
 
     struct Normal;
 
-    #[superstate(Top)]
-    impl State<CircuitState> for Normal {}
+    impl Substate<Top> for Normal {}
 
     struct EnterShortCircuit;
 
-    #[superstate(Top)]
-    impl State<CircuitState> for EnterShortCircuit {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<CircuitState, Self> {
-            superstates
-                .top
-                .log
-                .push("enter EnterShortCircuit".to_string());
-            StateEntry::Target(CircuitState::Normal)
+    impl Substate<Top> for EnterShortCircuit {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.log.push("enter EnterShortCircuit".to_string());
+            StateEntry::Target(State::Normal)
         }
     }
 
     struct ExitShortCircuit;
 
-    #[superstate(Top)]
-    impl State<CircuitState> for ExitShortCircuit {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<CircuitState, Self> {
-            superstates
-                .top
-                .log
-                .push("enter ExitShortCircuit".to_string());
+    impl Substate<Top> for ExitShortCircuit {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.log.push("enter ExitShortCircuit".to_string());
             Self.into()
         }
 
-        fn exit(self, superstates: &mut Self::Superstates<'_>) -> impl Into<Next<CircuitState>> {
-            superstates
-                .top
-                .log
-                .push("exit ExitShortCircuit".to_string());
-            Some(CircuitState::Normal)
+        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.log.push("exit ExitShortCircuit".to_string());
+            Some(State::Normal)
         }
     }
 
     struct Target;
 
-    #[superstate(Top)]
-    impl State<CircuitState> for Target {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<CircuitState, Self> {
-            superstates.top.log.push("enter Target".to_string());
+    impl Substate<Top> for Target {
+        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            ctx.top.log.push("enter Target".to_string());
             Self.into()
         }
     }
@@ -684,31 +627,29 @@ mod circuit {
     // For testing chained short circuits
     struct Chain1;
 
-    #[superstate(Top)]
-    impl State<CircuitState> for Chain1 {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<CircuitState, Self> {
-            StateEntry::Target(CircuitState::Chain2)
+    impl Substate<Top> for Chain1 {
+        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            StateEntry::Target(State::Chain2)
         }
     }
 
     struct Chain2;
 
-    #[superstate(Top)]
-    impl State<CircuitState> for Chain2 {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<CircuitState, Self> {
-            StateEntry::Target(CircuitState::Chain3)
+    impl Substate<Top> for Chain2 {
+        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            StateEntry::Target(State::Chain3)
         }
     }
 
     struct Chain3;
 
-    #[superstate(Top)]
-    impl State<CircuitState> for Chain3 {}
+    impl Substate<Top> for Chain3 {}
 }
 
 mod short_circuit_tests {
     use super::*;
-    use circuit::{machine::*, *};
+    use circuit::machine::{Builder as CircuitMachineBuilder, State as CircuitState};
+    use circuit::*;
 
     #[test]
     fn enter_short_circuit() {
@@ -763,7 +704,7 @@ mod evt {
 
     #[machine_module]
     pub mod machine {}
-    use machine::EvtState;
+    use machine::State;
 
     #[derive(Debug, Clone, PartialEq)]
     pub enum Event {
@@ -780,12 +721,12 @@ mod evt {
         pub handled_by: Option<String>,
     }
 
-    impl TopState<EvtState, Event> for Top {
-        fn handle_event(&mut self, event: &Event) -> impl Into<Next<EvtState>> {
+    impl TopState for Top {
+        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
             self.handled_by = Some("Top".to_string());
             match event {
-                Event::GoToA => Some(EvtState::A),
-                Event::GoToB => Some(EvtState::B),
+                Event::GoToA => Some(State::A),
+                Event::GoToB => Some(State::B),
                 _ => None,
             }
         }
@@ -793,26 +734,24 @@ mod evt {
 
     pub struct A;
 
-    #[superstate(Top)]
-    impl State<EvtState, Event> for A {}
+    impl Substate<Top> for A {}
 
     pub struct AA;
 
-    #[superstate(A)]
-    impl State<EvtState, Event> for AA {
+    impl Substate<A> for AA {
         fn handle_event(
             &mut self,
-            event: &Event,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<EventResponse<EvtState>> {
+            event: &Self::Event,
+            ctx: &mut Self::Context<'_>,
+        ) -> impl Into<EventResponse<Self::State>> {
             match event {
                 Event::Handled => {
-                    superstates.top.handled_by = Some("AA".to_string());
+                    ctx.top.handled_by = Some("AA".to_string());
                     EventResponse::Drop
                 }
                 Event::GoToDeep => {
-                    superstates.top.handled_by = Some("AA".to_string());
-                    EvtState::BB.into()
+                    ctx.top.handled_by = Some("AA".to_string());
+                    State::BB.into()
                 }
                 _ => None.into(), // Defer to superstate
             }
@@ -821,21 +760,19 @@ mod evt {
 
     pub struct B;
 
-    #[superstate(Top)]
-    impl State<EvtState, Event> for B {}
+    impl Substate<Top> for B {}
 
     pub struct BB;
 
-    #[superstate(B)]
-    impl State<EvtState, Event> for BB {
+    impl Substate<B> for BB {
         fn handle_event(
             &mut self,
-            event: &Event,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<EventResponse<EvtState>> {
+            event: &Self::Event,
+            ctx: &mut Self::Context<'_>,
+        ) -> impl Into<EventResponse<Self::State>> {
             match event {
                 Event::Handled => {
-                    superstates.top.handled_by = Some("BB".to_string());
+                    ctx.top.handled_by = Some("BB".to_string());
                     EventResponse::Drop
                 }
                 _ => None.into(),
@@ -846,7 +783,8 @@ mod evt {
 
 mod complex_events_tests {
     use super::*;
-    use evt::{machine::*, *};
+    use evt::machine::{Builder as EvtMachineBuilder, State as EvtState};
+    use evt::*;
 
     #[test]
     fn event_bubbles_to_top() {
@@ -901,22 +839,20 @@ mod traits {
 
     #[machine_module]
     pub mod machine {}
-    use machine::TraitsState;
+    use machine::State;
 
     pub struct Top;
-    impl TopState<TraitsState> for Top {}
+    impl TopState for Top {}
 
     struct A;
-    #[superstate(Top)]
-    impl State<TraitsState> for A {}
+    impl Substate<Top> for A {}
 
     struct B;
-    #[superstate(Top)]
-    impl State<TraitsState> for B {}
+    impl Substate<Top> for B {}
 }
 
 mod state_enum_traits_tests {
-    use super::traits::machine::*;
+    use super::traits::machine::State as TraitsState;
 
     #[test]
     fn state_enum_debug() {
@@ -958,19 +894,17 @@ mod froms {
 
     #[machine_module]
     pub mod machine {}
-    use machine::FromsState;
 
     pub struct Top;
-    impl TopState<FromsState> for Top {}
+    impl TopState for Top {}
 
     struct A;
-    #[superstate(Top)]
-    impl State<FromsState> for A {}
+    impl Substate<Top> for A {}
 }
 
 mod from_impls_tests {
     use super::*;
-    use froms::machine::*;
+    use froms::machine::State as FromsState;
 
     #[test]
     fn next_from_state_enum() {
@@ -1042,50 +976,43 @@ mod wide {
 
     #[machine_module]
     pub mod machine {}
-    use machine::WideState;
+    use machine::State;
 
     pub struct Top {
         pub visit_count: u32,
     }
 
-    impl TopState<WideState> for Top {}
+    impl TopState for Top {}
 
     struct S1;
-    #[superstate(Top)]
-    impl State<WideState> for S1 {}
+    impl Substate<Top> for S1 {}
 
     struct S2;
-    #[superstate(Top)]
-    impl State<WideState> for S2 {}
+    impl Substate<Top> for S2 {}
 
     struct S3;
-    #[superstate(Top)]
-    impl State<WideState> for S3 {}
+    impl Substate<Top> for S3 {}
 
     struct S4;
-    #[superstate(Top)]
-    impl State<WideState> for S4 {}
+    impl Substate<Top> for S4 {}
 
     struct S5;
-    #[superstate(Top)]
-    impl State<WideState> for S5 {}
+    impl Substate<Top> for S5 {}
 
     struct S6;
-    #[superstate(Top)]
-    impl State<WideState> for S6 {}
+    impl Substate<Top> for S6 {}
 
     struct S7;
-    #[superstate(Top)]
-    impl State<WideState> for S7 {}
+    impl Substate<Top> for S7 {}
 
     struct S8;
-    #[superstate(Top)]
-    impl State<WideState> for S8 {}
+    impl Substate<Top> for S8 {}
 }
 
 mod wide_machine_tests {
     use super::*;
-    use wide::{machine::*, *};
+    use wide::machine::{Builder as WideMachineBuilder, State as WideState, STATE_CHART as WIDE_STATE_CHART};
+    use wide::*;
 
     #[test]
     fn wide_state_chart() {
@@ -1138,14 +1065,14 @@ mod cont {
 
     #[machine_module]
     pub mod machine {}
-    use machine::ContState;
+    use machine::State;
 
     pub struct Top {
         pub update_log: Vec<String>,
     }
 
-    impl TopState<ContState> for Top {
-        fn update(&mut self) -> impl Into<Next<ContState>> {
+    impl TopState for Top {
+        fn update(&mut self) -> impl Into<Next<Self::State>> {
             self.update_log.push("Top update".to_string());
             None
         }
@@ -1153,40 +1080,28 @@ mod cont {
 
     pub struct A;
 
-    #[superstate(Top)]
-    impl State<ContState> for A {
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<ContState>> {
-            superstates.top.update_log.push("A update".to_string());
+    impl Substate<Top> for A {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.update_log.push("A update".to_string());
             None
         }
     }
 
     pub struct AA;
 
-    #[superstate(A)]
-    impl State<ContState> for AA {
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<ContState>> {
-            superstates.top.update_log.push("AA update".to_string());
+    impl Substate<A> for AA {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.update_log.push("AA update".to_string());
             // Transition to B during update
-            Some(ContState::B)
+            Some(State::B)
         }
     }
 
     pub struct B;
 
-    #[superstate(Top)]
-    impl State<ContState> for B {
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<ContState>> {
-            superstates.top.update_log.push("B update".to_string());
+    impl Substate<Top> for B {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            ctx.top.update_log.push("B update".to_string());
             None
         }
     }
@@ -1194,7 +1109,8 @@ mod cont {
 
 mod update_continuation_tests {
     use super::*;
-    use cont::{machine::*, *};
+    use cont::machine::{Builder as ContMachineBuilder, State as ContState};
+    use cont::*;
 
     #[test]
     fn update_continues_from_common_ancestor() {
@@ -1225,14 +1141,14 @@ mod exact {
 
     #[machine_module]
     pub mod machine {}
-    use machine::ExactState;
+    use machine::State;
 
     pub struct Top {
         pub init_count: u32,
     }
 
-    impl TopState<ExactState> for Top {
-        fn init(&mut self) -> impl Into<Next<ExactState>> {
+    impl TopState for Top {
+        fn init(&mut self) -> impl Into<Next<Self::State>> {
             self.init_count += 1;
             None
         }
@@ -1243,9 +1159,8 @@ mod exact {
         pub enter_count: u32,
     }
 
-    #[superstate(Top)]
-    impl State<ExactState> for A {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<ExactState, Self> {
+    impl Substate<Top> for A {
+        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
             Self {
                 init_count: 0,
                 enter_count: 1,
@@ -1253,10 +1168,7 @@ mod exact {
             .into()
         }
 
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<ExactState>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.init_count += 1;
             None
         }
@@ -1266,9 +1178,8 @@ mod exact {
         pub enter_count: u32,
     }
 
-    #[superstate(A)]
-    impl State<ExactState> for AA {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<ExactState, Self> {
+    impl Substate<A> for AA {
+        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
             Self { enter_count: 1 }.into()
         }
     }
@@ -1276,7 +1187,8 @@ mod exact {
 
 mod exact_transitions_tests {
     use super::*;
-    use exact::{machine::*, *};
+    use exact::machine::{Builder as ExactMachineBuilder, State as ExactState};
+    use exact::*;
 
     #[test]
     fn exact_transition_to_active_superstate() {
@@ -1336,28 +1248,25 @@ mod entry {
 
     #[machine_module]
     pub mod machine {}
-    use machine::EntryState;
+    use machine::State;
 
     pub struct Top;
-    impl TopState<EntryState> for Top {}
+    impl TopState for Top {}
 
     struct Normal;
-    #[superstate(Top)]
-    impl State<EntryState> for Normal {}
+    impl Substate<Top> for Normal {}
 
     struct RedirectOnEnter;
-    #[superstate(Top)]
-    impl State<EntryState> for RedirectOnEnter {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<EntryState, Self> {
-            StateEntry::Target(EntryState::Normal)
+    impl Substate<Top> for RedirectOnEnter {
+        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            StateEntry::Target(State::Normal)
         }
     }
 
     struct ExactRedirectOnEnter;
-    #[superstate(Top)]
-    impl State<EntryState> for ExactRedirectOnEnter {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<EntryState, Self> {
-            StateEntry::ExactTarget(EntryState::Top)
+    impl Substate<Top> for ExactRedirectOnEnter {
+        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+            StateEntry::ExactTarget(State::Top)
         }
     }
 
@@ -1365,9 +1274,8 @@ mod entry {
         pub value: u32,
     }
 
-    #[superstate(Top)]
-    impl State<EntryState> for Counter {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<EntryState, Self> {
+    impl Substate<Top> for Counter {
+        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
             StateEntry::State(Self { value: 42 })
         }
     }
@@ -1375,7 +1283,8 @@ mod entry {
 
 mod state_entry_tests {
     use super::*;
-    use entry::{machine::*, *};
+    use entry::machine::{Builder as EntryMachineBuilder, State as EntryState};
+    use entry::*;
 
     #[test]
     fn state_entry_state() {
@@ -1416,16 +1325,15 @@ mod machine_a {
 
     #[machine_module]
     pub mod machine {}
-    use machine::MachineAState;
+    use machine::State;
 
     pub struct Top {
         pub value: u32,
     }
-    impl TopState<MachineAState> for Top {}
+    impl TopState for Top {}
 
     struct StateA;
-    #[superstate(Top)]
-    impl State<MachineAState> for StateA {}
+    impl Substate<Top> for StateA {}
 }
 
 #[state_machine(MachineB)]
@@ -1434,22 +1342,21 @@ mod machine_b {
 
     #[machine_module]
     pub mod machine {}
-    use machine::MachineBState;
+    use machine::State;
 
     pub struct Top {
         pub value: String,
     }
-    impl TopState<MachineBState> for Top {}
+    impl TopState for Top {}
 
     struct StateB;
-    #[superstate(Top)]
-    impl State<MachineBState> for StateB {}
+    impl Substate<Top> for StateB {}
 }
 
 mod multiple_machines_tests {
     use super::*;
-    use machine_a::machine::*;
-    use machine_b::machine::*;
+    use machine_a::machine::{Builder as MachineAMachineBuilder, State as MachineAState};
+    use machine_b::machine::{Builder as MachineBMachineBuilder, State as MachineBState};
 
     #[test]
     fn machines_are_independent() {
@@ -1484,28 +1391,28 @@ mod unit {
 
     #[machine_module]
     pub mod machine {}
-    use machine::UnitState;
+    use machine::State;
 
     pub struct Top {
         pub event_count: u32,
     }
 
     // Using default () event type
-    impl TopState<UnitState> for Top {
-        fn handle_event(&mut self, _event: &()) -> impl Into<Next<UnitState>> {
+    impl TopState for Top {
+        fn handle_event(&mut self, _event: &Self::Event) -> impl Into<Next<Self::State>> {
             self.event_count += 1;
             None
         }
     }
 
     struct A;
-    #[superstate(Top)]
-    impl State<UnitState> for A {}
+    impl Substate<Top> for A {}
 }
 
 mod unit_events_tests {
     use super::*;
-    use unit::{machine::*, *};
+    use unit::machine::{Builder as UnitMachineBuilder, State as UnitState};
+    use unit::*;
 
     #[test]
     fn unit_event_handling() {
@@ -1531,19 +1438,18 @@ mod same {
 
     #[machine_module]
     pub mod machine {}
-    use machine::SameState;
+    use machine::State;
 
     pub struct Top;
-    impl TopState<SameState> for Top {}
+    impl TopState for Top {}
 
     pub struct Counter {
         pub enter_count: Rc<Cell<u32>>,
         pub exit_count: Rc<Cell<u32>>,
     }
 
-    #[superstate(Top)]
-    impl State<SameState> for Counter {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<SameState, Self> {
+    impl Substate<Top> for Counter {
+        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
             Self {
                 enter_count: Rc::new(Cell::new(1)),
                 exit_count: Rc::new(Cell::new(0)),
@@ -1551,7 +1457,7 @@ mod same {
             .into()
         }
 
-        fn exit(self, _superstates: &mut Self::Superstates<'_>) -> impl Into<Next<SameState>> {
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.exit_count.set(self.exit_count.get() + 1);
             None
         }
@@ -1560,7 +1466,8 @@ mod same {
 
 mod same_state_transition_tests {
     use super::*;
-    use same::{machine::*, *};
+    use same::machine::{Builder as SameMachineBuilder, State as SameState};
+    use same::*;
 
     #[test]
     fn normal_transition_to_self_is_noop() {
@@ -1611,42 +1518,40 @@ mod tdu {
 
     #[machine_module]
     pub mod machine {}
-    use machine::TduState;
+    use machine::State;
 
     pub struct Top {
         pub log: Vec<String>,
     }
 
-    impl TopState<TduState> for Top {
-        fn top_down_update(&mut self) -> impl Into<Next<TduState>> {
+    impl TopState for Top {
+        fn top_down_update(&mut self) -> impl Into<Next<Self::State>> {
             self.log.push("Top tdu".to_string());
             // Top triggers transition to B
-            Some(TduState::B)
+            Some(State::B)
         }
     }
 
     pub struct A;
 
-    #[superstate(Top)]
-    impl State<TduState> for A {
+    impl Substate<Top> for A {
         fn top_down_update(
             &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TduState>> {
-            superstates.top.log.push("A tdu".to_string());
+            ctx: &mut Self::Context<'_>,
+        ) -> impl Into<Next<Self::State>> {
+            ctx.top.log.push("A tdu".to_string());
             None
         }
     }
 
     pub struct B;
 
-    #[superstate(Top)]
-    impl State<TduState> for B {
+    impl Substate<Top> for B {
         fn top_down_update(
             &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TduState>> {
-            superstates.top.log.push("B tdu".to_string());
+            ctx: &mut Self::Context<'_>,
+        ) -> impl Into<Next<Self::State>> {
+            ctx.top.log.push("B tdu".to_string());
             None
         }
     }
@@ -1654,7 +1559,8 @@ mod tdu {
 
 mod top_down_transitions_tests {
     use super::*;
-    use tdu::{machine::*, *};
+    use tdu::machine::{Builder as TduMachineBuilder, State as TduState};
+    use tdu::*;
 
     #[test]
     fn top_triggers_transition_in_tdu() {
@@ -1685,7 +1591,7 @@ mod eexact {
 
     #[machine_module]
     pub mod machine {}
-    use machine::EexactState;
+    use machine::State;
 
     #[derive(Debug)]
     pub enum Event {
@@ -1699,28 +1605,28 @@ mod eexact {
         pub init_count: u32,
     }
 
-    impl TopState<EexactState, Event> for Top {
-        fn init(&mut self) -> impl Into<Next<EexactState>> {
+    impl TopState for Top {
+        fn init(&mut self) -> impl Into<Next<Self::State>> {
             self.init_count += 1;
             None
         }
 
-        fn handle_event(&mut self, event: &Event) -> impl Into<Next<EexactState>> {
+        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
             match event {
-                Event::ExactToTop => Next::ExactTarget(EexactState::Top),
-                Event::NormalToTop => Next::Target(EexactState::Top),
+                Event::ExactToTop => Next::ExactTarget(State::Top),
+                Event::NormalToTop => Next::Target(State::Top),
             }
         }
     }
 
     struct A;
-    #[superstate(Top)]
-    impl State<EexactState, Event> for A {}
+    impl Substate<Top> for A {}
 }
 
 mod event_exact_tests {
     use super::*;
-    use eexact::{machine::*, *};
+    use eexact::machine::{Builder as EexactMachineBuilder, State as EexactState};
+    use eexact::*;
 
     #[test]
     fn event_exact_transition_reinits_top() {

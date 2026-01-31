@@ -2,7 +2,7 @@ error: state graph cycle detected in children of Foo:
        Foo
        └─ Bar
           └─ Foo
-  --> tests/compile_fail/state_machine/graph_cycle.rs:20:18
+  --> tests/compile_fail/state_machine/graph_cycle.rs:19:19
    |
-20 |     #[superstate(Foo)]
-   |                  ^^^
+19 |     impl Substate<Foo> for Bar {}
+   |                   ^^^

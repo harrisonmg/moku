@@ -35,34 +35,6 @@ pub fn machine_module(_args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn superstate(_args: TokenStream, input: TokenStream) -> TokenStream {
-    // validate that this attribute is attached to an impl
-    let imp = match parse::<ItemImpl>(input.clone()) {
-        Ok(imp) => imp,
-        Err(error) => {
-            return token_stream_with_error(input, error);
-        }
-    };
-
-    // validate that the impl is for the State trait
-    if imp
-        .trait_
-        .as_ref()
-        .is_some_and(|tr| path_matches(&tr.1, "State"))
-    {
-        input
-    } else {
-        token_stream_with_error(
-            input,
-            syn::Error::new(
-                imp.span(),
-                "`moku::superstate` must only be applied to implementations of the `moku::State` trait",
-            )
-        )
-    }
-}
-
-#[proc_macro_attribute]
 pub fn state_machine(args: TokenStream, input: TokenStream) -> TokenStream {
     // validate that this attribute is attached to a module
     let main_mod = match parse::<ItemMod>(input.clone()) {

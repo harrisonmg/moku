@@ -1,5 +1,5 @@
-error: a struct with fields must manually implement the `State::enter` function
-  --> tests/compile_fail/state/no_enter_def.rs:18:10
+error: a struct with fields must manually implement the `Substate::enter` function
+  --> tests/compile_fail/state/no_enter_def.rs:17:10
    |
-18 |     impl State<BlinkyState> for Bottom {}
-   |          ^^^^^
+17 |     impl Substate<Top> for Bottom {}
+   |          ^^^^^^^^

@@ -1,0 +1,6 @@
+error: `moku::Substate` must be implemented on a plain struct
+       You may also use a type alias: `type MyState = Option<bool>;`
+  --> tests/compile_fail/state/substate_impl_on_ref.rs:15:28
+   |
+15 |     impl Substate<Top> for &Bottom {}
+   |                            ^

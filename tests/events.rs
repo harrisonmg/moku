@@ -35,11 +35,11 @@ mod tester {
     pub struct Top;
 
     impl TopState for Top {
-        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
+        fn handle_event(&mut self, event: &Self::Event) -> Self::Next {
             match event {
-                Event::A => Some(State::Foo),
-                Event::B => Some(State::Bar),
-                Event::C => None,
+                Event::A => State::Foo.into(),
+                Event::B => State::Bar.into(),
+                Event::C => Next::None,
             }
         }
     }
@@ -57,8 +57,8 @@ mod tester {
             &mut self,
             _event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
-            EventResponse::Drop
+        ) -> Self::Response {
+            Response::Drop
         }
     }
 
@@ -69,10 +69,10 @@ mod tester {
             &mut self,
             event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
+        ) -> Self::Response {
             match event {
-                Event::C => Some(State::Foo),
-                _ => None,
+                Event::C => State::Foo.into(),
+                _ => Response::default(),
             }
         }
     }
@@ -84,10 +84,10 @@ mod tester {
             &mut self,
             event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
+        ) -> Self::Response {
             match event {
-                Event::A => Some(State::Bar),
-                _ => None,
+                Event::A => State::Bar.into(),
+                _ => Response::default(),
             }
         }
     }

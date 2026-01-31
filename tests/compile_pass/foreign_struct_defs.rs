@@ -20,16 +20,16 @@ mod blinky {
     type BottomTy = Bottom;
 
     impl Substate<Top> for BottomTy {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {})
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {})
         }
     }
 
     use super::Under;
 
     impl Substate<BottomTy> for Under {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {})
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {})
         }
     }
 

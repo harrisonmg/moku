@@ -23,9 +23,9 @@ mod deep {
     }
 
     impl TopState for Top {
-        fn update(&mut self) -> impl Into<Next<Self::State>> {
+        fn update(&mut self) -> Self::Next {
             self.depth_visited.push(0);
-            None
+            Next::None
         }
     }
 
@@ -34,70 +34,70 @@ mod deep {
     }
 
     impl Substate<Top> for L1 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.depth_visited.push(1);
             Self { entered: true }.into()
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.depth_visited.push(1);
-            None
+            Next::None
         }
     }
 
     pub struct L2;
 
     impl Substate<L1> for L2 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.depth_visited.push(2);
             Self.into()
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.depth_visited.push(2);
-            None
+            Next::None
         }
     }
 
     pub struct L3;
 
     impl Substate<L2> for L3 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.depth_visited.push(3);
             Self.into()
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.depth_visited.push(3);
-            None
+            Next::None
         }
     }
 
     pub struct L4;
 
     impl Substate<L3> for L4 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.depth_visited.push(4);
             Self.into()
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.depth_visited.push(4);
-            None
+            Next::None
         }
     }
 
     pub struct L5;
 
     impl Substate<L4> for L5 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.depth_visited.push(5);
             Self.into()
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.depth_visited.push(5);
-            None
+            Next::None
         }
     }
 }
@@ -207,42 +207,42 @@ mod complex {
     pub struct A;
 
     impl Substate<Top> for A {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.transition_log.push("enter A".to_string());
             Self.into()
         }
 
-        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.transition_log.push("exit A".to_string());
-            None
+            Next::None
         }
     }
 
     pub struct A1;
 
     impl Substate<A> for A1 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.transition_log.push("enter A1".to_string());
             Self.into()
         }
 
-        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.transition_log.push("exit A1".to_string());
-            None
+            Next::None
         }
     }
 
     pub struct A2;
 
     impl Substate<A> for A2 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.transition_log.push("enter A2".to_string());
             Self.into()
         }
 
-        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.transition_log.push("exit A2".to_string());
-            None
+            Next::None
         }
     }
 
@@ -250,42 +250,42 @@ mod complex {
     pub struct B;
 
     impl Substate<Top> for B {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.transition_log.push("enter B".to_string());
             Self.into()
         }
 
-        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.transition_log.push("exit B".to_string());
-            None
+            Next::None
         }
     }
 
     pub struct B1;
 
     impl Substate<B> for B1 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.transition_log.push("enter B1".to_string());
             Self.into()
         }
 
-        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.transition_log.push("exit B1".to_string());
-            None
+            Next::None
         }
     }
 
     pub struct B2;
 
     impl Substate<B> for B2 {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.transition_log.push("enter B2".to_string());
             Self.into()
         }
 
-        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.transition_log.push("exit B2".to_string());
-            None
+            Next::None
         }
     }
 }
@@ -408,7 +408,7 @@ mod data {
     }
 
     impl Substate<Top> for Parent {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             // Access Top's counter during enter
             let val = ctx.top.counter;
             Self {
@@ -421,22 +421,22 @@ mod data {
     pub struct Child;
 
     impl Substate<Parent> for Child {
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             // Modify both parent and top state
             ctx.top.counter += 1;
             ctx.parent.multiplier *= 2;
-            None
+            Next::None
         }
     }
 
     pub struct Sibling;
 
     impl Substate<Parent> for Sibling {
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             // Different modification
             ctx.top.counter += 10;
             ctx.parent.multiplier += 1;
-            None
+            Next::None
         }
     }
 }
@@ -508,24 +508,24 @@ mod chains {
     pub struct Top;
 
     impl TopState for Top {
-        fn init(&mut self) -> impl Into<Next<Self::State>> {
-            Some(State::A)
+        fn init(&mut self) -> Self::Next {
+            State::A.into()
         }
     }
 
     struct A;
 
     impl Substate<Top> for A {
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            Some(State::AA)
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::AA.into()
         }
     }
 
     struct AA;
 
     impl Substate<A> for AA {
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            Some(State::AAA)
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::AAA.into()
         }
     }
 
@@ -536,9 +536,9 @@ mod chains {
     struct B;
 
     impl Substate<Top> for B {
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             // Init transitions to a different branch!
-            Some(State::A)
+            State::A.into()
         }
     }
 }
@@ -592,30 +592,30 @@ mod circuit {
     struct EnterShortCircuit;
 
     impl Substate<Top> for EnterShortCircuit {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.log.push("enter EnterShortCircuit".to_string());
-            StateEntry::Target(State::Normal)
+            Entry::Target(State::Normal)
         }
     }
 
     struct ExitShortCircuit;
 
     impl Substate<Top> for ExitShortCircuit {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.log.push("enter ExitShortCircuit".to_string());
             Self.into()
         }
 
-        fn exit(self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.log.push("exit ExitShortCircuit".to_string());
-            Some(State::Normal)
+            State::Normal.into()
         }
     }
 
     struct Target;
 
     impl Substate<Top> for Target {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.log.push("enter Target".to_string());
             Self.into()
         }
@@ -625,16 +625,16 @@ mod circuit {
     struct Chain1;
 
     impl Substate<Top> for Chain1 {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::Target(State::Chain2)
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::Target(State::Chain2)
         }
     }
 
     struct Chain2;
 
     impl Substate<Top> for Chain2 {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::Target(State::Chain3)
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::Target(State::Chain3)
         }
     }
 
@@ -719,12 +719,12 @@ mod evt {
     }
 
     impl TopState for Top {
-        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
+        fn handle_event(&mut self, event: &Self::Event) -> Self::Next {
             self.handled_by = Some("Top".to_string());
             match event {
-                Event::GoToA => Some(State::A),
-                Event::GoToB => Some(State::B),
-                _ => None,
+                Event::GoToA => State::A.into(),
+                Event::GoToB => State::B.into(),
+                _ => Next::None,
             }
         }
     }
@@ -740,11 +740,11 @@ mod evt {
             &mut self,
             event: &Self::Event,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
+        ) -> Self::Response {
             match event {
                 Event::Handled => {
                     ctx.top.handled_by = Some("AA".to_string());
-                    EventResponse::Drop
+                    Response::Drop
                 }
                 Event::GoToDeep => {
                     ctx.top.handled_by = Some("AA".to_string());
@@ -766,11 +766,11 @@ mod evt {
             &mut self,
             event: &Self::Event,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
+        ) -> Self::Response {
             match event {
                 Event::Handled => {
                     ctx.top.handled_by = Some("BB".to_string());
-                    EventResponse::Drop
+                    Response::Drop
                 }
                 _ => None.into(),
             }
@@ -881,7 +881,7 @@ mod state_enum_traits_tests {
 }
 
 // =============================================================================
-// Test 8: Next and EventResponse From Implementations
+// Test 8: Next and Response From Implementations
 // =============================================================================
 
 #[state_machine]
@@ -922,42 +922,42 @@ mod from_impls_tests {
 
     #[test]
     fn event_response_from_state_enum() {
-        let resp: EventResponse<FromsState> = FromsState::A.into();
+        let resp: Response<FromsState> = FromsState::A.into();
         assert!(matches!(
             resp,
-            EventResponse::Next(Next::Target(FromsState::A))
+            Response::Next(Next::Target(FromsState::A))
         ));
     }
 
     #[test]
     fn event_response_from_some() {
-        let resp: EventResponse<FromsState> = Some(FromsState::A).into();
+        let resp: Response<FromsState> = Some(FromsState::A).into();
         assert!(matches!(
             resp,
-            EventResponse::Next(Next::Target(FromsState::A))
+            Response::Next(Next::Target(FromsState::A))
         ));
     }
 
     #[test]
     fn event_response_from_none() {
-        let resp: EventResponse<FromsState> = None.into();
-        assert!(matches!(resp, EventResponse::Next(Next::None)));
+        let resp: Response<FromsState> = None.into();
+        assert!(matches!(resp, Response::Next(Next::None)));
     }
 
     #[test]
     fn event_response_from_next() {
         let next = Next::Target(FromsState::A);
-        let resp: EventResponse<FromsState> = next.into();
+        let resp: Response<FromsState> = next.into();
         assert!(matches!(
             resp,
-            EventResponse::Next(Next::Target(FromsState::A))
+            Response::Next(Next::Target(FromsState::A))
         ));
 
         let next = Next::ExactTarget(FromsState::A);
-        let resp: EventResponse<FromsState> = next.into();
+        let resp: Response<FromsState> = next.into();
         assert!(matches!(
             resp,
-            EventResponse::Next(Next::ExactTarget(FromsState::A))
+            Response::Next(Next::ExactTarget(FromsState::A))
         ));
     }
 }
@@ -1067,37 +1067,37 @@ mod cont {
     }
 
     impl TopState for Top {
-        fn update(&mut self) -> impl Into<Next<Self::State>> {
+        fn update(&mut self) -> Self::Next {
             self.update_log.push("Top update".to_string());
-            None
+            Next::None
         }
     }
 
     pub struct A;
 
     impl Substate<Top> for A {
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.update_log.push("A update".to_string());
-            None
+            Next::None
         }
     }
 
     pub struct AA;
 
     impl Substate<A> for AA {
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.update_log.push("AA update".to_string());
             // Transition to B during update
-            Some(State::B)
+            State::B.into()
         }
     }
 
     pub struct B;
 
     impl Substate<Top> for B {
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             ctx.top.update_log.push("B update".to_string());
-            None
+            Next::None
         }
     }
 }
@@ -1142,9 +1142,9 @@ mod exact {
     }
 
     impl TopState for Top {
-        fn init(&mut self) -> impl Into<Next<Self::State>> {
+        fn init(&mut self) -> Self::Next {
             self.init_count += 1;
-            None
+            Next::None
         }
     }
 
@@ -1154,7 +1154,7 @@ mod exact {
     }
 
     impl Substate<Top> for A {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
             Self {
                 init_count: 0,
                 enter_count: 1,
@@ -1162,9 +1162,9 @@ mod exact {
             .into()
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init_count += 1;
-            None
+            Next::None
         }
     }
 
@@ -1173,7 +1173,7 @@ mod exact {
     }
 
     impl Substate<A> for AA {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
             Self { enter_count: 1 }.into()
         }
     }
@@ -1252,15 +1252,15 @@ mod entry {
 
     struct RedirectOnEnter;
     impl Substate<Top> for RedirectOnEnter {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::Target(State::Normal)
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::Target(State::Normal)
         }
     }
 
     struct ExactRedirectOnEnter;
     impl Substate<Top> for ExactRedirectOnEnter {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::ExactTarget(State::Top)
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::ExactTarget(State::Top)
         }
     }
 
@@ -1269,8 +1269,8 @@ mod entry {
     }
 
     impl Substate<Top> for Counter {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self { value: 42 })
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self { value: 42 })
         }
     }
 }
@@ -1390,9 +1390,9 @@ mod unit {
 
     // Using default () event type
     impl TopState for Top {
-        fn handle_event(&mut self, _event: &Self::Event) -> impl Into<Next<Self::State>> {
+        fn handle_event(&mut self, _event: &Self::Event) -> Self::Next {
             self.event_count += 1;
-            None
+            Next::None
         }
     }
 
@@ -1439,7 +1439,7 @@ mod same {
     }
 
     impl Substate<Top> for Counter {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
             Self {
                 enter_count: Rc::new(Cell::new(1)),
                 exit_count: Rc::new(Cell::new(0)),
@@ -1447,9 +1447,9 @@ mod same {
             .into()
         }
 
-        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.exit_count.set(self.exit_count.get() + 1);
-            None
+            Next::None
         }
     }
 }
@@ -1515,10 +1515,10 @@ mod tdu {
     }
 
     impl TopState for Top {
-        fn top_down_update(&mut self) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self) -> Self::Next {
             self.log.push("Top tdu".to_string());
             // Top triggers transition to B
-            Some(State::B)
+            State::B.into()
         }
     }
 
@@ -1528,9 +1528,9 @@ mod tdu {
         fn top_down_update(
             &mut self,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             ctx.top.log.push("A tdu".to_string());
-            None
+            Next::None
         }
     }
 
@@ -1540,9 +1540,9 @@ mod tdu {
         fn top_down_update(
             &mut self,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             ctx.top.log.push("B tdu".to_string());
-            None
+            Next::None
         }
     }
 }
@@ -1596,12 +1596,12 @@ mod eexact {
     }
 
     impl TopState for Top {
-        fn init(&mut self) -> impl Into<Next<Self::State>> {
+        fn init(&mut self) -> Self::Next {
             self.init_count += 1;
-            None
+            Next::None
         }
 
-        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
+        fn handle_event(&mut self, event: &Self::Event) -> Self::Next {
             match event {
                 Event::ExactToTop => Next::ExactTarget(State::Top),
                 Event::NormalToTop => Next::Target(State::Top),

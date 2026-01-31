@@ -14,16 +14,16 @@ mod tester {
     pub struct Top;
 
     impl TopState for Top {
-        fn init(&mut self) -> impl Into<Next<Self::State>> {
-            Some(State::A)
+        fn init(&mut self) -> Self::Next {
+            State::A.into()
         }
 
-        fn update(&mut self) -> impl Into<Next<Self::State>> {
-            Some(State::B)
+        fn update(&mut self) -> Self::Next {
+            State::B.into()
         }
 
-        fn top_down_update(&mut self) -> impl Into<Next<Self::State>> {
-            Some(State::C)
+        fn top_down_update(&mut self) -> Self::Next {
+            State::C.into()
         }
     }
 

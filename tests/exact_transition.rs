@@ -20,48 +20,42 @@ mod tester {
 
     struct AA;
     impl Substate<A> for AA {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
             Self.into()
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            State::A
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::A.into()
         }
 
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            State::A
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::A.into()
         }
 
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
-            State::A
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::A.into()
         }
 
         fn handle_event(
             &mut self,
             _event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
-            State::A
+        ) -> Self::Response {
+            State::A.into()
         }
 
-        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            State::Top
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::Top.into()
         }
     }
 
     struct B;
     impl Substate<Top> for B {
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             Next::ExactTarget(State::Top)
         }
 
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             Next::ExactTarget(State::Top)
         }
 
@@ -69,25 +63,25 @@ mod tester {
             &mut self,
             _event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
-            Next::ExactTarget(State::Top)
+        ) -> Self::Response {
+            Next::ExactTarget(State::Top).into()
         }
 
-        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             Next::ExactTarget(State::Top)
         }
     }
 
     struct BA;
     impl Substate<B> for BA {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::ExactTarget(State::Top)
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::ExactTarget(State::Top)
         }
     }
 
     struct BB;
     impl Substate<B> for BB {
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             Next::ExactTarget(State::Top)
         }
     }

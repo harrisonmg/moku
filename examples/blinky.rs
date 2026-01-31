@@ -26,8 +26,8 @@ mod blinky {
     }
 
     impl TopState for Top {
-        fn init(&mut self) -> impl Into<Next<Self::State>> {
-            Some(State::Enabled)
+        fn init(&mut self) -> Self::Next {
+            State::Enabled.into()
         }
     }
 
@@ -38,8 +38,8 @@ mod blinky {
     struct Enabled;
 
     impl Substate<Top> for Enabled {
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            Some(State::LedOn)
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::LedOn.into()
         }
     }
 
@@ -48,18 +48,18 @@ mod blinky {
     }
 
     impl Substate<Enabled> for LedOn {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
             Self {
                 entry_time: Instant::now(),
             }
             .into()
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             if self.entry_time.elapsed() >= ctx.top.blink_period {
-                Some(State::LedOff)
+                State::LedOff.into()
             } else {
-                None
+                Next::None
             }
         }
     }
@@ -69,18 +69,18 @@ mod blinky {
     }
 
     impl Substate<Enabled> for LedOff {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
             Self {
                 entry_time: Instant::now(),
             }
             .into()
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             if self.entry_time.elapsed() >= ctx.top.blink_period {
-                Some(State::LedOn)
+                State::LedOn.into()
             } else {
-                None
+                Next::None
             }
         }
     }

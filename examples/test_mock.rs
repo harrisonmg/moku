@@ -61,7 +61,7 @@ mod example {
     struct Foo;
 
     impl Substate<Top> for Foo {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.gpio.set_high();
             Self.into()
         }
@@ -70,7 +70,7 @@ mod example {
     struct Bar;
 
     impl Substate<Top> for Bar {
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
+        fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry {
             ctx.top.gpio.set_low();
             Self.into()
         }

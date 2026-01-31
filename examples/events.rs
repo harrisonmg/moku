@@ -22,11 +22,11 @@ mod hunter {
     pub struct Top;
 
     impl TopState for Top {
-        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
+        fn handle_event(&mut self, event: &Self::Event) -> Self::Next {
             match event {
-                Event::StomachGrumbled => Some(State::Hunting),
-                Event::PreyCaught => Some(State::Cooking),
-                _ => None,
+                Event::StomachGrumbled => State::Hunting.into(),
+                Event::PreyCaught => State::Cooking.into(),
+                _ => Next::None,
             }
         }
     }
@@ -44,13 +44,13 @@ mod hunter {
             &mut self,
             event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
+        ) -> Self::Response {
             match event {
                 Event::MeatCooked => State::Top.into(),
                 // ignore Top state's logic to start hunting when stomach grumbles
-                Event::StomachGrumbled => EventResponse::Drop,
+                Event::StomachGrumbled => Response::Drop,
                 // defer other events to superstates
-                _ => None.into(),
+                _ => Response::default(),
             }
         }
     }

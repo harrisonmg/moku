@@ -52,8 +52,10 @@ pub use moku_macros::machine_module;
 /// Represents either no action or some type of transition to new state.
 ///
 /// Return type of multiple [`Substate`] methods.
+#[derive(Default)]
 pub enum Next<T: StateEnum> {
     /// No transition should be taken, stay in the current active state.
+    #[default]
     None,
 
     /// A transition should be taken to the target state.
@@ -91,7 +93,7 @@ impl StateMachineEvent for () {}
 /// The result of a single state handling an event.
 ///
 /// Implements [`From`] for implementors of `StateEnum` and `Option<StateEnum>`
-pub enum EventResponse<T: StateEnum> {
+pub enum Response<T: StateEnum> {
     /// The transition triggered by the event.
     /// A value of Next::None defers the handling of the event to the superstate.
     Next(Next<T>),
@@ -100,21 +102,27 @@ pub enum EventResponse<T: StateEnum> {
     Drop,
 }
 
-impl<T: StateEnum> From<T> for EventResponse<T> {
+impl<T: StateEnum> From<T> for Response<T> {
     fn from(value: T) -> Self {
-        EventResponse::Next(value.into())
+        Response::Next(value.into())
     }
 }
 
-impl<T: StateEnum> From<Option<T>> for EventResponse<T> {
+impl<T: StateEnum> From<Option<T>> for Response<T> {
     fn from(value: Option<T>) -> Self {
-        EventResponse::Next(value.into())
+        Response::Next(value.into())
     }
 }
 
-impl<T: StateEnum> From<Next<T>> for EventResponse<T> {
+impl<T: StateEnum> From<Next<T>> for Response<T> {
     fn from(value: Next<T>) -> Self {
-        EventResponse::Next(value)
+        Response::Next(value)
+    }
+}
+
+impl<T: StateEnum> Default for Response<T> {
+    fn default() -> Self {
+        Response::Next(Next::None)
     }
 }
 
@@ -158,6 +166,64 @@ where
     /// If any state returns `Some(state)` from its update method, that transition will be
     /// completed and the state machine will continue updating states starting from the nearest
     /// common ancestor of the previous state and the new state after transition.
+    ///
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// ├─ Foo
+    /// │  └─ Bar
+    /// └─ Fizz
+    ///    └─ Buzz
+    /// ```
+    /// If the [`Substate::update`] method of the `Bar` state returns `State::Buzz.into()`,
+    /// then:
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// #
+    /// #    struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// #
+    /// #    struct Fizz;
+    /// #    impl Substate<Top> for Fizz {}
+    /// #
+    /// #    struct Buzz;
+    /// #    impl Substate<Fizz> for Buzz {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::{Builder, State};
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// # machine.transition(State::Bar);
+    /// assert!(matches!(machine.state(), State::Bar));
+    /// machine.update();
+    /// ```
+    /// Will have the log output of:
+    /// ```text
+    /// Example: Updating
+    /// │Updating Bar
+    /// │Transitioning from Bar to Buzz
+    /// ││Exiting Bar
+    /// ││Exiting Foo
+    /// ││Entering Fizz
+    /// ││Entering Buzz
+    /// │└Transition complete
+    /// │Updating Top
+    /// └Update complete
+    /// ```
+    /// `Top` being the nearest common ancestor of the starting state, `Bar`, and the new state,
+    /// `Buzz`, so the update continues from `Top`.
     fn update(&mut self);
 
     /// Top-down update the state machine.
@@ -167,6 +233,70 @@ where
     /// Useful for propagating changes to state fields before calling [`StateMachine::update`], or for
     /// simply inverting the precedence of transitions (superstates may trigger transitions before
     /// their substates).
+    ///
+    /// If any state returns `Some(state)` from its update method, that transition will be
+    /// completed and the state machine will continue updating states starting from the first
+    /// active descendent of the nearest common ancestor of the previous state and the new state
+    /// after transition.
+    ///
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// ├─ Foo
+    /// │  └─ Bar
+    /// └─ Fizz
+    ///    └─ Buzz
+    /// ```
+    /// If the [`Substate::top_down_update`] method of the `Foo` state returns `State::Buzz.into()`,
+    /// then:
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// #
+    /// #    struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// #
+    /// #    struct Fizz;
+    /// #    impl Substate<Top> for Fizz {}
+    /// #
+    /// #    struct Buzz;
+    /// #    impl Substate<Fizz> for Buzz {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::{Builder, State};
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// # machine.transition(State::Foo);
+    /// assert!(matches!(machine.state(), State::Foo));
+    /// machine.top_down_update();
+    /// ```
+    /// Will have the log output of:
+    /// ```text
+    /// Example: Top-down updating
+    /// │Top-down updating Top
+    /// │Top-down updating Foo
+    /// │Transitioning from Foo to Fizz
+    /// ││Exiting Foo
+    /// ││Entering Fizz
+    /// ││Entering Buzz
+    /// │└Transition complete
+    /// │Top-down updating Fizz
+    /// │Top-down updating Buzz
+    /// └Top-down update complete
+    /// ```
+    /// `Top` being the nearest common ancestor of the starting state, `Foo`, and the new state,
+    /// `Fizz`, so the top-down update continues from the first active descendent of `Top`: `Fizz`.
     fn top_down_update(&mut self);
 
     /// Attempt to transition the [`StateMachine`] to the target state.
@@ -177,6 +307,36 @@ where
     ///
     /// Subject to interruption by short circuit transitions (from [`Substate::enter`] or [`Substate::exit`])
     /// and initial transitions (from [`Substate::init`] or [`TopState::init`]).
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// #
+    /// #    struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::{Builder, State};
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// // where Bar is a substate of Top:
+    /// machine.transition(State::Bar);
+    /// assert!(matches!(machine.state(), State::Bar));
+    ///
+    /// machine.transition(State::Top);
+    /// assert!(matches!(machine.state(), State::Bar));
+    /// ```
     fn transition(&mut self, target: T);
 
     /// Attempt to transition the [`StateMachine`] to the target state regardless of currently
@@ -187,31 +347,226 @@ where
     ///
     /// Subject to interruption by short circuit transitions (from [`Substate::enter`] or [`Substate::exit`])
     /// and initial transitions (from [`Substate::init`] or [`TopState::init`]).
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// #
+    /// #    struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::{Builder, State};
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// // where Bar is a substate of Top:
+    /// machine.transition(State::Bar);
+    /// assert!(matches!(machine.state(), State::Bar));
+    ///
+    /// machine.transition(State::Top);
+    /// assert!(matches!(machine.state(), State::Bar));
+    ///
+    /// machine.exact_transition(State::Top);
+    /// assert!(matches!(machine.state(), State::Top));
+    /// ```
     fn exact_transition(&mut self, target: T);
 
     /// Get the current state of the [`StateMachine`].
     ///
     /// Returns the deepest active state.
+    ///
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// └─ Foo
+    ///    └─ Bar
+    /// ```
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// #
+    /// #    struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::{Builder, State};
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// machine.transition(State::Bar);
+    /// assert!(matches!(machine.state(), State::Bar));
+    /// ```
     fn state(&self) -> T;
 
     /// Check if a given state matches the current state of this [`StateMachine`] or any active
     /// superstate.
+    ///
+    /// # Example
+    /// For some machine:
+    /// ```text
+    /// Top
+    /// ├─ Foo
+    /// │  └─ Bar
+    /// └─ Fizz
+    /// ```
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// #
+    /// #    struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// #
+    /// #    struct Fizz;
+    /// #    impl Substate<Top> for Fizz {}
+    /// # }
+    /// # use moku::{StateMachine, StateMachineBuilder};
+    /// # use example::machine::{Builder, State};
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// machine.transition(State::Bar);
+    /// assert!(machine.state_matches(State::Top));
+    /// assert!(machine.state_matches(State::Foo));
+    /// assert!(machine.state_matches(State::Bar));
+    /// assert!(!machine.state_matches(State::Fizz));
+    /// ```
     fn state_matches(&self, state: T) -> bool;
 
     /// Get a reference to the top state.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// // ...
+    ///     pub struct Top {
+    ///        pub foo: u8,
+    ///     }
+    ///
+    ///     impl TopState for Top {}
+    /// // ...
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::Builder;
+    /// # let machine = Builder::new(example::Top { foo: 8 }).build();
+    ///
+    /// dbg!(machine.top_ref().foo);
+    /// ```
     fn top_ref(&self) -> &V;
 
     /// Get a mutable reference to the top state.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// // ...
+    ///     pub struct Top {
+    ///        pub foo: u8,
+    ///     }
+    ///
+    ///     impl TopState for Top {}
+    /// // ...
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::Builder;
+    /// # let mut machine = Builder::new(example::Top { foo: 8 }).build();
+    ///
+    /// machine.top_mut().foo = 8;
+    /// ```
     fn top_mut(&mut self) -> &mut V;
 
     /// Get the name of this state machine.
     ///
     /// This name is used in moku log messages.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::Builder;
+    /// # let machine = Builder::new(example::Top).build();
+    /// assert_eq!(machine.name(), "Example");
+    /// ```
     fn name(&self) -> &str;
 
     /// Set the name of this state machine.
     ///
     /// This name is used in moku log messages.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::Builder;
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// machine.set_name("Kikai".to_owned());
+    /// assert_eq!(machine.name(), "Kikai");
+    /// ```
     #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     #[cfg(feature = "std")]
     fn set_name(&mut self, name: String);
@@ -221,13 +576,37 @@ where
     /// Starting with the deepest state, calls [`Substate::handle_event`] (or [`TopState::handle_event`])
     /// for each active state.
     ///
-    /// If a state returns [`EventResponse::Next`] with [`Next::None`], event handling will continue with its superstate.
+    /// If a state returns [`Response::Next`] with [`Next::None`], event handling will continue with its superstate.
     ///
-    /// If any state returns [`EventResponse::Next`] with something other than [`Next::None`],
+    /// If any state returns [`Response::Next`] with something other than [`Next::None`],
     /// the given transition will be completed and no further `handle_event` functions are called.
     ///
-    /// If any state returns [`EventResponse::Drop`], event handling stops immediately and no further
+    /// If any state returns [`Response::Drop`], event handling stops immediately and no further
     /// `handle_event` functions are called.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// // ...
+    ///     pub enum Event { A }
+    ///     impl StateMachineEvent for Event {}
+    ///
+    ///     pub struct Top;
+    ///     impl TopState for Top {}
+    /// // ...
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::Builder;
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// machine.handle_event(&example::Event::A);
+    /// ```
     fn handle_event(&mut self, event: &U);
 
     /// Get a list of currently active states, starting from the [TopState].
@@ -242,43 +621,37 @@ where
     ///    └─ Buzz
     /// ```
     /// ```
-    /// # #[state_machine]
+    /// # #[moku::state_machine]
     /// # mod example {
     /// #    use moku::*;
     /// #
     /// #    #[machine_module]
     /// #    pub mod machine {}
-    /// #
-    /// #    pub use machine::ExampleState;
+    /// #    use machine::State;
     /// #
     /// #    pub struct Top;
-    /// #    impl TopState<ExampleState> for Top {}
+    /// #    impl TopState for Top {}
     /// #
     /// #    struct Foo;
-    /// #    #[superstate(Top)]
-    /// #    impl State<ExampleState> for Foo {}
+    /// #    impl Substate<Top> for Foo {}
     /// #
     /// #    struct Bar;
-    /// #    #[superstate(Foo)]
-    /// #    impl State<ExampleState> for Bar {}
+    /// #    impl Substate<Foo> for Bar {}
     /// #
     /// #    struct Fizz;
-    /// #    #[superstate(Top)]
-    /// #    impl State<ExampleState> for Fizz {}
+    /// #    impl Substate<Top> for Fizz {}
     /// #
     /// #    struct Buzz;
-    /// #    #[superstate(Fizz)]
-    /// #    impl State<ExampleState> for Buzz {}
+    /// #    impl Substate<Fizz> for Buzz {}
     /// # }
     /// # use moku::*;
-    /// # use example::*;
-    /// # use example::machine::*;
-    /// # let mut machine = ExampleMachineBuilder::new(Top).build();
-    /// # machine.transition(ExampleState::Bar);
-    /// assert!(matches!(machine.state(), ExampleState::Bar));
+    /// # use example::machine::{Builder, State};
+    /// # let mut machine = Builder::new(example::Top).build();
+    /// # machine.transition(State::Bar);
+    /// assert!(matches!(machine.state(), State::Bar));
     /// assert_eq!(
     ///     machine.state_list(),
-    ///     vec![ExampleState::Top, ExampleState::Foo, ExampleState::Bar]
+    ///     vec![State::Top, State::Foo, State::Bar]
     /// );
     /// ```
     #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
@@ -297,11 +670,65 @@ where
     /// Get a reference to the state, if currently active.
     ///
     /// Returns `None` if the state machine is not currently in the state.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// #
+    /// // ...
+    ///     pub struct Foo;
+    ///
+    ///     impl Substate<Top> for Foo {}
+    /// // ...
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::Builder;
+    /// # let machine = Builder::new(example::Top).build();
+    ///
+    /// let foo: Option<&example::Foo> = machine.state_ref();
+    /// ```
     fn state_ref(&self) -> Option<&V>;
 
     /// Get a mutable reference to the state.
     ///
     /// Returns `None` if the state machine is not currently in the state.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// #
+    /// // ...
+    ///     pub struct Foo;
+    ///
+    ///     impl Substate<Top> for Foo {}
+    /// // ...
+    /// # }
+    /// # use moku::*;
+    /// # use example::machine::Builder;
+    /// # let mut machine = Builder::new(example::Top).build();
+    ///
+    /// let foo: Option<&mut example::Foo> = machine.state_mut();
+    /// ```
     fn state_mut(&mut self) -> Option<&mut V>;
 }
 
@@ -314,23 +741,86 @@ where
     W: StateMachine<T, U, V>,
 {
     /// Make a new [`StateMachineBuilder`] from a [`TopState`].
+    ///
+    /// # Example
+    /// ```
+    /// #[moku::state_machine]
+    /// mod example {
+    ///     #[moku::machine_module]
+    ///     pub mod machine {}
+    ///
+    ///     use machine::State;
+    ///
+    ///     pub struct Top;
+    ///
+    ///     impl moku::TopState for Top {}
+    /// }
+    ///
+    /// use moku::StateMachineBuilder;
+    /// use example::machine::Builder;
+    ///
+    /// let builder = Builder::new(example::Top);
+    /// let machine = builder.build();
+    /// ```
     fn new(top_state: V) -> Self;
 
     /// Set the name of the [`StateMachine`].
     ///
     /// If not set, defaults to the [`state_machine`] module's name in `UpperCamel` case.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// # }
+    /// #
+    /// # use moku::*;
+    /// # use example::machine::Builder;
+    /// let machine = Builder::new(example::Top).name("Kikai".to_owned()).build();
+    /// assert_eq!(machine.name(), "Kikai");
+    /// ```
     #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     #[cfg(feature = "std")]
     fn name(self, name: String) -> Self;
 
     /// Build the [`StateMachine`].
+    ///
+    /// # Example
+    /// ```
+    /// #[moku::state_machine]
+    /// mod example {
+    ///     #[moku::machine_module]
+    ///     pub mod machine {}
+    ///
+    ///     use machine::State;
+    ///
+    ///     pub struct Top;
+    ///
+    ///     impl moku::TopState for Top {}
+    /// }
+    ///
+    /// use moku::StateMachineBuilder;
+    /// use example::machine::Builder;
+    ///
+    /// let builder = Builder::new(example::Top);
+    /// let machine = builder.build();
+    /// ```
     fn build(self) -> W;
 }
 
 /// Return type of [`Substate::enter`].
 ///
 /// Represents either a successful state entry or a short circuit transition.
-pub enum StateEntry<T: StateEnum, U> {
+pub enum Entry<T: StateEnum, U> {
     /// State entry was successful, here is the newly constructed state.
     State(U),
 
@@ -343,9 +833,9 @@ pub enum StateEntry<T: StateEnum, U> {
     ExactTarget(T),
 }
 
-impl<T: StateEnum, U> From<U> for StateEntry<T, U> {
+impl<T: StateEnum, U> From<U> for Entry<T, U> {
     fn from(value: U) -> Self {
-        StateEntry::State(value)
+        Entry::State(value)
     }
 }
 
@@ -384,6 +874,18 @@ pub trait Substate<Parent>: Sized {
     /// Auto-filled by the [`state_machine`] macro.
     type Context<'a>;
 
+    /// Shorthand for the return type of [`Substate::enter`].
+    /// Auto-filled by the [`state_machine`] macro.
+    type Entry: Into<Entry<Self::State, Self>>;
+
+    /// Shorthand for the return type of transition methods.
+    /// Auto-filled by the [`state_machine`] macro.
+    type Next: Into<Next<Self::State>> + Default;
+
+    /// Shorthand for the return type of [`Substate::handle_event`].
+    /// Auto-filled by the [`state_machine`] macro.
+    type Response: Into<Response<Self::State>> + Default;
+
     /// Called when a [`StateMachine`] enters this state.
     ///
     /// Serves as a constructor for the state. If the state type is defined within the
@@ -392,9 +894,40 @@ pub trait Substate<Parent>: Sized {
     /// This method is only called when the state becomes active, and is not called upon re-entrant
     /// transitions (if this state is already active).
     ///
-    /// Returning a value of `StateEntry::Target(T)` will result in a "short circuit"
+    /// Returning a value of `Entry::Target(T)` will result in a "short circuit"
     /// transition that will be completed by the [`StateMachine`].
-    fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self>;
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// #
+    /// // ...
+    ///     pub struct Foo {
+    ///         bar: u8,
+    ///     }
+    ///
+    ///     impl Substate<Top> for Foo {
+    ///         fn enter(
+    ///             ctx: &mut Self::Context<'_>,
+    ///         ) -> Self::Entry {
+    ///             Entry::State(Self {
+    ///                 bar: 8,
+    ///             })
+    ///         }
+    ///     }
+    /// // ...
+    /// # }
+    fn enter(ctx: &mut Self::Context<'_>) -> Self::Entry;
 
     /// Called when a [`StateMachine`] transitions directly to this state.
     ///
@@ -405,24 +938,111 @@ pub trait Substate<Parent>: Sized {
     ///
     /// This method is called upon re-entrant transitions (if this state is already active).
     ///
-    /// Returning a value of `None` results in the [`StateMachine`] remaining in this state after
+    /// Returning a value of `Next::None` results in the [`StateMachine`] remaining in this state after
     /// transition.
-    fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-        None
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    pub struct Foo;
+    /// // ...
+    ///     impl Substate<Top> for Foo {
+    ///         fn init(
+    ///             &mut self,
+    ///             ctx: &mut Self::Context<'_>,
+    ///         ) -> Self::Next {
+    ///             State::Bar.into()
+    ///         }
+    ///     }
+    /// // ...
+    /// #    pub struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// # }
+    fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+        Default::default()
     }
 
     /// Called when [`StateMachine::update`] is called.
     ///
     /// This method may return a target state to transition to as a result of updating.
-    fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-        None
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    pub struct Foo;
+    /// // ...
+    ///     impl Substate<Top> for Foo {
+    ///         fn update(
+    ///             &mut self,
+    ///             ctx: &mut Self::Context<'_>,
+    ///         ) -> Self::Next {
+    ///             State::Bar.into()
+    ///         }
+    ///     }
+    /// // ...
+    /// #    pub struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// # }
+    fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+        Default::default()
     }
 
     /// Called when [`StateMachine::top_down_update`] is called.
     ///
     /// This method may return a target state to transition to as a result of updating.
-    fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-        None
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    pub struct Foo;
+    /// // ...
+    ///     impl Substate<Top> for Foo {
+    ///         fn top_down_update(
+    ///             &mut self,
+    ///             ctx: &mut Self::Context<'_>,
+    ///         ) -> Self::Next {
+    ///             State::Bar.into()
+    ///         }
+    ///     }
+    /// // ...
+    /// #    pub struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// # }
+    fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+        Default::default()
     }
 
     /// Called when a [`StateMachine`] exits this state.
@@ -431,25 +1051,89 @@ pub trait Substate<Parent>: Sized {
     ///
     /// This method may return a target state to "short circuit" transition to as a result of
     /// exiting this state.
-    fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-        None
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub struct Top;
+    /// #
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    pub struct Foo;
+    /// // ...
+    ///     impl Substate<Top> for Foo {
+    ///         fn exit(
+    ///             self,
+    ///             ctx: &mut Self::Context<'_>,
+    ///         ) -> Self::Next {
+    ///             State::Bar.into()
+    ///         }
+    ///     }
+    /// // ...
+    /// #    pub struct Bar;
+    /// #    impl Substate<Foo> for Bar {}
+    /// # }
+    fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+        Default::default()
     }
 
     /// Called when [`StateMachine::handle_event`] is called.
     ///
-    /// Return [`EventResponse::Next`] with [`Next::None`] to continue event handling with the superstate.
+    /// Return [`Response::Next`] with [`Next::None`] to continue event handling with the superstate.
     ///
-    /// Return [`EventResponse::Next`] with something other than [`Next::None`]
+    /// Return [`Response::Next`] with something other than [`Next::None`]
     /// to transition to the given state, after which event handling is stopped.
     ///
-    /// Return [`EventResponse::Drop`] to immediately stop event handling.
+    /// Return [`Response::Drop`] to immediately stop event handling.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub enum Event { A, B, C }
+    /// #    impl StateMachineEvent for Event {}
+    /// #
+    /// #    pub struct Top;
+    /// #    impl TopState for Top {}
+    /// #
+    /// #    pub struct Bar;
+    /// #    impl Substate<Top> for Bar {}
+    /// #
+    /// // ...
+    ///     pub struct Foo;
+    ///
+    ///     impl Substate<Top> for Foo {
+    ///         fn handle_event(
+    ///             &mut self,
+    ///             event: &Self::Event,
+    ///             _ctx: &mut Self::Context<'_>,
+    ///         ) -> Self::Response {
+    ///             match event {
+    ///                 Event::A => Next::None.into(),
+    ///                 Event::B => Response::Drop,
+    ///                 Event::C => State::Bar.into(),
+    ///             }
+    ///         }
+    ///     }
+    /// // ...
+    /// # }
+    /// ```
     #[allow(unused_variables)]
-    fn handle_event(
-        &mut self,
-        event: &Self::Event,
-        _ctx: &mut Self::Context<'_>,
-    ) -> impl Into<EventResponse<Self::State>> {
-        EventResponse::Next(Next::None)
+    fn handle_event(&mut self, event: &Self::Event, _ctx: &mut Self::Context<'_>) -> Self::Response {
+        Default::default()
     }
 }
 
@@ -471,8 +1155,8 @@ pub trait Substate<Parent>: Sized {
 ///     }
 ///
 ///     impl moku::TopState for Top {
-///         fn init(&mut self) -> impl Into<moku::Next<Self::State>> {
-///             State::Foo
+///         fn init(&mut self) -> Self::Next {
+///             State::Foo.into()
 ///         }
 ///     }
 ///
@@ -487,30 +1171,106 @@ pub trait TopState: Sized {
     /// The event type. Auto-filled by the [`state_machine`] macro.
     type Event: StateMachineEvent;
 
+    /// Shorthand for the return type of transition methods.
+    /// Auto-filled by the [`state_machine`] macro.
+    type Next: Into<Next<Self::State>> + Default;
+
     /// Called when a [`StateMachine`] initializes (upon calling [`StateMachineBuilder::build`]) and
     /// upon transitions directly to this state.
     ///
     /// This method can return a target state representing the initial transition to take upon
     /// entry of this state.
     ///
-    /// Returning a value of `None` results in the [`StateMachine`] remaining in this state after
+    /// Returning a value of `Next::None` results in the [`StateMachine`] remaining in this state after
     /// transition.
-    fn init(&mut self) -> impl Into<Next<Self::State>> {
-        None
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// // ...
+    ///     pub struct Top;
+    ///
+    ///     impl TopState for Top {
+    ///         fn init(&mut self) -> Self::Next {
+    ///             State::Foo.into()
+    ///         }
+    ///     }
+    /// // ...
+    /// #
+    /// #    pub struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// # }
+    fn init(&mut self) -> Self::Next {
+        Default::default()
     }
 
     /// Called when [`StateMachine::update`] is called.
     ///
     /// This method may return a target state to transition to as a result of updating.
-    fn update(&mut self) -> impl Into<Next<Self::State>> {
-        None
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// // ...
+    ///     pub struct Top;
+    ///
+    ///     impl TopState for Top {
+    ///         fn update(&mut self) -> Self::Next {
+    ///             State::Foo.into()
+    ///         }
+    ///     }
+    /// // ...
+    /// #
+    /// #    pub struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// # }
+    fn update(&mut self) -> Self::Next {
+        Default::default()
     }
 
     /// Called when [`StateMachine::top_down_update`] is called.
     ///
     /// This method may return a target state to transition to as a result of updating.
-    fn top_down_update(&mut self) -> impl Into<Next<Self::State>> {
-        None
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// // ...
+    ///     pub struct Top;
+    ///
+    ///     impl TopState for Top {
+    ///         fn top_down_update(&mut self) -> Self::Next {
+    ///             State::Foo.into()
+    ///         }
+    ///     }
+    /// // ...
+    /// #
+    /// #    pub struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// # }
+    fn top_down_update(&mut self) -> Self::Next {
+        Default::default()
     }
 
     /// Called when [`StateMachine::handle_event`] is called.
@@ -518,9 +1278,39 @@ pub trait TopState: Sized {
     /// This is the final state called during event handling.
     ///
     /// Return [`Next::None`] to make no transition.
+    ///
+    /// # Example
+    /// ```
+    /// # #[moku::state_machine]
+    /// # mod example {
+    /// #    use moku::*;
+    /// #
+    /// #    #[machine_module]
+    /// #    pub mod machine {}
+    /// #    use machine::State;
+    /// #
+    /// #    pub enum Event { A, B, C }
+    /// #    impl StateMachineEvent for Event {}
+    /// #
+    /// // ...
+    ///     pub struct Top;
+    ///     impl TopState for Top {
+    ///         fn handle_event(&mut self, event: &Self::Event) -> Self::Next {
+    ///             match event {
+    ///                 Event::A => State::Foo.into(),
+    ///                 _ => Next::None,
+    ///             }
+    ///         }
+    ///     }
+    /// // ...
+    /// #
+    /// #    pub struct Foo;
+    /// #    impl Substate<Top> for Foo {}
+    /// # }
+    /// ```
     #[allow(unused_variables)]
-    fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
-        Next::None
+    fn handle_event(&mut self, event: &Self::Event) -> Self::Next {
+        Default::default()
     }
 }
 
@@ -552,7 +1342,7 @@ pub mod internal {
         type Context<'a>;
 
         /// Called when entering this state.
-        fn enter(ctx: &mut Self::Context<'_>) -> StateEntry<T, Self>;
+        fn enter(ctx: &mut Self::Context<'_>) -> Entry<T, Self>;
 
         /// Called after entering or on direct transition.
         fn init(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<T>>;
@@ -571,7 +1361,7 @@ pub mod internal {
             &mut self,
             event: &U,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<T>>;
+        ) -> impl Into<Response<T>>;
     }
 
     /// Blanket implementation of StateLike for TopState.
@@ -583,7 +1373,7 @@ pub mod internal {
     {
         type Context<'a> = NoSuperstates<'a>;
 
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<T, Self> {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Entry<T, Self> {
             unreachable!("TopState::enter should never be called")
         }
 
@@ -610,8 +1400,8 @@ pub mod internal {
             &mut self,
             event: &U,
             _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<T>> {
-            EventResponse::Next(TopState::handle_event(self, event).into())
+        ) -> impl Into<Response<T>> {
+            Response::Next(TopState::handle_event(self, event).into())
         }
     }
 
@@ -729,8 +1519,8 @@ pub mod internal {
             event: &U,
             state: &mut V,
             ctx: &mut V::Context<'_>,
-        ) -> EventResponse<T> {
-            EventResponse::Next(Next::None)
+        ) -> Response<T> {
+            Response::Next(Next::None)
         }
 
         /// Build a list of the currently active states.
@@ -754,6 +1544,22 @@ pub mod internal {
 
         /// Entry resulted in a short circuit exact transition.
         ExactTarget(T),
+    }
+
+    impl<T, U, V, W> From<Entry<T, V>> for NodeEntry<T, U, V, W>
+    where
+        T: StateEnum,
+        U: StateMachineEvent,
+        V: StateLike<T, U>,
+        W: SubstateEnum<T, U, V>,
+    {
+        fn from(entry: Entry<T, V>) -> Self {
+            match entry {
+                Entry::State(state) => NodeEntry::Node(Node::from_state(state)),
+                Entry::Target(target) => NodeEntry::Target(target),
+                Entry::ExactTarget(target) => NodeEntry::ExactTarget(target),
+            }
+        }
     }
 
     /// A node in the state tree.
@@ -804,7 +1610,7 @@ pub mod internal {
                 W::this_state()
             );
             match V::enter(ctx) {
-                StateEntry::State(state) => NodeEntry::Node(Self {
+                Entry::State(state) => NodeEntry::Node(Self {
                     phantom_t: PhantomData,
                     phantom_u: PhantomData,
                     state,
@@ -812,14 +1618,14 @@ pub mod internal {
                     needs_update: false,
                     top_down_updated: false,
                 }),
-                StateEntry::Target(target) => {
+                Entry::Target(target) => {
                     info!(
                         "{}\u{02502}Short circuit transition to {target:?}",
                         if indent { "\u{02502}" } else { "" },
                     );
                     NodeEntry::Target(target)
                 }
-                StateEntry::ExactTarget(target) => {
+                Entry::ExactTarget(target) => {
                     info!(
                         "{}\u{02502}Short circuit exact transition to {target:?}",
                         if indent { "\u{02502}" } else { "" },
@@ -997,15 +1803,15 @@ pub mod internal {
         }
 
         /// Handle an event.
-        pub fn handle_event(&mut self, event: &U, ctx: &mut V::Context<'_>) -> EventResponse<T> {
+        pub fn handle_event(&mut self, event: &U, ctx: &mut V::Context<'_>) -> Response<T> {
             match self.substate.handle_event(event, &mut self.state, ctx) {
-                EventResponse::Next(Next::None) => {
+                Response::Next(Next::None) => {
                     let res = self.state.handle_event(event, ctx).into();
                     match &res {
-                        EventResponse::Drop => {
+                        Response::Drop => {
                             info!("\u{02502}{:?} dropping event", W::this_state())
                         }
-                        EventResponse::Next(next) => match next {
+                        Response::Next(next) => match next {
                             Next::None => {
                                 info!("\u{02502}{:?} deferring event", W::this_state())
                             }
@@ -1241,8 +2047,8 @@ pub mod internal {
                 .node
                 .handle_event(event, &mut NoSuperstates(PhantomData))
             {
-                EventResponse::Drop => (),
-                EventResponse::Next(next) => match next {
+                Response::Drop => (),
+                Response::Next(next) => match next {
                     Next::None => (),
                     Next::Target(target) => self.transition(target, true, false),
                     Next::ExactTarget(target) => self.transition(target, true, true),

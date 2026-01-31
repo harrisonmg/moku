@@ -159,13 +159,11 @@ Let's add some functionality to our states:
         // after transitioning into a state.
         //
         // Like most other methods in the `TopState` and `Substate` traits, the return value
-        // indicates a state to transition to, where `None` indicates no transition.
-        fn init(&mut self) -> impl Into<Next<Self::State>> {
+        // indicates a state to transition to, where `Next::None` indicates no transition.
+        fn init(&mut self) -> Self::Next {
             // When we transition into the `Top` state (or initialize the state machine),
             // transition into the `Enabled` state.
-            // `Next` implements `From` for `StateEnum` and `Option<StateEnum>`,
-            // so there are a few convenient ways to write our return value.
-            State::Enabled
+            State::Enabled.into()
         }
     }
 
@@ -178,9 +176,9 @@ Let's add some functionality to our states:
         fn init(
             &mut self,
             _context: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             // When we transition into the `Enabled` state, transition into the `LedOn` state.
-            State::LedOn
+            State::LedOn.into()
         }
     }
 
@@ -194,12 +192,12 @@ Let's add some functionality to our states:
         //
         // If unimplemented, moku will autogenerate this method for states with no fields.
         //
-        // The `StateEntry` return type also allows for a transition away instead of
+        // The `Entry` return type also allows for a transition away instead of
         // entering the state - for instance towards a fault state if some aspect of
         // state construction fails.
         fn enter(
             _context: &mut Self::Context<'_>,
-        ) -> StateEntry<Self::State, Self> {
+        ) -> Self::Entry {
             // dummy code to turn the LED on
             // led_gpio.set_high()
 
@@ -213,14 +211,14 @@ Let's add some functionality to our states:
         fn update(
             &mut self,
             context: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             // We can use `context` to access the `blink_time` field of the `Top` state.
             if self.entry_time.elapsed() >= context.top.blink_time {
                 // If we've met or exceeded the blink time, transition to the `LedOff` state.
-                Some(State::LedOff)
+                State::LedOff.into()
             } else {
                 // Otherwise, don't transition away from this state.
-                None
+                Next::None
             }
         }
     }
@@ -232,7 +230,7 @@ Let's add some functionality to our states:
     impl Substate<Enabled> for LedOff {
         fn enter(
             _context: &mut Self::Context<'_>,
-        ) -> StateEntry<Self::State, Self> {
+        ) -> Self::Entry {
             // dummy code to turn the LED off
             // led_gpio.set_low()
 
@@ -244,13 +242,13 @@ Let's add some functionality to our states:
         fn update(
             &mut self,
             context: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             if self.entry_time.elapsed() >= context.top.blink_time {
                 // If we've met or exceeded the blink time, transition to the `LedOn` state.
-                Some(State::LedOn)
+                State::LedOn.into()
             } else {
                 // Otherwise, don't transition away from this state.
-                None
+                Next::None
             }
         }
     }
@@ -271,8 +269,8 @@ Finally, let's use our state machine!
 #     use machine::State;
 #    pub struct Top { pub blink_time: std::time::Duration }
 #    impl TopState for Top {
-#        fn init(&mut self) -> impl Into<Next<Self::State>> {
-#            Some(State::Enabled)
+#        fn init(&mut self) -> Self::Next {
+#            State::Enabled.into()
 #        }
 #    }
 #     struct Disabled;
@@ -282,15 +280,15 @@ Finally, let's use our state machine!
 #         fn init(
 #             &mut self,
 #             _context: &mut Self::Context<'_>,
-#         ) -> impl Into<Next<Self::State>> {
-#             Some(State::LedOn)
+#         ) -> Self::Next {
+#             State::LedOn.into()
 #         }
 #     }
 #     struct LedOn { entry_time: std::time::Instant }
 #     impl Substate<Enabled> for LedOn {
 #         fn enter(
 #             _context: &mut Self::Context<'_>,
-#         ) -> StateEntry<Self::State, Self> {
+#         ) -> Self::Entry {
 #             Self {
 #                 entry_time: std::time::Instant::now(),
 #             }.into()
@@ -298,11 +296,11 @@ Finally, let's use our state machine!
 #         fn update(
 #             &mut self,
 #             context: &mut Self::Context<'_>,
-#         ) -> impl Into<Next<Self::State>> {
+#         ) -> Self::Next {
 #             if self.entry_time.elapsed() >= context.top.blink_time {
-#                 Some(State::LedOff)
+#                 State::LedOff.into()
 #             } else {
-#                 None
+#                 Next::None
 #             }
 #         }
 #     }
@@ -310,7 +308,7 @@ Finally, let's use our state machine!
 #     impl Substate<Enabled> for LedOff {
 #         fn enter(
 #             _context: &mut Self::Context<'_>,
-#         ) -> StateEntry<Self::State, Self> {
+#         ) -> Self::Entry {
 #             Self {
 #                 entry_time: std::time::Instant::now(),
 #             }.into()
@@ -318,11 +316,11 @@ Finally, let's use our state machine!
 #         fn update(
 #             &mut self,
 #             context: &mut Self::Context<'_>,
-#         ) -> impl Into<Next<Self::State>> {
+#         ) -> Self::Next {
 #             if self.entry_time.elapsed() >= context.top.blink_time {
-#                 Some(State::LedOn)
+#                 State::LedOn.into()
 #             } else {
-#                 None
+#                 Next::None
 #             }
 #         }
 #     }
@@ -438,11 +436,11 @@ mod example {
 
     // The proc macro auto-detects the Event type from the StateMachineEvent impl.
     impl TopState for Top {
-        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
+        fn handle_event(&mut self, event: &Self::Event) -> Self::Next {
             match event {
-                Event::A => Some(State::Foo), // Transition to the Foo state.
-                Event::B => Some(State::Bar), // Transition to the Bar state.
-                Event::C => None, // Do nothing.
+                Event::A => State::Foo.into(), // Transition to the Foo state.
+                Event::B => State::Bar.into(), // Transition to the Bar state.
+                Event::C => Next::None, // Do nothing.
             }
         }
     }
@@ -461,19 +459,19 @@ mod example {
             &mut self,
             event: &Self::Event,
             _context: &mut Self::Context<'_>,
-        ) -> impl Into<EventResponse<Self::State>> {
+        ) -> Self::Response {
             match event {
                 Event::A => {
                     // Do nothing with this event and pass handling to the next highest state.
-                    EventResponse::Next(Next::None)
+                    Response::Next(Next::None)
                 }
                 Event::B => {
                     // Do nothing and stop event handling immediately.
-                    EventResponse::Drop
+                    Response::Drop
                 }
                 Event::C => {
                     // Transitition to the Foo state and stop event handling.
-                    // EventResponse implements `From` for `StateEnum`, `Option<StateEnum>`,
+                    // Response implements `From` for `StateEnum`, `Option<StateEnum>`,
                     // and `Next<StateEnum>` for convenience.
                     State::Foo.into()
                 }

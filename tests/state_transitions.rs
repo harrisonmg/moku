@@ -18,35 +18,32 @@ mod tester {
     struct A;
 
     impl Substate<Top> for A {
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            Some(State::B)
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::B.into()
         }
     }
 
     struct B;
 
     impl Substate<Top> for B {
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            Some(State::C)
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::C.into()
         }
     }
 
     struct C;
 
     impl Substate<Top> for C {
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
-            Some(State::D)
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::D.into()
         }
     }
 
     struct D;
 
     impl Substate<Top> for D {
-        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
-            Some(State::E)
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
+            State::E.into()
         }
     }
 
@@ -57,8 +54,8 @@ mod tester {
     struct F;
 
     impl Substate<Top> for F {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::Target(State::Top)
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::Target(State::Top)
         }
     }
 }

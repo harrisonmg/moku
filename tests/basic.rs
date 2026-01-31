@@ -24,23 +24,23 @@ mod tester {
     }
 
     impl TopState for Top {
-        fn init(&mut self) -> impl Into<Next<Self::State>> {
+        fn init(&mut self) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self) -> impl Into<Next<Self::State>> {
+        fn update(&mut self) -> Self::Next {
             self.update += 1;
             self.update_order = self.update_order_acc;
             self.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(&mut self) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = self.update_order_acc;
             self.update_order_acc += 1;
-            None
+            Next::None
         }
     }
 
@@ -62,38 +62,38 @@ mod tester {
     }
 
     impl Substate<Top> for A {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
         fn top_down_update(
             &mut self,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.exit.set(self.exit.get() + 1);
-            None
+            Next::None
         }
     }
 
@@ -131,38 +131,38 @@ mod tester {
     }
 
     impl Substate<Top> for B {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
         fn top_down_update(
             &mut self,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.exit.set(self.exit.get() + 1);
-            None
+            Next::None
         }
     }
 
@@ -184,38 +184,38 @@ mod tester {
     }
 
     impl Substate<B> for BA {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
         fn top_down_update(
             &mut self,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.exit.set(self.exit.get() + 1);
-            None
+            Next::None
         }
     }
 
@@ -237,38 +237,38 @@ mod tester {
     }
 
     impl Substate<B> for BB {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
         fn top_down_update(
             &mut self,
             ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        ) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn exit(self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn exit(self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.exit.set(self.exit.get() + 1);
-            None
+            Next::None
         }
     }
 }
@@ -575,26 +575,26 @@ fn self_transition() {
 
 #[test]
 fn state_list() {
-    let mut machine = TesterMachineBuilder::new(Top::default()).build();
+    let mut machine = Builder::new(Top::default()).build();
 
-    assert!(matches!(machine.state(), TesterState::Top));
-    assert_eq!(machine.state_list(), vec![TesterState::Top]);
+    assert!(matches!(machine.state(), State::Top));
+    assert_eq!(machine.state_list(), vec![State::Top]);
 
-    machine.transition(TesterState::A);
-    assert!(matches!(machine.state(), TesterState::A));
-    assert_eq!(machine.state_list(), vec![TesterState::Top, TesterState::A]);
+    machine.transition(State::A);
+    assert!(matches!(machine.state(), State::A));
+    assert_eq!(machine.state_list(), vec![State::Top, State::A]);
 
-    machine.transition(TesterState::AA);
-    assert!(matches!(machine.state(), TesterState::AA));
+    machine.transition(State::AA);
+    assert!(matches!(machine.state(), State::AA));
     assert_eq!(
         machine.state_list(),
-        vec![TesterState::Top, TesterState::A, TesterState::AA]
+        vec![State::Top, State::A, State::AA]
     );
 
-    machine.transition(TesterState::BB);
-    assert!(matches!(machine.state(), TesterState::BB));
+    machine.transition(State::BB);
+    assert!(matches!(machine.state(), State::BB));
     assert_eq!(
         machine.state_list(),
-        vec![TesterState::Top, TesterState::B, TesterState::BB]
+        vec![State::Top, State::B, State::BB]
     );
 }

@@ -29,23 +29,23 @@ mod tester {
     }
 
     impl TopState for Top {
-        fn init(&mut self) -> impl Into<Next<Self::State>> {
+        fn init(&mut self) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self) -> impl Into<Next<Self::State>> {
+        fn update(&mut self) -> Self::Next {
             self.update += 1;
             self.update_order = self.update_order_acc;
             self.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(&mut self) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = self.update_order_acc;
             self.update_order_acc += 1;
-            None
+            Next::None
         }
     }
 
@@ -60,30 +60,30 @@ mod tester {
     }
 
     impl Substate<Top> for A {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
     }
 
@@ -114,30 +114,30 @@ mod tester {
     }
 
     impl Substate<Top> for B {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
     }
 
@@ -152,30 +152,30 @@ mod tester {
     }
 
     impl Substate<B> for BA {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
     }
 
@@ -190,30 +190,30 @@ mod tester {
     }
 
     impl Substate<B> for BB {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.init += 1;
-            None
+            Next::None
         }
 
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
             self.update_order = ctx.top.update_order_acc;
             ctx.top.update_order_acc += 1;
-            None
+            Next::None
         }
     }
 }

@@ -11,16 +11,16 @@ mod new {
     }
 
     impl moku::TopState for Top {
-        fn init(&mut self) -> impl Into<moku::Next<Self::State>> {
-            Some(State::A)
+        fn init(&mut self) -> Self::Next {
+            State::A.into()
         }
     }
 
     struct A;
     impl moku::Substate<Top> for A {
-        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<moku::Next<Self::State>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> Self::Next {
             println!("{}", ctx.top.val);
-            None
+            moku::Next::None
         }
     }
 }

@@ -19,14 +19,14 @@ mod tester {
     }
 
     impl TopState for Top {
-        fn update(&mut self) -> impl Into<Next<Self::State>> {
+        fn update(&mut self) -> Self::Next {
             self.update += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(&mut self) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self) -> Self::Next {
             self.top_down_update += 1;
-            None
+            Next::None
         }
     }
 
@@ -36,24 +36,21 @@ mod tester {
     }
 
     impl Substate<Top> for A {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
-            Some(State::BA)
+            State::BA.into()
         }
 
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
-            Some(State::BA)
+            State::BA.into()
         }
     }
 
@@ -63,24 +60,21 @@ mod tester {
     }
 
     impl Substate<A> for AA {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
-            None
+            Next::None
         }
     }
 
@@ -90,24 +84,21 @@ mod tester {
     }
 
     impl Substate<Top> for B {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
-            Some(State::BA)
+            State::BA.into()
         }
 
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
-            Some(State::BA)
+            State::BA.into()
         }
     }
 
@@ -117,24 +108,21 @@ mod tester {
     }
 
     impl Substate<B> for BA {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
-            None
+            Next::None
         }
     }
 
@@ -144,24 +132,21 @@ mod tester {
     }
 
     impl Substate<B> for BB {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
-            None
+            Next::None
         }
 
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
-            None
+            Next::None
         }
     }
 
@@ -171,24 +156,21 @@ mod tester {
     }
 
     impl Substate<BB> for BBA {
-        fn enter(_ctx: &mut Self::Context<'_>) -> StateEntry<Self::State, Self> {
-            StateEntry::State(Self {
+        fn enter(_ctx: &mut Self::Context<'_>) -> Self::Entry {
+            Entry::State(Self {
                 update: 0,
                 top_down_update: 0,
             })
         }
 
-        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+        fn update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.update += 1;
-            Some(State::BA)
+            State::BA.into()
         }
 
-        fn top_down_update(
-            &mut self,
-            _ctx: &mut Self::Context<'_>,
-        ) -> impl Into<Next<Self::State>> {
+        fn top_down_update(&mut self, _ctx: &mut Self::Context<'_>) -> Self::Next {
             self.top_down_update += 1;
-            Some(State::BA)
+            State::BA.into()
         }
     }
 }

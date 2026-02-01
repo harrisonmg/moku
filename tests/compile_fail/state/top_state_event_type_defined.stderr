@@ -1,0 +1,5 @@
+error: the `TopState::Event` associated type must not be manually defined
+  --> tests/compile_fail/state/top_state_event_type_defined.rs:13:9
+   |
+13 |         type Event = ();
+   |         ^^^^

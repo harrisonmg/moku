@@ -8,12 +8,11 @@ mod blinky {
     mod machine {}
 
     struct Top;
-    impl TopState<BlinkyState> for Top {}
+    impl TopState for Top {}
 
     struct Bottom;
 
-    #[superstate(Bottom)]
-    impl State<BlinkyState> for Bottom {}
+    impl Substate<Bottom> for Bottom {}
 }
 
 fn main() {}

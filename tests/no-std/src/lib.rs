@@ -6,6 +6,7 @@
 // Run these tests with `cargo test` in the directory of this particular crate.
 
 #![no_std]
+#![allow(clippy::upper_case_acronyms)]
 
 extern crate moku;
 use moku::*;
@@ -17,8 +18,6 @@ mod tester {
     #[machine_module]
     pub mod machine {}
 
-    use machine::TesterState;
-
     #[derive(Default)]
     pub struct Top {
         pub access: u8,
@@ -29,24 +28,21 @@ mod tester {
         pub update_order_acc: u8,
     }
 
-    impl TopState<TesterState> for Top {
-        fn init(&mut self) -> impl Into<Next<TesterState>> {
+    impl TopState for Top {
+        fn init(&mut self) -> impl Into<Next<Self::State>> {
             self.init += 1;
-            None
         }
 
-        fn update(&mut self) -> impl Into<Next<TesterState>> {
+        fn update(&mut self) -> impl Into<Next<Self::State>> {
             self.update += 1;
             self.update_order = self.update_order_acc;
             self.update_order_acc += 1;
-            None
         }
 
-        fn top_down_update(&mut self) -> impl Into<Next<TesterState>> {
+        fn top_down_update(&mut self) -> impl Into<Next<Self::State>> {
             self.top_down_update += 1;
             self.update_order = self.update_order_acc;
             self.update_order_acc += 1;
-            None
         }
     }
 
@@ -60,63 +56,46 @@ mod tester {
         pub update_order: u8,
     }
 
-    #[superstate(Top)]
-    impl State<TesterState> for A {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<TesterState, Self> {
-            StateEntry::State(Self {
+    impl Substate<Top> for A {
+        fn enter(_ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.init += 1;
-            None
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.update += 1;
-            self.update_order = superstates.top.update_order_acc;
-            superstates.top.update_order_acc += 1;
-            None
+            self.update_order = ctx.top.update_order_acc;
+            ctx.top.update_order_acc += 1;
         }
 
-        fn top_down_update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.top_down_update += 1;
-            self.update_order = superstates.top.update_order_acc;
-            superstates.top.update_order_acc += 1;
-            None
+            self.update_order = ctx.top.update_order_acc;
+            ctx.top.update_order_acc += 1;
         }
     }
 
     struct AA;
 
-    #[superstate(A)]
-    impl State<TesterState> for AA {}
+    impl Substate<A> for AA {}
 
     struct AAA;
 
-    #[superstate(AA)]
-    impl State<TesterState> for AAA {}
+    impl Substate<AA> for AAA {}
 
     struct AB;
 
-    #[superstate(A)]
-    impl State<TesterState> for AB {}
+    impl Substate<A> for AB {}
 
     struct ABA;
 
-    #[superstate(AB)]
-    impl State<TesterState> for ABA {}
+    impl Substate<AB> for ABA {}
 
     #[derive(Default)]
     pub struct B {
@@ -128,41 +107,28 @@ mod tester {
         pub update_order: u8,
     }
 
-    #[superstate(Top)]
-    impl State<TesterState> for B {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<TesterState, Self> {
-            StateEntry::State(Self {
+    impl Substate<Top> for B {
+        fn enter(_ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.init += 1;
-            None
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.update += 1;
-            self.update_order = superstates.top.update_order_acc;
-            superstates.top.update_order_acc += 1;
-            None
+            self.update_order = ctx.top.update_order_acc;
+            ctx.top.update_order_acc += 1;
         }
 
-        fn top_down_update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.top_down_update += 1;
-            self.update_order = superstates.top.update_order_acc;
-            superstates.top.update_order_acc += 1;
-            None
+            self.update_order = ctx.top.update_order_acc;
+            ctx.top.update_order_acc += 1;
         }
     }
 
@@ -176,41 +142,28 @@ mod tester {
         pub update_order: u8,
     }
 
-    #[superstate(B)]
-    impl State<TesterState> for BA {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<TesterState, Self> {
-            StateEntry::State(Self {
+    impl Substate<B> for BA {
+        fn enter(_ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.init += 1;
-            None
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.update += 1;
-            self.update_order = superstates.top.update_order_acc;
-            superstates.top.update_order_acc += 1;
-            None
+            self.update_order = ctx.top.update_order_acc;
+            ctx.top.update_order_acc += 1;
         }
 
-        fn top_down_update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.top_down_update += 1;
-            self.update_order = superstates.top.update_order_acc;
-            superstates.top.update_order_acc += 1;
-            None
+            self.update_order = ctx.top.update_order_acc;
+            ctx.top.update_order_acc += 1;
         }
     }
 
@@ -224,41 +177,28 @@ mod tester {
         pub update_order: u8,
     }
 
-    #[superstate(B)]
-    impl State<TesterState> for BB {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<TesterState, Self> {
-            StateEntry::State(Self {
+    impl Substate<B> for BB {
+        fn enter(_ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
+            Entry::State(Self {
                 enter: 1,
                 ..Default::default()
             })
         }
 
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.init += 1;
-            None
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.update += 1;
-            self.update_order = superstates.top.update_order_acc;
-            superstates.top.update_order_acc += 1;
-            None
+            self.update_order = ctx.top.update_order_acc;
+            ctx.top.update_order_acc += 1;
         }
 
-        fn top_down_update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<TesterState>> {
+        fn top_down_update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
             self.top_down_update += 1;
-            self.update_order = superstates.top.update_order_acc;
-            superstates.top.update_order_acc += 1;
-            None
+            self.update_order = ctx.top.update_order_acc;
+            ctx.top.update_order_acc += 1;
         }
     }
 }
@@ -271,7 +211,7 @@ mod tests {
     #[test]
     fn state_chart() {
         assert_eq!(
-            TESTER_STATE_CHART,
+            STATE_CHART,
             "Top
 ├─ A
 │  ├─ AA
@@ -286,62 +226,62 @@ mod tests {
 
     #[test]
     fn machine_name() {
-        let machine = TesterMachineBuilder::new(Top::default()).build();
+        let machine = Builder::new(Top::default()).build();
         assert_eq!(machine.name(), "Tester");
     }
 
     #[test]
     fn state_match() {
-        let mut machine = TesterMachineBuilder::new(Top::default()).build();
+        let mut machine = Builder::new(Top::default()).build();
 
-        assert!(matches!(machine.state(), TesterState::Top));
+        assert!(matches!(machine.state(), State::Top));
 
-        assert!(machine.state_matches(TesterState::Top));
-        assert!(!machine.state_matches(TesterState::A));
-        assert!(!machine.state_matches(TesterState::B));
-        assert!(!machine.state_matches(TesterState::BA));
-        assert!(!machine.state_matches(TesterState::BB));
+        assert!(machine.state_matches(State::Top));
+        assert!(!machine.state_matches(State::A));
+        assert!(!machine.state_matches(State::B));
+        assert!(!machine.state_matches(State::BA));
+        assert!(!machine.state_matches(State::BB));
 
-        machine.transition(TesterState::A);
-        assert!(matches!(machine.state(), TesterState::A));
+        machine.transition(State::A);
+        assert!(matches!(machine.state(), State::A));
 
-        assert!(machine.state_matches(TesterState::Top));
-        assert!(machine.state_matches(TesterState::A));
-        assert!(!machine.state_matches(TesterState::B));
-        assert!(!machine.state_matches(TesterState::BA));
-        assert!(!machine.state_matches(TesterState::BB));
+        assert!(machine.state_matches(State::Top));
+        assert!(machine.state_matches(State::A));
+        assert!(!machine.state_matches(State::B));
+        assert!(!machine.state_matches(State::BA));
+        assert!(!machine.state_matches(State::BB));
 
-        machine.transition(TesterState::B);
-        assert!(matches!(machine.state(), TesterState::B));
+        machine.transition(State::B);
+        assert!(matches!(machine.state(), State::B));
 
-        assert!(machine.state_matches(TesterState::Top));
-        assert!(!machine.state_matches(TesterState::A));
-        assert!(machine.state_matches(TesterState::B));
-        assert!(!machine.state_matches(TesterState::BA));
-        assert!(!machine.state_matches(TesterState::BB));
+        assert!(machine.state_matches(State::Top));
+        assert!(!machine.state_matches(State::A));
+        assert!(machine.state_matches(State::B));
+        assert!(!machine.state_matches(State::BA));
+        assert!(!machine.state_matches(State::BB));
 
-        machine.transition(TesterState::BA);
-        assert!(matches!(machine.state(), TesterState::BA));
+        machine.transition(State::BA);
+        assert!(matches!(machine.state(), State::BA));
 
-        assert!(machine.state_matches(TesterState::Top));
-        assert!(!machine.state_matches(TesterState::A));
-        assert!(machine.state_matches(TesterState::B));
-        assert!(machine.state_matches(TesterState::BA));
-        assert!(!machine.state_matches(TesterState::BB));
+        assert!(machine.state_matches(State::Top));
+        assert!(!machine.state_matches(State::A));
+        assert!(machine.state_matches(State::B));
+        assert!(machine.state_matches(State::BA));
+        assert!(!machine.state_matches(State::BB));
 
-        machine.transition(TesterState::BB);
-        assert!(matches!(machine.state(), TesterState::BB));
+        machine.transition(State::BB);
+        assert!(matches!(machine.state(), State::BB));
 
-        assert!(machine.state_matches(TesterState::Top));
-        assert!(!machine.state_matches(TesterState::A));
-        assert!(machine.state_matches(TesterState::B));
-        assert!(!machine.state_matches(TesterState::BA));
-        assert!(machine.state_matches(TesterState::BB));
+        assert!(machine.state_matches(State::Top));
+        assert!(!machine.state_matches(State::A));
+        assert!(machine.state_matches(State::B));
+        assert!(!machine.state_matches(State::BA));
+        assert!(machine.state_matches(State::BB));
     }
 
     #[test]
     fn state_refs() {
-        let mut machine = TesterMachineBuilder::new(Top::default()).build();
+        let mut machine = Builder::new(Top::default()).build();
 
         assert_eq!(machine.top_ref().init, 1);
         machine.top_mut().access += 1;
@@ -362,7 +302,7 @@ mod tests {
         let state: Option<&BB> = machine.state_ref();
         assert!(state.is_none());
 
-        machine.transition(TesterState::A);
+        machine.transition(State::A);
 
         let state: Option<&Top> = machine.state_ref();
         assert!(state.is_some());
@@ -375,7 +315,7 @@ mod tests {
         let state: Option<&BB> = machine.state_ref();
         assert!(state.is_none());
 
-        machine.transition(TesterState::A);
+        machine.transition(State::A);
 
         let state: Option<&Top> = machine.state_ref();
         assert!(state.is_some());
@@ -388,7 +328,7 @@ mod tests {
         let state: Option<&BB> = machine.state_ref();
         assert!(state.is_none());
 
-        machine.transition(TesterState::BA);
+        machine.transition(State::BA);
 
         let state: Option<&Top> = machine.state_ref();
         assert!(state.is_some());
@@ -401,7 +341,7 @@ mod tests {
         let state: Option<&BB> = machine.state_ref();
         assert!(state.is_none());
 
-        machine.transition(TesterState::BB);
+        machine.transition(State::BB);
 
         let state: Option<&Top> = machine.state_ref();
         assert!(state.is_some());
@@ -417,8 +357,8 @@ mod tests {
 
     #[test]
     fn update_order() {
-        let mut machine = TesterMachineBuilder::new(Top::default()).build();
-        machine.transition(TesterState::BA);
+        let mut machine = Builder::new(Top::default()).build();
+        machine.transition(State::BA);
 
         let top: &Top = machine.state_ref().unwrap();
         let bar: &B = machine.state_ref().unwrap();
@@ -473,13 +413,13 @@ mod tests {
 
     #[test]
     fn enter_init_exit() {
-        let mut machine = TesterMachineBuilder::new(Top::default()).build();
-        assert!(matches!(machine.state(), TesterState::Top));
+        let mut machine = Builder::new(Top::default()).build();
+        assert!(matches!(machine.state(), State::Top));
 
         assert_eq!(machine.top_ref().init, 1);
 
-        machine.transition(TesterState::BA);
-        assert!(matches!(machine.state(), TesterState::BA));
+        machine.transition(State::BA);
+        assert!(matches!(machine.state(), State::BA));
 
         assert_eq!(machine.top_ref().init, 1);
 
@@ -491,8 +431,8 @@ mod tests {
         assert_eq!(state.enter, 1);
         assert_eq!(state.init, 1);
 
-        machine.transition(TesterState::BB);
-        assert!(matches!(machine.state(), TesterState::BB));
+        machine.transition(State::BB);
+        assert!(matches!(machine.state(), State::BB));
 
         assert_eq!(machine.top_ref().init, 1);
 
@@ -504,8 +444,8 @@ mod tests {
         assert_eq!(state.enter, 1);
         assert_eq!(state.init, 1);
 
-        machine.transition(TesterState::B);
-        assert!(matches!(machine.state(), TesterState::BB));
+        machine.transition(State::B);
+        assert!(matches!(machine.state(), State::BB));
 
         let state: &B = machine.state_ref().unwrap();
         assert_eq!(state.enter, 1);
@@ -514,5 +454,28 @@ mod tests {
         let state: &BB = machine.state_ref().unwrap();
         assert_eq!(state.enter, 1);
         assert_eq!(state.init, 1);
+    }
+}
+
+#[state_machine(Kikai)]
+mod named {
+    use moku::*;
+
+    #[machine_module]
+    pub mod machine {}
+
+    pub struct Top;
+    impl TopState for Top {}
+}
+
+#[cfg(test)]
+mod named_tests {
+    use super::named::{machine::Builder, *};
+    use moku::*;
+
+    #[test]
+    fn custom_name() {
+        let machine = Builder::new(Top).build();
+        assert_eq!(machine.name(), "Kikai");
     }
 }

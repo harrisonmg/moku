@@ -1,15 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    spanned::Spanned, Attribute, ImplItem, Item, ItemImpl, ItemMod, ItemStruct, Meta, MetaList,
-    Type, TypePath,
+    spanned::Spanned, Attribute, GenericArgument, ImplItem, Item, ItemImpl, ItemMod, ItemStruct,
+    Meta, PathArguments, Type, TypePath,
 };
 
 use crate::{
     metadata::{Metadata, State},
-    util::{filter_attributes, generics_match, path_matches},
+    util::{filter_attributes, path_matches},
 };
 
 /// Collect and validate Metadata about the structure of a `state_machine` module and the usage of attributes.
@@ -17,7 +17,7 @@ pub fn build_metadata(name: Ident, module: ItemMod) -> Result<Metadata, syn::Err
     let mut unpacker = Unpacker::new(name, module);
     unpacker.unpack()?;
     unpacker.check_state_defs();
-    unpacker.validate_superstates_types()?;
+    unpacker.validate_associated_types()?;
     unpacker.validate_enter_defs()?;
     let top_state = unpacker.get_top_state()?;
     unpacker.validate_superstates(top_state)?;
@@ -28,7 +28,7 @@ struct UnpackedState {
     ident: Ident,
     superstate: Ident,
     imp: ItemImpl,
-    attr_span: Span,
+    superstate_span: Span,
     def_found: bool,
     has_fields: bool,
     autogen_enter: bool,
@@ -36,12 +36,13 @@ struct UnpackedState {
 
 struct Unpacker {
     name: Ident,
-    state_enum: Ident,
     main_mod: ItemMod,
     machine_mod: Option<ItemMod>,
     event: Option<Ident>,
     top_state: Option<Ident>,
+    top_state_impl: Option<ItemImpl>,
     states: Vec<UnpackedState>,
+    state_idents: HashSet<Ident>,
     structs: HashMap<Ident, bool>,
     error: Option<syn::Error>,
 }
@@ -49,13 +50,14 @@ struct Unpacker {
 impl Unpacker {
     fn new(name: Ident, main_mod: ItemMod) -> Self {
         Self {
-            state_enum: format_ident!("{}State", name),
             name,
             main_mod,
             machine_mod: None,
             event: None,
             top_state: None,
+            top_state_impl: None,
             states: Vec::new(),
+            state_idents: HashSet::new(),
             structs: HashMap::new(),
             error: None,
         }
@@ -63,11 +65,13 @@ impl Unpacker {
 
     /// Build Metadata from the info collected by an Unpacker.
     fn build_metadata(mut self) -> Result<Metadata, syn::Error> {
+        let (event, event_local) = self.take_event();
         let mut metadata = Metadata {
-            event: self.take_event(),
+            event,
+            event_local,
             top_state: self.get_top_state()?.into(),
+            top_state_impl: self.top_state_impl.take(),
             machine_mod: self.take_machine_mod()?,
-            state_enum: self.state_enum,
             name: self.name,
             states: HashMap::new(),
             main_mod: self.main_mod,
@@ -131,7 +135,7 @@ impl Unpacker {
 
         // fallthrough error for above validation
         let msg = format!(
-            "a `moku::state_machine` module must be inline with its attribte, try
+            "a `moku::state_machine` module must be inline with its attribute, try
 ```
 #[moku::state_machine]
 mod {} {{
@@ -143,7 +147,7 @@ mod {} {{
         Err(syn::Error::new(self.main_mod.span(), msg))
     }
 
-    /// Check each found State struct definition with it's struct definition.
+    /// Check each found State struct definition with its struct definition.
     fn check_state_defs(&mut self) {
         for state in &mut self.states {
             match self.structs.remove(&state.ident) {
@@ -158,15 +162,35 @@ mod {} {{
         }
     }
 
-    /// Validate that the Superstates associated type is not manually defined for any State.
-    fn validate_superstates_types(&self) -> Result<(), syn::Error> {
+    /// Validate that associated types are not manually defined for any Substate.
+    fn validate_associated_types(&self) -> Result<(), syn::Error> {
         for state in &self.states {
             for item in &state.imp.items {
                 if let ImplItem::Type(ty) = item {
-                    if ty.ident == "Superstates" {
+                    if ty.ident == "Context" || ty.ident == "State" || ty.ident == "Event" {
                         return Err(syn::Error::new(
                             ty.span(),
-                            "the `State::Superstates` associated type must not be manually defined",
+                            format!(
+                                "the `Substate::{}` associated type must not be manually defined",
+                                ty.ident
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Also check TopState impl
+        if let Some(ref imp) = self.top_state_impl {
+            for item in &imp.items {
+                if let ImplItem::Type(ty) = item {
+                    if ty.ident == "State" || ty.ident == "Event" {
+                        return Err(syn::Error::new(
+                            ty.span(),
+                            format!(
+                                "the `TopState::{}` associated type must not be manually defined",
+                                ty.ident
+                            ),
                         ));
                     }
                 }
@@ -176,7 +200,7 @@ mod {} {{
         Ok(())
     }
 
-    /// Validate that State::enter is manually defined or can be autogenerated for each State.
+    /// Validate that Substate::enter is manually defined or can be autogenerated for each Substate.
     fn validate_enter_defs(&mut self) -> Result<(), syn::Error> {
         for state in &mut self.states {
             let has_enter = state.imp.items.iter().any(|item| match item {
@@ -190,7 +214,7 @@ mod {} {{
                 if state.has_fields {
                     return Err(syn::Error::new(
                         state.imp.trait_.as_ref().unwrap().1.span(),
-                        "a struct with fields must manually implement the `State::enter` function",
+                        "a struct with fields must manually implement the `Substate::enter` function",
                     ));
                 } else {
                     state.autogen_enter = true;
@@ -198,7 +222,7 @@ mod {} {{
             } else {
                 return Err(syn::Error::new(
                     state.imp.trait_.as_ref().unwrap().1.span(),
-                    "a struct that is not defined in this module must manually implement the `State::enter` function",
+                    "a struct that is not defined in this module must manually implement the `Substate::enter` function",
                 ));
             }
         }
@@ -217,11 +241,12 @@ mod {} {{
         }
     }
 
-    /// Take the Ident of the StateMachineEvent if found, else ().
-    fn take_event(&mut self) -> TokenStream {
+    /// Take the StateMachineEvent paths if found, else ().
+    /// Returns (event_from_machine, event_local) tuple.
+    fn take_event(&mut self) -> (TokenStream, TokenStream) {
         match self.event.take() {
-            Some(ident) => quote! { super::#ident },
-            None => quote! { () },
+            Some(ident) => (quote! { super::#ident }, quote! { #ident }),
+            None => (quote! { () }, quote! { () }),
         }
     }
 
@@ -236,23 +261,18 @@ mod {} {{
         }
     }
 
-    /// Validate that each State's superstate is another State or the TopState.
+    /// Validate that each Substate's superstate is another Substate or the TopState.
     fn validate_superstates(&self, top_state: &Ident) -> Result<(), syn::Error> {
         // validate that each superstate is another State or TopState
-        for (index, state) in self.states.iter().enumerate() {
-            let matches_top_state = state.superstate == *top_state;
-            let matches_other_state =
-                self.states
-                    .iter()
-                    .enumerate()
-                    .any(|(other_index, other_state)| {
-                        index != other_index && state.superstate == other_state.ident
-                    });
-            if !matches_top_state && !matches_other_state {
+        for state in &self.states {
+            let valid = state.superstate != state.ident
+                && (state.superstate == *top_state
+                    || self.state_idents.contains(&state.superstate));
+            if !valid {
                 return Err(syn::Error::new(
-                    state.attr_span,
+                    state.superstate_span,
                     format!(
-                        "superstate `{}` doesn't match any other known `moku::State` or `moku::TopState`",
+                        "superstate `{}` doesn't match any other known `moku::Substate` or `moku::TopState`",
                         state.superstate
                     ),
                 ));
@@ -263,29 +283,31 @@ mod {} {{
     }
 
     /// Unpack an implementation of the `TopState` trait.
-    fn unpack_top_state(&mut self, imp: &ItemImpl) {
+    fn unpack_top_state(&mut self, imp: ItemImpl) {
         if self.top_state.is_some() {
             self.error = Some(syn::Error::new(
                 imp.span(),
                 "multiple `moku::TopState`s are defined within this module",
             ));
-        } else {
-            let ident = match imp.self_ty.as_ref() {
-                Type::Path(TypePath { path, .. }) => path.get_ident().cloned(),
-                _ => None,
-            };
+            return;
+        }
 
-            match ident {
-                Some(ident) => {
-                    self.top_state = Some(ident);
-                }
-                None => {
-                    self.error = Some(syn::Error::new(
-                        imp.self_ty.span(),
-                        "`moku::TopState` must be implemented on a plain struct \
-                        \nYou may also use a type alias: `type MyTopState = Option<bool>;`",
-                    ));
-                }
+        let ident = match imp.self_ty.as_ref() {
+            Type::Path(TypePath { path, .. }) => path.get_ident().cloned(),
+            _ => None,
+        };
+
+        match ident {
+            Some(ident) => {
+                self.top_state = Some(ident);
+                self.top_state_impl = Some(imp);
+            }
+            None => {
+                self.error = Some(syn::Error::new(
+                    imp.self_ty.span(),
+                    "`moku::TopState` must be implemented on a plain struct \
+                    \nYou may also use a type alias: `type MyTopState = Option<bool>;`",
+                ));
             }
         }
     }
@@ -327,12 +349,12 @@ mod {} {{
         }
     }
 
-    /// Unpack an implementation of the `State` trait.
-    fn unpack_state(&mut self, imp: ItemImpl) {
+    /// Unpack an implementation of the `Substate` trait.
+    fn unpack_substate(&mut self, imp: ItemImpl) {
         if !imp.generics.params.is_empty() {
             self.error = Some(syn::Error::new(
                 imp.self_ty.span(),
-                "`moku::State`s must not have generic parameters",
+                "`moku::Substate` impls must not have generic parameters",
             ));
             return;
         }
@@ -347,51 +369,81 @@ mod {} {{
             None => {
                 self.error = Some(syn::Error::new(
                     imp.self_ty.span(),
-                    "`moku::State` must be implemented on a plain struct \
+                    "`moku::Substate` must be implemented on a plain struct \
                     \nYou may also use a type alias: `type MyState = Option<bool>;`",
                 ));
                 return;
             }
         };
 
-        let mut attrs = filter_attributes(&imp.attrs, "superstate");
-        match attrs.len() {
-            0 => {
+        // Extract the superstate from the trait generic parameter: Substate<Parent>
+        let trait_path = &imp.trait_.as_ref().unwrap().1;
+        let last_segment = trait_path.segments.last().unwrap();
+
+        let superstate = match &last_segment.arguments {
+            PathArguments::AngleBracketed(args) => {
+                if args.args.len() != 1 {
+                    self.error = Some(syn::Error::new(
+                        args.span(),
+                        "`moku::Substate` requires exactly one type parameter for the superstate",
+                    ));
+                    return;
+                }
+                match args.args.first().unwrap() {
+                    GenericArgument::Type(Type::Path(TypePath { path, .. })) => {
+                        path.get_ident().cloned()
+                    }
+                    _ => None,
+                }
+            }
+            PathArguments::None => {
                 self.error = Some(syn::Error::new(
-                    imp.span(),
-                    "no `moku::superstate` attribute defined for this `moku::State`",
+                    last_segment.span(),
+                    "`moku::Substate` requires a superstate type parameter, e.g. `impl Substate<Top> for Foo`",
                 ));
                 return;
             }
-            1 => (),
-            _ => {
+            PathArguments::Parenthesized(_) => {
                 self.error = Some(syn::Error::new(
-                    imp.span(),
-                    "multiple `moku::superstate` attributes defined for this `moku::State`",
+                    last_segment.span(),
+                    "unexpected parenthesized arguments on `moku::Substate`",
                 ));
                 return;
             }
-        }
-
-        let attr = &attrs.pop().unwrap();
-
-        let superstate: Option<Ident> = match &attr.meta {
-            Meta::List(MetaList { tokens, .. }) => syn::parse2(tokens.clone()).ok(),
-            _ => None,
         };
 
         let superstate = match superstate {
             Some(superstate) => superstate,
             None => {
-                self.error = Some(syn::Error::new( imp.span(), "the `moku::superstate` attribute requires a single State name as an argument, e.g. `#[superstate(Top)]`",));
+                self.error = Some(syn::Error::new(
+                    last_segment.span(),
+                    "the `moku::Substate` superstate must be only a single state name, e.g. `impl Substate<Top> for Foo`",
+                ));
                 return;
             }
         };
 
+        let superstate_span = match &last_segment.arguments {
+            PathArguments::AngleBracketed(args) => args.span(),
+            _ => last_segment.span(),
+        };
+
+        // Check for duplicate Substate impls
+        if !self.state_idents.insert(ident.clone()) {
+            self.error = Some(syn::Error::new(
+                imp.self_ty.span(),
+                format!(
+                    "multiple `Substate` impls found for `{}`; each state must only implement Substate once",
+                    ident
+                ),
+            ));
+            return;
+        }
+
         self.states.push(UnpackedState {
             ident,
             superstate,
-            attr_span: attr.span(),
+            superstate_span,
             imp,
             def_found: false,
             has_fields: false,
@@ -400,7 +452,7 @@ mod {} {{
     }
 
     fn unpack_struct(&mut self, def: ItemStruct) -> Option<Item> {
-        // track what structs have no fields for State::enter autogen info
+        // track what structs have no fields for Substate::enter autogen info
         self.structs
             .insert(def.ident.clone(), !def.fields.is_empty());
 
@@ -433,7 +485,7 @@ mod {} {{
             _ => {
                 self.error = Some(syn::Error::new(
                     attr.span(),
-                    "`moku::machine_module` accepts no arguments, try `#[machine_module]`",
+                    "`moku::machine_module` accepts no arguments, try `#[moku::machine_module]`",
                 ));
                 return None;
             }
@@ -474,41 +526,12 @@ mod {} {{
         };
 
         if path_matches(tr, "TopState") {
-            if generics_match(tr, &self.state_enum, &self.event) {
-                self.unpack_top_state(&imp);
-                Some(Item::Impl(imp))
-            } else {
-                let msg = if let Some(event) = &self.event {
-                    format!(
-                        "this impl of moku::TopState must use the generics <{}, {}>",
-                        self.state_enum, event
-                    )
-                } else {
-                    format!(
-                        "this impl of moku::TopState must use the generic <{}>",
-                        self.state_enum
-                    )
-                };
-                self.error = Some(syn::Error::new(tr.span(), msg));
-                None
-            }
-        } else if path_matches(tr, "State") {
-            if generics_match(tr, &self.state_enum, &self.event) {
-                self.unpack_state(imp);
-            } else {
-                let msg = if let Some(event) = &self.event {
-                    format!(
-                        "impls of moku::State must use the generics <{}, {}>",
-                        self.state_enum, event
-                    )
-                } else {
-                    format!(
-                        "impls of moku::State must use the generic <{}>",
-                        self.state_enum
-                    )
-                };
-                self.error = Some(syn::Error::new(tr.span(), msg));
-            }
+            // TopState now has no generic parameters
+            self.unpack_top_state(imp);
+            None
+        } else if path_matches(tr, "Substate") {
+            // Substate<Parent> - superstate is in the generic parameter
+            self.unpack_substate(imp);
             None
         } else {
             Some(Item::Impl(imp))

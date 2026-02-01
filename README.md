@@ -59,25 +59,23 @@ mod blinky {
     #[machine_module]
     mod machine {}
 
-    // Moku has generated `BlinkyState`, an enum of all states.
-    use machine::BlinkyState;
+    // Moku has generated `State`, an enum of all states.
+    use machine::State;
 
     // Every moku state machine must have a single `TopState`, which acts as a
     // superstate to all other states. The state machine never leaves this state.
     struct Top;
 
     // The top state is indicated by implementing the `TopState` trait for a struct.
-    impl TopState<BlinkyState> for Top {}
+    impl TopState for Top {}
 }
 ```
 
 Moku will generate the following public items inside of the `machine` module:
-- The enum `BlinkyState` that implements [`StateEnum`]
-- The struct `BlinkyMachine` that implements [`StateMachine`] and [`StateRef`] for every state
-- The struct `BlinkyMachineBuilder` that implements [`StateMachineBuilder`]
-- The `const` `&str` `BLINKY_STATE_CHART`
-
-The `Blinky` name that prepends each of these items defaults to the name of the parent module in `UpperCamel` case, but can be manually specified as an argument to the [`state_machine`] attribute.
+- The enum `State` that implements [`StateEnum`]
+- The struct `Machine` that implements [`StateMachine`] and [`StateRef`] for every state
+- The struct `Builder` that implements [`StateMachineBuilder`]
+- The `const` `&str` `STATE_CHART`
 
 Let's add some more states inside of the `blinky` module:
 ```rust
@@ -88,38 +86,33 @@ Let's add some more states inside of the `blinky` module:
 #     use moku::*;
 #     #[machine_module]
 #     mod machine {}
-#     use machine::BlinkyState;
+#     use machine::State;
 #     struct Top;
-#     impl TopState<BlinkyState> for Top {}
+#     impl TopState for Top {}
     // ...
 
     struct Disabled;
 
-    // Every `State` must use the `superstate` attribute to indicate what state
-    // it is a substate of.
-    #[superstate(Top)]
-    impl State<BlinkyState> for Disabled {}
+    // Every substate must implement `Substate` with its superstate as the generic parameter.
+    impl Substate<Top> for Disabled {}
 
     struct Enabled;
 
-    #[superstate(Top)]
-    impl State<BlinkyState> for Enabled {}
+    impl Substate<Top> for Enabled {}
 
     struct LedOn;
 
-    #[superstate(Enabled)]
-    impl State<BlinkyState> for LedOn {}
+    impl Substate<Enabled> for LedOn {}
 
     struct LedOff;
 
-    #[superstate(Enabled)]
-    impl State<BlinkyState> for LedOff {}
+    impl Substate<Enabled> for LedOff {}
 
     // ...
 # }
 ```
 
-At this point, `BLINKY_STATE_CHART` will look like:
+At this point, `STATE_CHART` will look like:
 ```txt
 Top
 ├─ Disabled
@@ -128,10 +121,10 @@ Top
    └─ LedOff
 ```
 
-and `BlinkyState` will look like:
+and `State` will look like:
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BlinkyState {
+pub enum State {
     Top,
     Disabled,
     Enabled,
@@ -149,7 +142,7 @@ Let's add some functionality to our states:
 #     use moku::*;
 #     #[machine_module]
 #     mod machine {}
-#     use machine::BlinkyState;
+#     use machine::State;
     // ...
 
     struct Top {
@@ -161,35 +154,31 @@ Let's add some functionality to our states:
         blink_time: std::time::Duration,
     }
 
-    impl TopState<BlinkyState> for Top {
+    impl TopState for Top {
         // By implementing the `init` method, we can define the initial transition taken
         // after transitioning into a state.
         //
-        // Like most other methods in the `TopState` and `State` traits, the return value
-        // indicates a state to transition to, where `None` indicates no transition.
-        fn init(&mut self) -> impl Into<Next<BlinkyState>> {
+        // Like most other methods in the `TopState` and `Substate` traits, the return value
+        // indicates a state to transition to, where `Next::None` indicates no transition.
+        fn init(&mut self) -> impl Into<Next<Self::State>> {
             // When we transition into the `Top` state (or initialize the state machine),
             // transition into the `Enabled` state.
-            // `Next` implements `From` for `StateEnum` and `Option<StateEnum>`,
-            // so there are a few convenient ways to write our return value.
-            BlinkyState::Enabled
+            State::Enabled
         }
     }
 
     // ...
 #     struct Disabled;
-#     #[superstate(Top)]
-#     impl State<BlinkyState> for Disabled {}
+#     impl Substate<Top> for Disabled {}
 #     struct Enabled;
 
-    #[superstate(Top)]
-    impl State<BlinkyState> for Enabled {
+    impl Substate<Top> for Enabled {
         fn init(
             &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<BlinkyState>> {
+            _ctx: &mut Self::Context<'_>,
+        ) -> impl Into<Next<Self::State>> {
             // When we transition into the `Enabled` state, transition into the `LedOn` state.
-            BlinkyState::LedOn
+            State::LedOn
         }
     }
 
@@ -197,40 +186,39 @@ Let's add some functionality to our states:
         entry_time: std::time::Instant,
     }
 
-    #[superstate(Enabled)]
-    impl State<BlinkyState> for LedOn {
+    impl Substate<Enabled> for LedOn {
         // The `enter` method acts as a constructor for the state when it becomes active.
         // States do not persist when they are inactive.
         //
         // If unimplemented, moku will autogenerate this method for states with no fields.
         //
-        // The `StateEntry` return type also allows for a transition away instead of
+        // The `Entry` return type also allows for a transition away instead of
         // entering the state - for instance towards a fault state if some aspect of
         // state construction fails.
         fn enter(
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> StateEntry<BlinkyState, Self> {
+            _ctx: &mut Self::Context<'_>,
+        ) -> impl Into<Entry<Self::State, Self>> {
             // dummy code to turn the LED on
             // led_gpio.set_high()
 
             Self {
                 entry_time: std::time::Instant::now(),
-            }.into()
+            }
         }
 
-        // Moku automatically defines the `Superstates` associated type for each state.
+        // Moku automatically defines the `Context` associated type for each state.
         // This type will contain a mutable reference to each active superstate.
         fn update(
             &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<BlinkyState>> {
-            // We can use `superstates` to access the `blink_time` field of the `Top` state.
-            if self.entry_time.elapsed() >= superstates.top.blink_time {
+            ctx: &mut Self::Context<'_>,
+        ) -> impl Into<Next<Self::State>> {
+            // We can use `ctx` to access the `blink_time` field of the `Top` state.
+            if self.entry_time.elapsed() >= ctx.top.blink_time {
                 // If we've met or exceeded the blink time, transition to the `LedOff` state.
-                Some(BlinkyState::LedOff)
+                Next::Target(State::LedOff)
             } else {
                 // Otherwise, don't transition away from this state.
-                None
+                Next::None
             }
         }
     }
@@ -239,29 +227,28 @@ Let's add some functionality to our states:
         entry_time: std::time::Instant,
     }
 
-    #[superstate(Enabled)]
-    impl State<BlinkyState> for LedOff {
+    impl Substate<Enabled> for LedOff {
         fn enter(
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> StateEntry<BlinkyState, Self> {
+            _ctx: &mut Self::Context<'_>,
+        ) -> impl Into<Entry<Self::State, Self>> {
             // dummy code to turn the LED off
             // led_gpio.set_low()
 
             Self {
                 entry_time: std::time::Instant::now(),
-            }.into()
+            }
         }
 
         fn update(
             &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<BlinkyState>> {
-            if self.entry_time.elapsed() >= superstates.top.blink_time {
+            context: &mut Self::Context<'_>,
+        ) -> impl Into<Next<Self::State>> {
+            if self.entry_time.elapsed() >= context.top.blink_time {
                 // If we've met or exceeded the blink time, transition to the `LedOn` state.
-                Some(BlinkyState::LedOn)
+                Next::Target(State::LedOn)
             } else {
                 // Otherwise, don't transition away from this state.
-                None
+                Next::None
             }
         }
     }
@@ -279,65 +266,61 @@ Finally, let's use our state machine!
 #     use moku::*;
 #     #[machine_module]
 #     pub mod machine {}
-#     use machine::BlinkyState;
+#     use machine::State;
 #    pub struct Top { pub blink_time: std::time::Duration }
-#    impl TopState<BlinkyState> for Top {
-#        fn init(&mut self) -> impl Into<Next<BlinkyState>> {
-#            Some(BlinkyState::Enabled)
+#    impl TopState for Top {
+#        fn init(&mut self) -> impl Into<Next<Self::State>> {
+#            State::Enabled
 #        }
 #    }
 #     struct Disabled;
-#     #[superstate(Top)]
-#     impl State<BlinkyState> for Disabled {}
+#     impl Substate<Top> for Disabled {}
 #     struct Enabled;
-#     #[superstate(Top)]
-#     impl State<BlinkyState> for Enabled {
+#     impl Substate<Top> for Enabled {
 #         fn init(
 #             &mut self,
-#             _superstates: &mut Self::Superstates<'_>,
-#         ) -> impl Into<Next<BlinkyState>> {
-#             Some(BlinkyState::LedOn)
+#             _ctx: &mut Self::Context<'_>,
+#         ) -> impl Into<Next<Self::State>> {
+#             State::LedOn
 #         }
 #     }
 #     struct LedOn { entry_time: std::time::Instant }
-#     #[superstate(Enabled)]
-#     impl State<BlinkyState> for LedOn {
+#     impl Substate<Enabled> for LedOn {
 #         fn enter(
-#             _superstates: &mut Self::Superstates<'_>,
-#         ) -> StateEntry<BlinkyState, Self> {
+#             _ctx: &mut Self::Context<'_>,
+#         ) -> impl Into<Entry<Self::State, Self>> {
 #             Self {
 #                 entry_time: std::time::Instant::now(),
-#             }.into()
+#             }
 #         }
 #         fn update(
 #             &mut self,
-#             superstates: &mut Self::Superstates<'_>,
-#         ) -> impl Into<Next<BlinkyState>> {
-#             if self.entry_time.elapsed() >= superstates.top.blink_time {
-#                 Some(BlinkyState::LedOff)
+#             context: &mut Self::Context<'_>,
+#         ) -> impl Into<Next<Self::State>> {
+#             if self.entry_time.elapsed() >= context.top.blink_time {
+#                 Next::Target(State::LedOff)
 #             } else {
-#                 None
+#                 Next::None
 #             }
 #         }
 #     }
 #     pub struct LedOff { pub entry_time: std::time::Instant }
-#     #[superstate(Enabled)]
-#     impl State<BlinkyState> for LedOff {
+#     impl Substate<Enabled> for LedOff {
 #         fn enter(
-#             _superstates: &mut Self::Superstates<'_>,
-#         ) -> StateEntry<BlinkyState, Self> {
+#             _ctx: &mut Self::Context<'_>,
+#         ) -> impl Into<Entry<Self::State, Self>> {
 #             Self {
 #                 entry_time: std::time::Instant::now(),
-#             }.into()
+#             }
 #         }
 #         fn update(
 #             &mut self,
-#             superstates: &mut Self::Superstates<'_>,
-#         ) -> impl Into<Next<BlinkyState>> {
-#             if self.entry_time.elapsed() >= superstates.top.blink_time {
-#                 Some(BlinkyState::LedOn)
+#             context: &mut Self::Context<'_>,
+#         ) -> impl Into<Next<Self::State>> {
+#             if self.entry_time.elapsed() >= context.top.blink_time {
+#                 Next::Target(State::LedOn)
 #             } else {
-#                 None
+#                 Next::None
 #             }
 #         }
 #     }
@@ -345,7 +328,7 @@ Finally, let's use our state machine!
 // ...
 
 use moku::{StateMachine, StateMachineBuilder};
-use blinky::{machine::{BlinkyMachineBuilder, BlinkyState}, Top};
+use blinky::{machine::{Builder, State}, Top};
 
 let top_state = Top {
     blink_time: std::time::Duration::ZERO,
@@ -353,7 +336,7 @@ let top_state = Top {
 
 // The builder type let's us make a new state machine from a top state.
 // The state machine is initialized upon building.
-let mut machine = BlinkyMachineBuilder::new(top_state).build();
+let mut machine = Builder::new(top_state).build();
 
 // log output:
 // ----------
@@ -364,11 +347,11 @@ let mut machine = BlinkyMachineBuilder::new(top_state).build();
 // └Transition complete
 
 // `state_matches(...)` will match with any active state or superstate.
-assert!(machine.state_matches(BlinkyState::Enabled));
-assert!(machine.state_matches(BlinkyState::LedOn));
+assert!(machine.state_matches(State::Enabled));
+assert!(machine.state_matches(State::LedOn));
 
 // `state()` returns the exact current state.
-assert!(matches!(machine.state(), BlinkyState::LedOn));
+assert!(matches!(machine.state(), State::LedOn));
 
 // `update()` calls each state's `update()` method, starting from the deepest state.
 machine.update();
@@ -411,7 +394,7 @@ let mut led_off: &mut blinky::LedOff = machine.state_mut().unwrap();
 led_off.entry_time = std::time::Instant::now();
 
 // We can manually induce transitions.
-machine.transition(BlinkyState::Disabled);
+machine.transition(State::Disabled);
 
 // log output:
 // ----------
@@ -451,48 +434,46 @@ mod example {
 
     struct Top;
 
-    // When implementing `TopState` and `State`, use your event type as the second generic.
-    impl TopState<ExampleState, Event> for Top {
-        fn handle_event(&mut self, event: &Event) -> impl Into<Next<ExampleState>> {
+    // The proc macro auto-detects the Event type from the StateMachineEvent impl.
+    impl TopState for Top {
+        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
             match event {
-                Event::A => Some(ExampleState::Foo), // Transition to the Foo state.
-                Event::B => Some(ExampleState::Bar), // Transition to the Bar state.
-                Event::C => None, // Do nothing.
+                Event::A => Next::Target(State::Foo), // Transition to the Foo state.
+                Event::B => Next::Target(State::Bar), // Transition to the Bar state.
+                Event::C => Next::None, // Do nothing.
             }
         }
     }
 
     struct Foo;
 
-    #[superstate(Top)]
-    impl State<ExampleState, Event> for Foo {
+    impl Substate<Top> for Foo {
         // The default implementation of `handle_event` simply defers all
         // events to the next highest state.
     }
 
     struct Bar;
 
-    #[superstate(Top)]
-    impl State<ExampleState, Event> for Bar {
+    impl Substate<Top> for Bar {
         fn handle_event(
             &mut self,
-            event: &Event,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<EventResponse<ExampleState>> {
+            _ctx: &mut Self::Context<'_>,
+            event: &Self::Event,
+        ) -> impl Into<Response<Self::State>> {
             match event {
                 Event::A => {
                     // Do nothing with this event and pass handling to the next highest state.
-                    EventResponse::Next(Next::None)
+                    Response::Next(Next::None)
                 }
                 Event::B => {
                     // Do nothing and stop event handling immediately.
-                    EventResponse::Drop
+                    Response::Drop
                 }
                 Event::C => {
                     // Transitition to the Foo state and stop event handling.
-                    // EventResponse implements `From` for `StateEnum`, `Option<StateEnum>`,
+                    // Response implements `From` for `StateEnum`, `Option<StateEnum>`,
                     // and `Next<StateEnum>` for convenience.
-                    ExampleState::Foo.into()
+                    Response::Next(Next::Target(State::Foo))
                 }
             }
         }
@@ -501,7 +482,7 @@ mod example {
 ```
 
 ## Warning
-Moku exposes the [`internal`] module, the contents of which are intended to be used only by the code that is generated by moku. This, in addition to the methods defined in the [`TopState`] and [`State`] traits, are not intended to be called by users.
+Moku exposes the [`internal`] module, the contents of which are intended to be used only by the code that is generated by moku. This, in addition to the methods defined in the [`TopState`] and [`Substate`] traits, are not intended to be called by users.
 
 ## Macro expansion
 Should you wish to view the fully expanded code generated by moku, the [`cargo-expand`](https://crates.io/crates/cargo-expand) crate may prove useful.

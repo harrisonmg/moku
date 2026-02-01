@@ -1,4 +1,4 @@
-use blinky::{new_machine, BlinkyState, BLINKY_STATE_CHART};
+use blinky::{new_machine, State, STATE_CHART};
 use moku::StateMachine;
 
 #[moku::state_machine]
@@ -9,11 +9,11 @@ mod blinky {
 
     #[machine_module]
     mod machine {}
-    use machine::{BlinkyMachine, BlinkyMachineBuilder};
-    pub use machine::{BlinkyState, BLINKY_STATE_CHART};
+    use machine::{Builder, Machine};
+    pub use machine::{State, STATE_CHART};
 
-    pub fn new_machine() -> BlinkyMachine {
-        BlinkyMachineBuilder::new(Top {
+    pub fn new_machine() -> Machine {
+        Builder::new(Top {
             // In the real world, `StateMachine::update` would be called at some regular interval,
             // and this period may be set > 0 to control the blinking frequency.
             blink_period: Duration::ZERO,
@@ -25,26 +25,21 @@ mod blinky {
         blink_period: Duration,
     }
 
-    impl TopState<BlinkyState> for Top {
-        fn init(&mut self) -> impl Into<Next<BlinkyState>> {
-            Some(BlinkyState::Enabled)
+    impl TopState for Top {
+        fn init(&mut self) -> impl Into<Next<Self::State>> {
+            State::Enabled
         }
     }
 
     struct Disabled;
 
-    #[superstate(Top)]
-    impl State<BlinkyState> for Disabled {}
+    impl Substate<Top> for Disabled {}
 
     struct Enabled;
 
-    #[superstate(Top)]
-    impl State<BlinkyState> for Enabled {
-        fn init(
-            &mut self,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<BlinkyState>> {
-            Some(BlinkyState::LedOn)
+    impl Substate<Top> for Enabled {
+        fn init(&mut self, _ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            State::LedOn
         }
     }
 
@@ -52,23 +47,18 @@ mod blinky {
         entry_time: Instant,
     }
 
-    #[superstate(Enabled)]
-    impl State<BlinkyState> for LedOn {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BlinkyState, Self> {
+    impl Substate<Enabled> for LedOn {
+        fn enter(_ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
             Self {
                 entry_time: Instant::now(),
             }
-            .into()
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<BlinkyState>> {
-            if self.entry_time.elapsed() >= superstates.top.blink_period {
-                Some(BlinkyState::LedOff)
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            if self.entry_time.elapsed() >= ctx.top.blink_period {
+                Next::Target(State::LedOff)
             } else {
-                None
+                Next::None
             }
         }
     }
@@ -77,23 +67,18 @@ mod blinky {
         entry_time: Instant,
     }
 
-    #[superstate(Enabled)]
-    impl State<BlinkyState> for LedOff {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BlinkyState, Self> {
+    impl Substate<Enabled> for LedOff {
+        fn enter(_ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
             Self {
                 entry_time: Instant::now(),
             }
-            .into()
         }
 
-        fn update(
-            &mut self,
-            superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<Next<BlinkyState>> {
-            if self.entry_time.elapsed() >= superstates.top.blink_period {
-                Some(BlinkyState::LedOn)
+        fn update(&mut self, ctx: &mut Self::Context<'_>) -> impl Into<Next<Self::State>> {
+            if self.entry_time.elapsed() >= ctx.top.blink_period {
+                Next::Target(State::LedOn)
             } else {
-                None
+                Next::None
             }
         }
     }
@@ -110,7 +95,7 @@ fn main() {
     println!("- Type nothing and press enter to run a single update of the state machine");
     println!("- Type a state name and press enter to manually transition into that state");
 
-    println!("\nBlinky state chart:\n\n{}\n", BLINKY_STATE_CHART);
+    println!("\nBlinky state chart:\n\n{}\n", STATE_CHART);
 
     let mut machine = new_machine();
     println!();
@@ -119,11 +104,11 @@ fn main() {
         println!();
         match line.unwrap().to_lowercase().as_str() {
             "" => machine.update(),
-            "top" => machine.transition(BlinkyState::Top),
-            "disabled" => machine.transition(BlinkyState::Disabled),
-            "enabled" => machine.transition(BlinkyState::Enabled),
-            "ledon" => machine.transition(BlinkyState::LedOn),
-            "ledoff" => machine.transition(BlinkyState::LedOff),
+            "top" => machine.transition(State::Top),
+            "disabled" => machine.transition(State::Disabled),
+            "enabled" => machine.transition(State::Enabled),
+            "ledon" => machine.transition(State::LedOn),
+            "ledoff" => machine.transition(State::LedOff),
             _ => println!("unrecognized input, try again"),
         };
         println!();

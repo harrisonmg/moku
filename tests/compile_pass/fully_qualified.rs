@@ -3,25 +3,21 @@ mod blinky {
     #[::moku::machine_module]
     mod machine {}
 
-    use machine::BlinkyState;
-
     struct Event;
 
     impl ::moku::StateMachineEvent for Event {}
 
     struct Top;
 
-    impl ::moku::TopState<BlinkyState, Event> for Top {}
+    impl ::moku::TopState for Top {}
 
     struct Disabled;
 
-    #[::moku::superstate(Top)]
-    impl ::moku::State<BlinkyState, Event> for Disabled {}
+    impl ::moku::Substate<Top> for Disabled {}
 
     struct Enabled;
 
-    #[::moku::superstate(Top)]
-    impl moku::State<BlinkyState, Event> for Enabled {}
+    impl ::moku::Substate<Top> for Enabled {}
 }
 
 fn main() {}

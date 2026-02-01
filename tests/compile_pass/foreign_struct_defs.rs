@@ -9,38 +9,33 @@ mod blinky {
     #[machine_module]
     mod machine {}
 
-    use machine::BlinkyState;
-
     struct Event;
     type EventTy = Event;
     impl StateMachineEvent for EventTy {}
 
     struct Top;
-    impl TopState<BlinkyState, EventTy> for Top {}
+    impl TopState for Top {}
 
     struct Bottom;
     type BottomTy = Bottom;
 
-    #[superstate(Top)]
-    impl State<BlinkyState, EventTy> for BottomTy {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BlinkyState, Self> {
-            StateEntry::State(Self {})
+    impl Substate<Top> for BottomTy {
+        fn enter(_ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
+            Entry::State(Self {})
         }
     }
 
     use super::Under;
 
-    #[superstate(BottomTy)]
-    impl State<BlinkyState, EventTy> for Under {
-        fn enter(_superstates: &mut Self::Superstates<'_>) -> StateEntry<BlinkyState, Self> {
-            StateEntry::State(Self {})
+    impl Substate<BottomTy> for Under {
+        fn enter(_ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
+            Entry::State(Self {})
         }
     }
 
     struct Inside;
 
-    #[superstate(Under)]
-    impl State<BlinkyState, EventTy> for Inside {}
+    impl Substate<Under> for Inside {}
 }
 
 fn main() {}

@@ -1,7 +1,4 @@
-use syn::{
-    AngleBracketedGenericArguments, Attribute, GenericArgument, Ident, Path, PathArguments, Type,
-    TypePath,
-};
+use syn::{Attribute, Path};
 
 /// Check if the first segment of a Path matches `{name}` or `moku::{name}`.
 pub fn path_matches(path: &Path, name: &str) -> bool {
@@ -19,52 +16,6 @@ pub fn path_matches(path: &Path, name: &str) -> bool {
     };
 
     seg.ident == name
-}
-
-/// Check that the generics of a Path match the expected state enum an event types.
-pub fn generics_match(path: &Path, state_enum: &Ident, event: &Option<Ident>) -> bool {
-    // assume we're checking the last segment
-    let seg = match path.segments.last() {
-        Some(seg) => seg,
-        None => return false,
-    };
-
-    match &seg.arguments {
-        PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
-            if args.is_empty() {
-                return false;
-            }
-
-            match &args[0] {
-                GenericArgument::Type(Type::Path(TypePath { path, .. })) => {
-                    if !path.is_ident(state_enum) {
-                        return false;
-                    }
-                }
-                _ => return false,
-            }
-
-            if let Some(event) = event {
-                if args.len() != 2 {
-                    return false;
-                }
-
-                match &args[1] {
-                    GenericArgument::Type(Type::Path(TypePath { path, .. })) => {
-                        if !path.is_ident(event) {
-                            return false;
-                        }
-                    }
-                    _ => return false,
-                }
-            } else if args.len() != 1 {
-                return false;
-            }
-
-            true
-        }
-        _ => false,
-    }
 }
 
 /// Filter a list of attributes down to those matching `{name}` or `moku::{name}`.

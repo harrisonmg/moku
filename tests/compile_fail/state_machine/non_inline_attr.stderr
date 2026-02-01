@@ -6,7 +6,7 @@ error[E0658]: file modules in proc macro input are unstable
   |
   = note: see issue #54727 <https://github.com/rust-lang/rust/issues/54727> for more information
 
-error: a `moku::state_machine` module must be inline with its attribte, try
+error: a `moku::state_machine` module must be inline with its attribute, try
        ```
        #[moku::state_machine]
        mod dummy_mod {

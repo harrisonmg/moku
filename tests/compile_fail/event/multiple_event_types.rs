@@ -7,8 +7,6 @@ mod blinky {
     #[machine_module]
     mod machine {}
 
-    use machine::BlinkyState;
-
     struct EventA;
 
     impl StateMachineEvent for EventA {}
@@ -19,7 +17,7 @@ mod blinky {
 
     struct Top;
 
-    impl TopState<BlinkyState, EventA> for Top {}
+    impl TopState for Top {}
 }
 
 fn main() {}

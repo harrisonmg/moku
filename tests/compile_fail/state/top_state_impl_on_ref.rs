@@ -8,7 +8,7 @@ mod blinky {
     mod machine {}
 
     struct Top {}
-    impl TopState<BlinkyState> for &Top {}
+    impl TopState for &Top {}
 }
 
 fn main() {}

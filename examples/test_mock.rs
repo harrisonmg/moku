@@ -56,38 +56,36 @@ mod example {
         }
     }
 
-    impl TopState<ExampleState> for Top {}
+    impl TopState for Top {}
 
     struct Foo;
 
-    #[superstate(Top)]
-    impl State<ExampleState> for Foo {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ExampleState, Self> {
-            superstates.top.gpio.set_high();
-            Self.into()
+    impl Substate<Top> for Foo {
+        fn enter(ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
+            ctx.top.gpio.set_high();
+            Self
         }
     }
 
     struct Bar;
 
-    #[superstate(Top)]
-    impl State<ExampleState> for Bar {
-        fn enter(superstates: &mut Self::Superstates<'_>) -> StateEntry<ExampleState, Self> {
-            superstates.top.gpio.set_low();
-            Self.into()
+    impl Substate<Top> for Bar {
+        fn enter(ctx: &mut Self::Context<'_>) -> impl Into<Entry<Self::State, Self>> {
+            ctx.top.gpio.set_low();
+            Self
         }
     }
 }
 
 fn main() {
     // Non-test code can use the real hardware interface [Gpio].
-    let _machine = ExampleMachineBuilder::new(Top::new()).build();
+    let _machine = Builder::new(Top::new()).build();
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        example::{ExampleMachineBuilder, ExampleState, Top},
+        example::{Builder, State, Top},
         TestGpio,
     };
     use moku::*;
@@ -95,12 +93,12 @@ mod tests {
     #[test]
     fn test_level() {
         // Test code can use the test interface [TestGpio].
-        let mut machine = ExampleMachineBuilder::new(Top::new()).build();
+        let mut machine = Builder::new(Top::new()).build();
 
-        machine.transition(ExampleState::Foo);
+        machine.transition(State::Foo);
         assert!(machine.top_ref().gpio.level);
 
-        machine.transition(ExampleState::Bar);
+        machine.transition(State::Bar);
         assert!(!machine.top_ref().gpio.level);
     }
 }

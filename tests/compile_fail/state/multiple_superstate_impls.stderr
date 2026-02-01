@@ -1,0 +1,5 @@
+error: multiple `Substate` impls found for `Bottom`; each state must only implement Substate once
+  --> tests/compile_fail/state/multiple_superstate_impls.rs:18:31
+   |
+18 |     impl Substate<Middle> for Bottom {}
+   |                               ^^^^^^

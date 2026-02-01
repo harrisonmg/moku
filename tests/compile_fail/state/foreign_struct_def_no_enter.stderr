@@ -1,5 +1,5 @@
-error: a struct that is not defined in this module must manually implement the `State::enter` function
-  --> tests/compile_fail/state/foreign_struct_def_no_enter.rs:20:10
+error: a struct that is not defined in this module must manually implement the `Substate::enter` function
+  --> tests/compile_fail/state/foreign_struct_def_no_enter.rs:19:10
    |
-20 |     impl State<BlinkyState> for Bottom {}
-   |          ^^^^^
+19 |     impl Substate<Top> for Bottom {}
+   |          ^^^^^^^^

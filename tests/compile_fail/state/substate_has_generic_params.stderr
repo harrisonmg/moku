@@ -1,0 +1,5 @@
+error: `moku::Substate` impls must not have generic parameters
+  --> tests/compile_fail/state/substate_has_generic_params.rs:17:31
+   |
+17 |     impl<T> Substate<Top> for Bottom<T> {}
+   |                               ^^^^^^

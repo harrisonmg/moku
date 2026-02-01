@@ -1,5 +1,5 @@
-error: superstate `Tob` doesn't match any other known `moku::State` or `moku::TopState`
-  --> tests/compile_fail/state/invalid_superstate.rs:15:5
+error: superstate `Tob` doesn't match any other known `moku::Substate` or `moku::TopState`
+  --> tests/compile_fail/state/invalid_superstate.rs:15:18
    |
-15 |     #[superstate(Tob)]
-   |     ^
+15 |     impl Substate<Tob> for Bottom {}
+   |                  ^

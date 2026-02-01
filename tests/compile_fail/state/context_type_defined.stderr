@@ -1,0 +1,5 @@
+error: the `Substate::Context` associated type must not be manually defined
+  --> tests/compile_fail/state/context_type_defined.rs:16:9
+   |
+16 |         type Context<'a> = std::marker::PhantomData<&'a ()>;
+   |         ^^^^

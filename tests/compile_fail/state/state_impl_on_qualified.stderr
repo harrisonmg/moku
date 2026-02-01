@@ -1,6 +1,0 @@
-error: `moku::State` must be implemented on a plain struct
-       You may also use a type alias: `type MyState = Option<bool>;`
-  --> tests/compile_fail/state/state_impl_on_qualified.rs:16:33
-   |
-16 |     impl State<BlinkyState> for super::blinky::Bottom {}
-   |                                 ^^^^^

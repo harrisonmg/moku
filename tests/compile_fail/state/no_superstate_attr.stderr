@@ -1,5 +1,0 @@
-error: no `moku::superstate` attribute defined for this `moku::State`
-  --> tests/compile_fail/state/no_superstate_attr.rs:13:5
-   |
-13 |     impl State<BlinkyState> for Bottom {}
-   |     ^^^^

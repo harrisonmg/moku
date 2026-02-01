@@ -8,37 +8,31 @@ mod blinky {
     mod machine {}
 
     struct Top;
-    impl TopState<BlinkyState> for Top {}
+    impl TopState for Top {}
 
     struct Foo;
 
-    #[superstate(Beef)]
-    impl State<BlinkyState> for Foo {}
+    impl Substate<Beef> for Foo {}
 
     struct Bar;
 
-    #[superstate(Foo)]
-    impl State<BlinkyState> for Bar {}
+    impl Substate<Foo> for Bar {}
 
     struct Fizz;
 
-    #[superstate(Foo)]
-    impl State<BlinkyState> for Fizz {}
+    impl Substate<Foo> for Fizz {}
 
     struct Buzz;
 
-    #[superstate(Fizz)]
-    impl State<BlinkyState> for Buzz {}
+    impl Substate<Fizz> for Buzz {}
 
     struct Dead;
 
-    #[superstate(Buzz)]
-    impl State<BlinkyState> for Dead {}
+    impl Substate<Buzz> for Dead {}
 
     struct Beef;
 
-    #[superstate(Dead)]
-    impl State<BlinkyState> for Beef {}
+    impl Substate<Dead> for Beef {}
 }
 
 fn main() {}

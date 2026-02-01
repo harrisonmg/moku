@@ -6,7 +6,7 @@ error: state graph cycle detected in children of Dead:
              └─ Fizz
                 └─ Buzz
                    └─ Dead
-  --> tests/compile_fail/state_machine/long_graph_cycle.rs:40:18
+  --> tests/compile_fail/state_machine/long_graph_cycle.rs:35:19
    |
-40 |     #[superstate(Dead)]
-   |                  ^^^^
+35 |     impl Substate<Dead> for Beef {}
+   |                   ^^^^

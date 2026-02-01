@@ -21,45 +21,43 @@ mod hunter {
 
     pub struct Top;
 
-    impl TopState<HunterState, Event> for Top {
-        fn handle_event(&mut self, event: &Event) -> impl Into<Next<HunterState>> {
+    impl TopState for Top {
+        fn handle_event(&mut self, event: &Self::Event) -> impl Into<Next<Self::State>> {
             match event {
-                Event::StomachGrumbled => Some(HunterState::Hunting),
-                Event::PreyCaught => Some(HunterState::Cooking),
-                _ => None,
+                Event::StomachGrumbled => Next::Target(State::Hunting),
+                Event::PreyCaught => Next::Target(State::Cooking),
+                _ => Next::None,
             }
         }
     }
 
     struct Hunting;
 
-    #[superstate(Top)]
-    impl State<HunterState, Event> for Hunting {
+    impl Substate<Top> for Hunting {
         // by default, states will defer all events
     }
 
     struct Cooking;
 
-    #[superstate(Top)]
-    impl State<HunterState, Event> for Cooking {
+    impl Substate<Top> for Cooking {
         fn handle_event(
             &mut self,
-            event: &Event,
-            _superstates: &mut Self::Superstates<'_>,
-        ) -> impl Into<EventResponse<HunterState>> {
+            _ctx: &mut Self::Context<'_>,
+            event: &Self::Event,
+        ) -> impl Into<Response<Self::State>> {
             match event {
-                Event::MeatCooked => HunterState::Top.into(),
+                Event::MeatCooked => Response::Next(Next::Target(State::Top)),
                 // ignore Top state's logic to start hunting when stomach grumbles
-                Event::StomachGrumbled => EventResponse::Drop,
+                Event::StomachGrumbled => Response::Drop,
                 // defer other events to superstates
-                _ => None.into(),
+                _ => Response::Next(Next::None),
             }
         }
     }
 }
 
 fn main() {
-    let mut machine = HunterMachineBuilder::new(Top).build();
+    let mut machine = Builder::new(Top).build();
     let mut events = VecDeque::new();
 
     // generate events

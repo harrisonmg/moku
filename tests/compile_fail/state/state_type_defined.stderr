@@ -1,0 +1,5 @@
+error: the `Substate::State` associated type must not be manually defined
+  --> tests/compile_fail/state/state_type_defined.rs:16:9
+   |
+16 |         type State = ();
+   |         ^^^^

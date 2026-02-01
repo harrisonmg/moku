@@ -1,0 +1,5 @@
+error: the `Substate::Event` associated type must not be manually defined
+  --> tests/compile_fail/state/event_type_defined.rs:16:9
+   |
+16 |         type Event = ();
+   |         ^^^^

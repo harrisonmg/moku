@@ -9,35 +9,32 @@ mod tester {
     #[machine_module]
     pub mod machine {}
 
-    use machine::TesterState;
-
     pub struct Top;
 
-    impl TopState<TesterState> for Top {}
+    impl TopState for Top {}
 
     struct Foo;
 
-    #[superstate(Top)]
-    impl State<TesterState> for Foo {}
+    impl Substate<Top> for Foo {}
 }
 
 #[test]
 fn default_actions() {
-    let mut machine = TesterMachineBuilder::new(Top).build();
-    assert!(matches!(machine.state(), TesterState::Top));
+    let mut machine = Builder::new(Top).build();
+    assert!(matches!(machine.state(), State::Top));
 
     machine.update();
-    assert!(matches!(machine.state(), TesterState::Top));
+    assert!(matches!(machine.state(), State::Top));
 
     machine.top_down_update();
-    assert!(matches!(machine.state(), TesterState::Top));
+    assert!(matches!(machine.state(), State::Top));
 
-    machine.transition(TesterState::Foo);
-    assert!(matches!(machine.state(), TesterState::Foo));
+    machine.transition(State::Foo);
+    assert!(matches!(machine.state(), State::Foo));
 
     machine.update();
-    assert!(matches!(machine.state(), TesterState::Foo));
+    assert!(matches!(machine.state(), State::Foo));
 
     machine.top_down_update();
-    assert!(matches!(machine.state(), TesterState::Foo));
+    assert!(matches!(machine.state(), State::Foo));
 }

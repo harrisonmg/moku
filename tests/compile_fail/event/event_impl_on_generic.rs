@@ -7,15 +7,15 @@ mod blinky {
     #[machine_module]
     mod machine {}
 
-    use machine::BlinkyState;
-
-    struct Event<T>;
+    struct Event<T> {
+        _marker: std::marker::PhantomData<T>,
+    }
 
     impl<T> StateMachineEvent for Event<T> {}
 
     struct Top;
 
-    impl TopState<BlinkyState, Event> for Top {}
+    impl TopState for Top {}
 }
 
 fn main() {}

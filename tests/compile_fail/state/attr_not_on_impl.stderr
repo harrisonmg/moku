@@ -1,5 +1,0 @@
-error: expected `impl`
- --> tests/compile_fail/state/attr_not_on_impl.rs:5:5
-  |
-5 |     struct Bottom;
-  |     ^^^^^^

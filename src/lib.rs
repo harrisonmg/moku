@@ -1613,6 +1613,14 @@ pub mod internal {
         ExactTarget(T),
     }
 
+    bitflags::bitflags! {
+        #[derive(Debug, Clone, Copy, Default)]
+        struct NodeFlags: u8 {
+            const NEEDS_UPDATE = 1;
+            const TOP_DOWN_UPDATED = 2;
+        }
+    }
+
     /// A node in the state tree.
     pub struct Node<T, U, V, W>
     where
@@ -1630,8 +1638,7 @@ pub mod internal {
         #[allow(missing_docs)]
         pub substate: W,
 
-        needs_update: bool,
-        top_down_updated: bool,
+        flags: NodeFlags,
     }
 
     impl<T, U, V, W> Node<T, U, V, W>
@@ -1648,9 +1655,13 @@ pub mod internal {
                 phantom_u: PhantomData,
                 state,
                 substate: W::none_variant(),
-                needs_update: false,
-                top_down_updated: false,
+                flags: NodeFlags::empty(),
             }
+        }
+
+        /// Check if this node needs an update.
+        pub fn needs_update(&self) -> bool {
+            self.flags.contains(NodeFlags::NEEDS_UPDATE)
         }
 
         /// Enter this node.
@@ -1666,8 +1677,7 @@ pub mod internal {
                     phantom_u: PhantomData,
                     state,
                     substate: W::none_variant(),
-                    needs_update: false,
-                    top_down_updated: false,
+                    flags: NodeFlags::empty(),
                 }),
                 StateEntry::Target(target) => {
                     info!(
@@ -1688,11 +1698,11 @@ pub mod internal {
 
         /// Update this node and its active descendents.
         pub fn update(&mut self, superstates: &mut V::Superstates<'_>) -> Next<T> {
-            self.needs_update = true;
+            self.flags.insert(NodeFlags::NEEDS_UPDATE);
             match self.substate.update(&mut self.state, superstates) {
                 Next::None => {
                     info!("\u{02502}Updating {:?}", W::this_state());
-                    self.needs_update = false;
+                    self.flags.remove(NodeFlags::NEEDS_UPDATE);
                     self.state.update(superstates).into()
                 }
                 target => target,
@@ -1701,11 +1711,11 @@ pub mod internal {
 
         /// Update this node and its active descendents if in need of update after a transition.
         pub fn update_in_need(&mut self, superstates: &mut V::Superstates<'_>) -> Next<T> {
-            if self.needs_update {
+            if self.flags.contains(NodeFlags::NEEDS_UPDATE) {
                 match self.substate.update_in_need(&mut self.state, superstates) {
                     Next::None => {
                         info!("\u{02502}Updating {:?}", W::this_state());
-                        self.needs_update = false;
+                        self.flags.remove(NodeFlags::NEEDS_UPDATE);
                         self.state.update(superstates).into()
                     }
                     target => target,
@@ -1718,7 +1728,7 @@ pub mod internal {
         /// Top-down update this node and its active descendents.
         pub fn top_down_update(&mut self, superstates: &mut V::Superstates<'_>) -> Next<T> {
             info!("\u{02502}Top-down updating {:?}", W::this_state());
-            self.top_down_updated = true;
+            self.flags.insert(NodeFlags::TOP_DOWN_UPDATED);
             match self.state.top_down_update(superstates).into() {
                 Next::None => self.substate.top_down_update(&mut self.state, superstates),
                 target => target,
@@ -1728,9 +1738,9 @@ pub mod internal {
         /// Top-down update this node and its active descendents if in need of update after a
         /// transition.
         pub fn top_down_update_in_need(&mut self, superstates: &mut V::Superstates<'_>) -> Next<T> {
-            if !self.top_down_updated {
+            if !self.flags.contains(NodeFlags::TOP_DOWN_UPDATED) {
                 info!("\u{02502}Top-down updating {:?}", W::this_state());
-                self.top_down_updated = true;
+                self.flags.insert(NodeFlags::TOP_DOWN_UPDATED);
                 match self.state.top_down_update(superstates).into() {
                     Next::None => (),
                     target => return target,
@@ -1743,7 +1753,7 @@ pub mod internal {
 
         /// Clear the top-down update flag from this node and its active descendents.
         pub fn clear_top_down_updated(&mut self) {
-            self.top_down_updated = false;
+            self.flags.remove(NodeFlags::TOP_DOWN_UPDATED);
             self.substate.clear_top_down_updated();
         }
 
@@ -1972,7 +1982,7 @@ pub mod internal {
                         Next::ExactTarget(target) => self.transition(target, true, true),
                     }
 
-                    while self.node.needs_update {
+                    while self.node.needs_update() {
                         match self.node.update_in_need(&mut NoSuperstates(PhantomData)) {
                             Next::None => (),
                             Next::Target(target) => self.transition(target, true, false),

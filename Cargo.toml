@@ -22,6 +22,7 @@ default = ["std"]
 std = ["moku-macros/std"]
 
 [dependencies]
+bitflags = "2.10.0"
 log = "0.4.22"
 moku-macros = { version = "0.3.0", path = "moku-macros" }
 

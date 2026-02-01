@@ -175,7 +175,7 @@ Let's add some functionality to our states:
     impl Substate<Top> for Enabled {
         fn init(
             &mut self,
-            _context: &mut Self::Context<'_>,
+            _ctx: &mut Self::Context<'_>,
         ) -> Self::Next {
             // When we transition into the `Enabled` state, transition into the `LedOn` state.
             State::LedOn.into()
@@ -196,7 +196,7 @@ Let's add some functionality to our states:
         // entering the state - for instance towards a fault state if some aspect of
         // state construction fails.
         fn enter(
-            _context: &mut Self::Context<'_>,
+            _ctx: &mut Self::Context<'_>,
         ) -> Self::Entry {
             // dummy code to turn the LED on
             // led_gpio.set_high()
@@ -229,7 +229,7 @@ Let's add some functionality to our states:
 
     impl Substate<Enabled> for LedOff {
         fn enter(
-            _context: &mut Self::Context<'_>,
+            _ctx: &mut Self::Context<'_>,
         ) -> Self::Entry {
             // dummy code to turn the LED off
             // led_gpio.set_low()
@@ -279,7 +279,7 @@ Finally, let's use our state machine!
 #     impl Substate<Top> for Enabled {
 #         fn init(
 #             &mut self,
-#             _context: &mut Self::Context<'_>,
+#             _ctx: &mut Self::Context<'_>,
 #         ) -> Self::Next {
 #             State::LedOn.into()
 #         }
@@ -287,7 +287,7 @@ Finally, let's use our state machine!
 #     struct LedOn { entry_time: std::time::Instant }
 #     impl Substate<Enabled> for LedOn {
 #         fn enter(
-#             _context: &mut Self::Context<'_>,
+#             _ctx: &mut Self::Context<'_>,
 #         ) -> Self::Entry {
 #             Self {
 #                 entry_time: std::time::Instant::now(),
@@ -307,7 +307,7 @@ Finally, let's use our state machine!
 #     pub struct LedOff { pub entry_time: std::time::Instant }
 #     impl Substate<Enabled> for LedOff {
 #         fn enter(
-#             _context: &mut Self::Context<'_>,
+#             _ctx: &mut Self::Context<'_>,
 #         ) -> Self::Entry {
 #             Self {
 #                 entry_time: std::time::Instant::now(),
@@ -457,8 +457,8 @@ mod example {
     impl Substate<Top> for Bar {
         fn handle_event(
             &mut self,
+            _ctx: &mut Self::Context<'_>,
             event: &Self::Event,
-            _context: &mut Self::Context<'_>,
         ) -> Self::Response {
             match event {
                 Event::A => {

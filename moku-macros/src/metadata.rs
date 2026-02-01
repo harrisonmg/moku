@@ -507,7 +507,7 @@ impl Metadata {
             let is_top_state = ancestors.is_empty();
 
             let parent_context = match ancestors.last() {
-                None => quote! { ::moku::NoSuperstates },
+                None => quote! { ::moku::NoParents },
                 Some(parent) => parent.context_ident().into_token_stream(),
             };
 
@@ -598,10 +598,10 @@ impl Metadata {
 
                         fn handle_event(
                             &mut self,
-                            event: &#event_local,
                             ctx: &mut Self::Context<'_>,
+                            event: &#event_local,
                         ) -> impl Into<::moku::Response<#machine_mod::State>> {
-                            <Self as ::moku::Substate<_>>::handle_event(self, event, ctx)
+                            <Self as ::moku::Substate<_>>::handle_event(self, ctx, event)
                         }
                     }
                 });
@@ -865,8 +865,8 @@ impl Metadata {
                             match self {
                                 Self::None => ::moku::Response::Next(::moku::Next::None),
                                 #(Self::#children(node) => node.handle_event(
-                                        event,
                                         &mut #context::new(state, ctx),
+                                        event,
                                 ),)*
                             }
                         }

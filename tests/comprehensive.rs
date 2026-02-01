@@ -738,8 +738,8 @@ mod evt {
     impl Substate<A> for AA {
         fn handle_event(
             &mut self,
-            event: &Self::Event,
             ctx: &mut Self::Context<'_>,
+            event: &Self::Event,
         ) -> Self::Response {
             match event {
                 Event::Handled => {
@@ -764,8 +764,8 @@ mod evt {
     impl Substate<B> for BB {
         fn handle_event(
             &mut self,
-            event: &Self::Event,
             ctx: &mut Self::Context<'_>,
+            event: &Self::Event,
         ) -> Self::Response {
             match event {
                 Event::Handled => {

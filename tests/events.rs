@@ -55,8 +55,8 @@ mod tester {
     impl Substate<Top> for Dropper {
         fn handle_event(
             &mut self,
-            _event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
+            _event: &Self::Event,
         ) -> Self::Response {
             Response::Drop
         }
@@ -67,8 +67,8 @@ mod tester {
     impl Substate<Top> for FooPasser {
         fn handle_event(
             &mut self,
-            event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
+            event: &Self::Event,
         ) -> Self::Response {
             match event {
                 Event::C => State::Foo.into(),
@@ -82,8 +82,8 @@ mod tester {
     impl Substate<FooPasser> for BarPasser {
         fn handle_event(
             &mut self,
-            event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
+            event: &Self::Event,
         ) -> Self::Response {
             match event {
                 Event::A => State::Bar.into(),

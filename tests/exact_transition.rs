@@ -38,8 +38,8 @@ mod tester {
 
         fn handle_event(
             &mut self,
-            _event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
+            _event: &Self::Event,
         ) -> Self::Response {
             State::A.into()
         }
@@ -61,8 +61,8 @@ mod tester {
 
         fn handle_event(
             &mut self,
-            _event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
+            _event: &Self::Event,
         ) -> Self::Response {
             Next::ExactTarget(State::Top).into()
         }

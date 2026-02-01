@@ -42,8 +42,8 @@ mod hunter {
     impl Substate<Top> for Cooking {
         fn handle_event(
             &mut self,
-            event: &Self::Event,
             _ctx: &mut Self::Context<'_>,
+            event: &Self::Event,
         ) -> Self::Response {
             match event {
                 Event::MeatCooked => State::Top.into(),
